@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "autonomous-ai-data-analyst"
+version = "0.1.0"
+description = "Autonomous AI Data Analyst Agent — Plan-Act-Reflect engine with FastAPI and Reflex"
+authors = [
+    { name = "D. Bala Varshith" },
+    { name = "R. Nikitha Varma" },
+    { name = "S. K. Rafi" }
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "python-multipart>=0.0.9",
+    "sqlalchemy>=2.0.28",
+    "alembic>=1.13.1",
+    "pandas>=2.2.1",
+    "numpy>=1.26.4",
+    "openpyxl>=3.1.2",
+    "duckdb>=0.10.0",
+    "scipy>=1.12.0",
+    "scikit-learn>=1.4.1.post1",
+    "statsmodels>=0.14.1",
+    "plotly>=5.20.0",
+    "reflex>=0.6.0",
+    "httpx>=0.27.0",
+    "pytest>=8.1.0",
+    "pytest-asyncio>=0.23.5",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --import-mode=importlib"
+testpaths = ["backend/tests"]
+pythonpath = ["backend", "."]
+asyncio_mode = "auto"
