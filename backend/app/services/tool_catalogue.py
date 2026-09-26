@@ -1,0 +1,145 @@
+"""Central Tool Catalogue registry and execution dispatcher for the Claude Agent.
+
+Defines schemas, type signatures, and parameters for Claude function calling.
+Enforces closed-set execution and parameter safety.
+"""
+from typing import Any, Callable, Dict, List, Optional
+from backend.app.services.charts import generate_chart
+from backend.app.services.correlation import run_correlation
+from backend.app.services.outliers import detect_outliers
+from backend.app.services.segmentation import segment_compare
+from backend.app.services.sql_tool import query_sql
+from backend.app.services.summary import write_summary
+from backend.app.services.timeseries import trend_analysis
+
+# Claude Tool Calling Definitions (Anthropic API Format)
+CLAUDE_TOOL_DEFINITIONS = [
+    {
+        "name": "run_correlation",
+        "description": "Calculates pairwise correlation across numeric columns in the dataset and flags strong linear relationships (|r| >= threshold).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset_id": {"type": "string", "description": "The dataset identifier or sample filename."},
+                "columns": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional list of numeric columns to correlate. If omitted, correlates all numeric columns."
+                },
+                "threshold": {
+                    "type": "number",
+                    "default": 0.4,
+                    "description": "Minimum absolute correlation threshold to flag as a notable relationship."
+                }
+            },
+            "required": ["dataset_id"]
+        }
+    },
+    {
+        "name": "detect_outliers",
+        "description": "Performs statistical outlier detection on numeric features using IQR (Interquartile Range), Z-Score, or Isolation Forest.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset_id": {"type": "string", "description": "The dataset identifier or sample filename."},
+                "method": {
+                    "type": "string",
+                    "enum": ["iqr", "zscore", "isolation_forest"],
+                    "default": "iqr",
+                    "description": "Statistical method for anomaly detection."
+                },
+                "columns": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of numeric columns to evaluate."
+                }
+            },
+            "required": ["dataset_id"]
+        }
+    },
+    {
+        "name": "segment_compare",
+        "description": "Groups dataset by a categorical column and compares a numeric metric across segments (mean, median, sum, counts, relative differences, and ANOVA significance).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset_id": {"type": "string", "description": "The dataset identifier or sample filename."},
+                "segment_column": {"type": "string", "description": "The categorical column to group by (e.g. 'Department', 'Category', 'Region')."},
+                "metric_column": {"type": "string", "description": "The numeric column to aggregate and compare (e.g. 'Annual_Salary', 'Unit_Price', 'Conversions')."}
+            },
+            "required": ["dataset_id", "segment_column", "metric_column"]
+        }
+    },
+    {
+        "name": "trend_analysis",
+        "description": "Performs chronological time-series analysis over a date-indexed column to detect trend direction (upward/downward/stable), slope, percentage change, and peaks.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset_id": {"type": "string", "description": "The dataset identifier or sample filename."},
+                "date_column": {"type": "string", "description": "The date or timestamp column name."},
+                "value_column": {"type": "string", "description": "The numeric metric to track over time."}
+            },
+            "required": ["dataset_id", "date_column", "value_column"]
+        }
+    },
+    {
+        "name": "generate_chart",
+        "description": "Generates a declarative Plotly chart specification dictionary for visual rendering in the dashboard.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "result_type": {
+                    "type": "string",
+                    "enum": ["correlation", "trend", "segment_compare", "outlier", "bar", "line", "scatter", "heatmap"],
+                    "description": "Type of visualization appropriate for the result."
+                },
+                "data": {
+                    "type": "object",
+                    "description": "The structured data payload generated by a preceding analysis tool."
+                },
+                "title": {"type": "string", "description": "Optional human-readable chart title."}
+            },
+            "required": ["result_type", "data"]
+        }
+    },
+    {
+        "name": "query_sql",
+        "description": "Executes a safe, read-only SQL query over the dataset via DuckDB (the dataset table is named 'df').",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dataset_id": {"type": "string", "description": "The dataset identifier or sample filename."},
+                "sql": {"type": "string", "description": "Read-only SELECT query over table 'df' (e.g., 'SELECT Category, AVG(Quantity) FROM df GROUP BY 1')."}
+            },
+            "required": ["dataset_id", "sql"]
+        }
+    }
+]
+
+# Dispatcher mapping tool name to callable Python function
+TOOL_REGISTRY: Dict[str, Callable] = {
+    "run_correlation": run_correlation,
+    "detect_outliers": detect_outliers,
+    "segment_compare": segment_compare,
+    "trend_analysis": trend_analysis,
+    "generate_chart": generate_chart,
+    "query_sql": query_sql,
+    "write_summary": write_summary
+}
+
+def execute_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Safely execute a tool from the closed catalogue with validation."""
+    if tool_name not in TOOL_REGISTRY:
+        raise ValueError(f"Unknown tool '{tool_name}'. Available tools: {list(TOOL_REGISTRY.keys())}")
+        
+    func = TOOL_REGISTRY[tool_name]
+    try:
+        return func(**arguments)
+    except Exception as e:
+        return {
+            "status": "error",
+            "tool": tool_name,
+            "error_type": type(e).__name__,
+            "message": str(e)
+        }

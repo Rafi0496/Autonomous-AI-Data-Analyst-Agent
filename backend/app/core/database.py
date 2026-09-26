@@ -28,4 +28,5 @@ def init_db():
     """Initialize all tables defined in models."""
     import backend.app.models.dataset  # ensure models are loaded
     import backend.app.models.user
+    import backend.app.models.job
     Base.metadata.create_all(bind=engine)

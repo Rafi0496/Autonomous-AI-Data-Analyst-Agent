@@ -172,6 +172,16 @@ Each phase below lists objectives, week-by-week tasks, primary tech touched, and
 - A visible run log per analysis session, listing each step the agent took and why.
 - Enforced step/token budget with logged token/cost usage per session.
 
+**Phase 2 As-Built Verification Status (Completed & Fully Verified):**
+- [x] Tool Catalogue: `run_correlation()`, `detect_outliers()`, `segment_compare()`, `trend_analysis()`, `generate_chart()`, `query_sql()`, `write_summary()` returning typed structured data.
+- [x] Single tool-call Claude API prototype tested via `scripts/prototype_tool_call.py`.
+- [x] Plan-Act-Reflect Orchestrator (`backend/app/agent/orchestrator.py`) with reflection-driven follow-ups.
+- [x] Closed-catalogue & DuckDB in-memory isolation guardrails against SQL writes & filesystem traversals verified with adversarial tests.
+- [x] Step/token budget guardrail tripping verified with automated tests tripping budgets and asserting graceful partial fallbacks.
+- [x] Ordered explainability run log stored in `AnalysisJob` model and exposed via `/api/v1/jobs/{job_id}/logs`.
+- [x] Celery worker task + resilient async polling endpoint (`/api/v1/jobs`).
+- [x] Full agent loop unattended integration test verified on messy retail data with programmatic citation verification (`citation_checker.py`, 100.0% verification rate).
+
 ---
 
 ## PHASE 3 — Insight, Visualization & Reporting (Weeks 9–12)
