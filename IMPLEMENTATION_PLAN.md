@@ -67,6 +67,35 @@
 - [x] Visible token/cost tracker on the dashboard (Plan §8.5 — user-facing, not just an internal budget) — *Verified: Step progress, token usage, latency metrics, and budget limits on dashboard and settings pages.*
 - [x] Multi-dataset autonomous end-to-end verification (`scripts/verify_phase3.py`) — *Verified: Full flow across retail, HR, and marketing messy datasets producing demo artifacts.*
 
+### Phase 3 Hardening — Architecture & Plan-Act-Reflect Mechanics
+1. **Batched Tool Calls per Plan:**
+   - The initial planning phase (`llm_client.plan()`) receives the dataset profile, cleaning summary, and analytical goal.
+   - It outputs a batched plan of tool calls with typed arguments and model-generated rationales.
+   - These tool calls are placed in a FIFO execution queue (`pending_plan`).
+2. **Sequential Act Phase:**
+   - The orchestrator dequeues and executes each tool call sequentially.
+   - Each step measures raw execution duration using `time.perf_counter()` with millisecond precision (`duration_ms`).
+   - Planning latency (`llm_latency_ms`) is attributed to the initial step of the batch.
+3. **Dynamic Reflection & Bounded Follow-ups:**
+   - When the `pending_plan` queue becomes empty, and if the current step count is below `max_steps`, reflection is triggered (`llm_client.reflect()`).
+   - The model observes execution history and tool findings, generating:
+     a. A synthesis observation (`reflection`), stored in `run_log` on the step entry.
+     b. Bounded follow-up tool calls (if necessary), appended to `pending_plan`.
+   - Reflection latency (`reflection_latency_ms`) is tracked with millisecond precision.
+4. **Max Rounds & Guardrails:**
+   - Maximum execution rounds are strictly bounded by `max_steps` (default 5 or 6).
+   - Additional guardrails include total runtime timeout (default 120s) and token budget limits (e.g. 15,000 tokens).
+5. **Deterministic Insight Ranking & Suppression:**
+   - Impact score formula: `raw_score * confidence_factor` (`{"high": 1.0, "medium": 0.75, "low": 0.5}`).
+   - Analytical suppression: if `n_used < 20` or `exclusion_rate > 0.5`, analytical finding is suppressed and converted to a data quality caveat (`"insufficient data for <analysis>"`).
+   - Zero outliers are folded into methodology with `impact_score <= 0.10`.
+   - Trend analysis enforces OLS linear regression: if $p \ge 0.05$, titled `"No significant trend in X"`, with effect size equal to standardized slope and $n_{periods}$ reported separately.
+   - Partitioning: Output splits into top 6 analytical insights and max 4 data quality insights.
+6. **Bound Citation Checking & Verification:**
+   - Synthesis returns structured claims: `{text, source_id, metric_key, value, unit}`.
+   - Numeric values are validated against specific source metrics with 2% rounding tolerance and metric key consistency.
+   - Pre-strip verification threshold $\ge 95\%$ enforced; single regeneration on failure; offending unverified sentences stripped cleanly.
+
 ### Phase 4 — Real-World Readiness (Weeks 13–16)
 - [ ] JWT authentication wired between Reflex sessions and FastAPI
 - [ ] Multi-user data isolation
