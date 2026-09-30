@@ -19,7 +19,7 @@ def extract_numeric_tokens(text: str) -> List[float]:
     text_clean = re.sub(r"\b[A-Za-z0-9]+-\d+\b", " ", text_clean)
 
     # Regex matching numbers with optional decimals, commas, negatives, currency, or percentages
-    pattern = r"[-+]?\$?\b\d{1,3}(?:,\d{3})*(?:\.\d+)?%?\b"
+    pattern = r"[-+]?\$?\b(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?\b"
     matches = re.findall(pattern, text_clean)
     numbers = []
     
@@ -62,6 +62,9 @@ def build_fact_pool(
             harvest_obj(obj.model_dump())
         elif hasattr(obj, "__dict__"):
             harvest_obj(obj.__dict__)
+        elif isinstance(obj, str):
+            for n in extract_numeric_tokens(obj):
+                add_num(n)
         elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
             add_num(obj)
 

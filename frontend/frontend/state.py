@@ -44,6 +44,19 @@ class RunLogStepModel(BaseModel):
     llm_latency_ms: float = 0.0
     tokens: int = 0
 
+class EvidenceItemModel(BaseModel):
+    type: str = "insight"
+    id: str = ""
+    title: str = ""
+    tool: str = ""
+
+class ChatMessageModel(BaseModel):
+    role: str = "user"
+    content: str = ""
+    evidence: List[EvidenceItemModel] = []
+    verification_is_valid: bool = True
+    verification_summary: str = ""
+
 class AppState(rx.State):
     """Global reactive state managing datasets, profiling, agent execution, dashboard, and chat."""
     
@@ -122,7 +135,7 @@ class AppState(rx.State):
     token_budget_setting: int = 15000
 
     # Chat Q&A (Milestone 4)
-    chat_messages: List[Dict[str, Any]] = []
+    chat_messages: List[ChatMessageModel] = []
     chat_input: str = ""
     is_chatting: bool = False
     suggested_questions: List[str] = [
@@ -525,20 +538,28 @@ class AppState(rx.State):
             except Exception:
                 pass
 
-    async def send_chat_message(self, question_text: Optional[str] = None):
+    def clear_chat(self):
+        """Reset conversation message history."""
+        self.chat_messages = []
+
+    async def ask_suggested(self, q: str):
+        """Ask a suggested question directly."""
+        self.chat_input = q
+        await self.send_chat_message()
+
+    async def send_chat_message(self):
         """Send Q&A prompt to /chat endpoint (Milestone 4)."""
-        prompt = (question_text or self.chat_input).strip()
+        prompt = self.chat_input.strip()
         if not prompt:
             return
 
         self.chat_input = ""
         self.is_chatting = True
-        self.chat_messages.append({
-            "role": "user",
-            "content": prompt,
-            "evidence": [],
-            "verification": {}
-        })
+        self.chat_messages.append(ChatMessageModel(
+            role="user",
+            content=prompt,
+            evidence=[]
+        ))
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -546,30 +567,46 @@ class AppState(rx.State):
                     "job_id": self.active_job_id,
                     "dataset_id": self.selected_dataset_id,
                     "question": prompt,
-                    "history": [{"role": m["role"], "content": m["content"]} for m in self.chat_messages[:-1]]
+                    "history": [{"role": m.role, "content": m.content} for m in self.chat_messages[:-1]]
                 }
                 res = await client.post(f"{API_BASE_URL}/chat", json=payload)
                 if res.status_code == 200:
                     ans_data = res.json()
-                    self.chat_messages.append({
-                        "role": "assistant",
-                        "content": ans_data.get("answer", "No response generated."),
-                        "evidence": ans_data.get("evidence", []),
-                        "verification": ans_data.get("verification", {})
-                    })
+                    raw_ev = ans_data.get("evidence", [])
+                    ev_list = []
+                    for e in raw_ev:
+                        ev_list.append(EvidenceItemModel(
+                            type=str(e.get("type", "insight")),
+                            id=str(e.get("id", "")),
+                            title=str(e.get("title", e.get("tool", ""))),
+                            tool=str(e.get("tool", ""))
+                        ))
+                    ver = ans_data.get("verification", {})
+                    is_val = ver.get("is_valid", True)
+                    checked = ver.get("total_claims_checked", 0)
+                    ver_sum = f"{ver.get('verified_claims_count', 0)}/{checked} claims verified" if checked > 0 else "Fact-aligned"
+                    self.chat_messages.append(ChatMessageModel(
+                        role="assistant",
+                        content=ans_data.get("answer", "No response generated."),
+                        evidence=ev_list,
+                        verification_is_valid=is_val,
+                        verification_summary=ver_sum
+                    ))
                 else:
-                    self.chat_messages.append({
-                        "role": "assistant",
-                        "content": f"Error: Unable to get response from analyst engine ({res.status_code}).",
-                        "evidence": [],
-                        "verification": {}
-                    })
+                    self.chat_messages.append(ChatMessageModel(
+                        role="assistant",
+                        content=f"Error: Unable to get response from analyst engine ({res.status_code}).",
+                        evidence=[],
+                        verification_is_valid=False,
+                        verification_summary="Error"
+                    ))
         except Exception as e:
-            self.chat_messages.append({
-                "role": "assistant",
-                "content": f"Request failed: {str(e)}",
-                "evidence": [],
-                "verification": {}
-            })
+            self.chat_messages.append(ChatMessageModel(
+                role="assistant",
+                content=f"Request failed: {str(e)}",
+                evidence=[],
+                verification_is_valid=False,
+                verification_summary="Exception"
+            ))
         finally:
             self.is_chatting = False

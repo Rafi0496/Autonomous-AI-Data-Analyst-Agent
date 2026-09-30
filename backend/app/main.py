@@ -29,8 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from backend.app.api.v1.endpoints import chat
+
 # Include API Router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(chat.router, prefix="/chat", tags=["Chat Root"])
 
 @app.get("/")
 def root():
