@@ -48,6 +48,8 @@ def segment_compare(
             is_categorical_target = True
     elif raw_metric_series.nunique() <= 2 and set(raw_metric_series.dropna().unique()).issubset({0, 1, 0.0, 1.0}):
         is_categorical_target = True
+    else:
+        metric_series = raw_metric_series
 
     # -------------------------------------------------------------
     # PATH 1: Categorical / Binary Rate Analysis (e.g. Attrition by Dept)
