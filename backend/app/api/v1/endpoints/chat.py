@@ -18,6 +18,10 @@ class ChatResponse(BaseModel):
     answer: str
     evidence: List[Dict[str, Any]] = []
     verification: Dict[str, Any] = {}
+    provider: Optional[str] = "heuristic"
+    tool_calls_used: List[Dict[str, Any]] = []
+    pre_strip_rate: Optional[float] = 100.0
+    post_strip_rate: Optional[float] = 100.0
 
 @router.post("", response_model=ChatResponse)
 @router.post("/", response_model=ChatResponse)
@@ -33,5 +37,9 @@ def handle_chat_query(request: ChatRequest, db: Session = Depends(get_db)) -> Ch
     return ChatResponse(
         answer=result["answer"],
         evidence=result.get("evidence", []),
-        verification=result.get("verification", {})
+        verification=result.get("verification", {}),
+        provider=result.get("provider", "heuristic"),
+        tool_calls_used=result.get("tool_calls_used", []),
+        pre_strip_rate=result.get("pre_strip_rate", 100.0),
+        post_strip_rate=result.get("post_strip_rate", 100.0)
     )

@@ -36,6 +36,10 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(chat.router, prefix="/chat", tags=["Chat Root"])
 app.include_router(reports.router, prefix="/reports", tags=["Reports Root"])
 
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "backend"}
+
 @app.get("/")
 def root():
     return {

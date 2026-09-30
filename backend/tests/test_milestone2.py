@@ -57,7 +57,8 @@ def test_chart_spec_selection_per_insight_type():
             {"date": "2023-03", "value": 14250.0, "rolling_avg": 12083.3}
         ],
         "peak_period": {"date": "2023-03", "value": 14250.0},
-        "n_used": 12,
+        "n_used": 100,
+        "n_periods": 12,
         "n_excluded_imputed": 0
     }
 

@@ -27,7 +27,7 @@ class JobStatusResponse(BaseModel):
     step_limit: int
     tokens_used: int
     token_budget: int
-    execution_time_seconds: int
+    execution_time_seconds: float = 0.0
     results: Optional[Dict[str, Any]] = None
     verification: Optional[Dict[str, Any]] = None
     created_at: str
