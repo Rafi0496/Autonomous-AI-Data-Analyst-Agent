@@ -278,14 +278,60 @@ class PlanActReflectOrchestrator:
         synth_latency_ms = round((time.perf_counter() - synth_start) * 1000, 2)
         self._accumulate_tokens(synth_res.usage)
 
+        # Initial Bound Citation Verification
+        initial_payload = {
+            "executive_summary": synth_res.executive_summary,
+            "key_findings": synth_res.key_findings,
+            "claims": synth_res.claims or []
+        }
+        verification = validate_citations(
+            synthesis_result=initial_payload,
+            structured_results=executed_results,
+            dataset_profile=profile_dict,
+            insights=insights
+        )
+
+        # Retry once if unverified claims/numbers exist and LLM is configured
+        if not verification["is_valid"] and self.llm_client.provider_name != "heuristic":
+            failing_claims = verification["unverified_claims"]
+            if not failing_claims and verification["unverified_numbers"]:
+                failing_claims = [{"unverified_value": n} for n in verification["unverified_numbers"]]
+            retry_start = time.perf_counter()
+            retry_res = self.llm_client.synthesize(
+                results=executed_results,
+                dataset_profile=profile_dict,
+                goal=synth_goal,
+                failing_claims=failing_claims
+            )
+            synth_latency_ms += round((time.perf_counter() - retry_start) * 1000, 2)
+            self._accumulate_tokens(retry_res.usage)
+            retry_payload = {
+                "executive_summary": retry_res.executive_summary,
+                "key_findings": retry_res.key_findings,
+                "claims": retry_res.claims or []
+            }
+            verification = validate_citations(
+                synthesis_result=retry_payload,
+                structured_results=executed_results,
+                dataset_profile=profile_dict,
+                insights=insights
+            )
+            synth_res = retry_res
+
+        # If unverified claims or numbers persist, strip offending sentences
+        clean_summary = verification.get("cleaned_executive_summary") or synth_res.executive_summary
+        stripped_sentences = verification.get("stripped_sentences", [])
+
         synthesis = {
             "status": "success",
-            "executive_summary": synth_res.executive_summary,
+            "executive_summary": clean_summary,
             "key_findings": synth_res.key_findings,
             "recommendations": synth_res.recommendations,
             "total_findings": len(synth_res.key_findings),
             "total_tools_executed": len(executed_results),
             "citations_index": synth_res.citations_index,
+            "claims": synth_res.claims or [],
+            "stripped_sentences": stripped_sentences,
             "llm_latency_ms": synth_latency_ms
         }
 
@@ -301,13 +347,6 @@ class PlanActReflectOrchestrator:
                 except Exception:
                     pass
 
-        # Programmatic Citation Verification (accepting all insight values)
-        verification = validate_citations(
-            synthesis_result=synthesis,
-            structured_results=executed_results,
-            dataset_profile=profile_dict,
-            insights=insights
-        )
 
         final_status = "budget_tripped" if self.budget_tripped else "completed"
         total_runtime_seconds = round(time.perf_counter() - self.start_time, 2)

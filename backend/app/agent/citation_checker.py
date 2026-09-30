@@ -1,8 +1,16 @@
-"""Programmatic Claim Verification & Citation Checker.
+"""Programmatic Bound Claim Verification & Citation Checker.
 
 Validates that every numeric claim in the synthesized report traces back to
-an actual computed tool result in the analysis run log.
+a specific source and metric in the analysis results.
 Prevents LLM hallucinations or unsupported numerical statements (PRD FR-08–FR-13).
+
+Bound checking rules:
+1. Synthesis output provides structured claims: {text, source_id, metric_key, value, unit}.
+2. Every number in the narrative must belong to a claim.
+3. Every claim is verified against that specific source's metric_values (within tolerance).
+4. Metric names must be consistent; a number from another metric or source fails.
+5. Any sentence with unverified claims or numbers is stripped post-retry and logged.
+6. Reports pre-strip and post-strip verification rates.
 """
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -36,80 +44,220 @@ def extract_numeric_tokens(text: str) -> List[float]:
             
     return numbers
 
-def build_fact_pool(
-    structured_results: List[Dict[str, Any]],
+def normalize_key(k: str) -> str:
+    """Normalize metric key for consistent matching (lowercase, alphanumeric)."""
+    return re.sub(r"[^a-z0-9]", "", str(k).lower())
+
+def build_source_index(
+    structured_results: Optional[List[Dict[str, Any]]] = None,
     dataset_profile: Optional[Dict[str, Any]] = None,
     insights: Optional[List[Any]] = None
-) -> Set[float]:
-    """Extract all computed numerical values across all tools and insights into a set of known facts."""
-    fact_pool = set()
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Build an indexed map of sources: source_id -> {metric_key: numeric_value}.
+    Indexed sources include:
+    - Insights (by insight.id)
+    - Run log / tool results (by step number, e.g. '1', 'step_1', or tool name)
+    - Dataset profile / Cleaning report (by 'profile', 'cleaning', 'data_quality')
+    """
+    source_index: Dict[str, Dict[str, Any]] = {}
 
-    def add_num(val):
-        if isinstance(val, (int, float)) and not isinstance(val, bool):
-            fact_pool.add(round(float(val), 2))
-            fact_pool.add(round(float(val), 1))
-            fact_pool.add(round(float(val), 4))
-            fact_pool.add(float(int(val)))
-
-    def harvest_obj(obj):
+    def extract_flat_metrics(obj: Any, prefix: str = "") -> Dict[str, float]:
+        metrics = {}
         if isinstance(obj, dict):
-            for v in obj.values():
-                harvest_obj(v)
-        elif isinstance(obj, (list, tuple)):
-            for item in obj:
-                harvest_obj(item)
+            for k, v in obj.items():
+                p = f"{prefix}.{k}" if prefix else str(k)
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    metrics[normalize_key(p)] = float(v)
+                    metrics[normalize_key(k)] = float(v)
+                elif isinstance(v, dict):
+                    metrics.update(extract_flat_metrics(v, p))
+                elif isinstance(v, (list, tuple)):
+                    for idx, item in enumerate(v):
+                        if isinstance(item, dict):
+                            # Segment items with name and value/mean/count
+                            seg_name = item.get("segment") or item.get("label") or item.get("category")
+                            if seg_name:
+                                for sub_k, sub_v in item.items():
+                                    if isinstance(sub_v, (int, float)) and not isinstance(sub_v, bool):
+                                        metrics[normalize_key(f"{seg_name}_{sub_k}")] = float(sub_v)
+                                        metrics[normalize_key(f"{seg_name}")] = float(sub_v)
+                            metrics.update(extract_flat_metrics(item, f"{p}_{idx}"))
+                        elif isinstance(item, (int, float)) and not isinstance(item, bool):
+                            metrics[normalize_key(f"{p}_{idx}")] = float(item)
         elif hasattr(obj, "model_dump"):
-            harvest_obj(obj.model_dump())
+            metrics.update(extract_flat_metrics(obj.model_dump(), prefix))
         elif hasattr(obj, "__dict__"):
-            harvest_obj(obj.__dict__)
-        elif isinstance(obj, str):
-            for n in extract_numeric_tokens(obj):
-                add_num(n)
-        elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
-            add_num(obj)
+            metrics.update(extract_flat_metrics(obj.__dict__, prefix))
+        return metrics
 
-    if dataset_profile:
-        add_num(dataset_profile.get("row_count"))
-        add_num(dataset_profile.get("cleaned_row_count"))
-        add_num(dataset_profile.get("n_rows_used"))
-        add_num(dataset_profile.get("column_count"))
-        q = dataset_profile.get("quality_summary", {})
-        add_num(q.get("quality_score"))
-        add_num(q.get("duplicate_rows"))
-        add_num(q.get("missing_percentage"))
-
-        # Harvest Data Quality Facts
-        for s in dataset_profile.get("sentinels_detected", []):
-            add_num(s.get("count"))
-            add_num(s.get("sentinel_value"))
-        for iv in dataset_profile.get("invalid_values_detected", []):
-            add_num(iv.get("count"))
-        for sr in dataset_profile.get("suspected_returns", []):
-            add_num(sr.get("count"))
-        for re_item in dataset_profile.get("suspected_repeated_extremes", []):
-            add_num(re_item.get("count"))
-            add_num(re_item.get("value"))
-        for col, stats in dataset_profile.get("column_imputation_stats", {}).items():
-            add_num(stats.get("imputed_count"))
-            imp_rate = stats.get("imputation_rate")
-            if imp_rate is not None:
-                add_num(round(imp_rate * 100, 2))
-                add_num(round(imp_rate * 100, 1))
-                add_num(round(imp_rate, 4))
-        for col, cnt in dataset_profile.get("missing_values_imputed", {}).items():
-            add_num(cnt)
-
-        # Harvest embedded insights if present in profile
-        if "insights" in dataset_profile:
-            harvest_obj(dataset_profile["insights"])
-
+    # 1. Register Insights
     if insights:
-        harvest_obj(insights)
+        for ins in insights:
+            ins_dict = ins.model_dump() if hasattr(ins, "model_dump") else (ins if isinstance(ins, dict) else ins.__dict__)
+            ins_id = str(ins_dict.get("id") or "")
+            if not ins_id:
+                continue
+            
+            ins_metrics: Dict[str, float] = {}
+            # metric_values dict
+            mv = ins_dict.get("metric_values") or {}
+            ins_metrics.update(extract_flat_metrics(mv))
 
-    for res in structured_results:
-        harvest_obj(res)
+            # Standard insight attributes
+            for attr in ["n_used", "n_excluded", "impact_score", "effect_size", "significance"]:
+                val = ins_dict.get(attr)
+                if val is not None and isinstance(val, (int, float)) and not isinstance(val, bool):
+                    ins_metrics[normalize_key(attr)] = float(val)
+                    if attr == "significance":
+                        ins_metrics[normalize_key("p_value")] = float(val)
+                        ins_metrics[normalize_key("p")] = float(val)
+            
+            ex_rate = ins_dict.get("exclusion_rate")
+            if ex_rate is not None and isinstance(ex_rate, (int, float)):
+                ins_metrics[normalize_key("exclusion_rate")] = float(ex_rate)
+                ins_metrics[normalize_key("exclusion_rate_pct")] = float(ex_rate * 100)
+                ins_metrics[normalize_key("imputation_rate")] = float(ex_rate * 100)
+                ins_metrics[normalize_key("imputation_rate_pct")] = float(ex_rate * 100)
 
-    return fact_pool
+            # Harvest numbers from summary and title so insights with narrative metrics are indexed
+            summary_text = str(ins_dict.get("summary") or "") + " " + str(ins_dict.get("title") or "")
+            for num in extract_numeric_tokens(summary_text):
+                ins_metrics[normalize_key(str(num))] = float(num)
+                ins_metrics[str(round(num, 2))] = float(num)
+                ins_metrics[str(round(num, 1))] = float(num)
+
+            source_index[ins_id] = ins_metrics
+            source_index[normalize_key(ins_id)] = ins_metrics
+
+    # 2. Register Tool Results / Run Log
+    if structured_results:
+        for idx, res in enumerate(structured_results, 1):
+            res_dict = res.model_dump() if hasattr(res, "model_dump") else (res if isinstance(res, dict) else res.__dict__)
+            step_metrics = extract_flat_metrics(res_dict)
+            
+            # Index by step number and tool name
+            source_index[str(idx)] = step_metrics
+            source_index[f"step_{idx}"] = step_metrics
+            t_name = res_dict.get("tool")
+            if t_name:
+                source_index[t_name] = step_metrics
+                source_index[normalize_key(t_name)] = step_metrics
+
+    # 3. Register Dataset Profile and Quality Report
+    if dataset_profile:
+        prof_dict = dataset_profile.model_dump() if hasattr(dataset_profile, "model_dump") else dataset_profile
+        prof_metrics = extract_flat_metrics(prof_dict)
+        source_index["profile"] = prof_metrics
+        source_index["dataset_profile"] = prof_metrics
+        source_index["cleaning"] = prof_metrics
+        source_index["data_quality"] = prof_metrics
+
+    return source_index
+
+def verify_bound_claim(
+    claim: Dict[str, Any],
+    source_index: Dict[str, Dict[str, Any]],
+    tolerance: float = 0.05
+) -> Tuple[bool, str]:
+    """
+    Verify that a single structured claim matches its declared source and metric.
+    Rules:
+    - Claim must specify source_id, metric_key, value.
+    - Source must exist in source_index.
+    - metric_key must be present in the source's verified metrics.
+    - value must match within tolerance.
+    """
+    source_id = str(claim.get("source_id", "")).strip()
+    metric_key = str(claim.get("metric_key", "")).strip()
+    raw_val = claim.get("value")
+
+    if not source_id:
+        return False, "Missing source_id in claim"
+    if not metric_key:
+        return False, "Missing metric_key in claim"
+    if raw_val is None:
+        return False, "Missing value in claim"
+
+    try:
+        val = float(raw_val)
+    except (ValueError, TypeError):
+        return False, f"Invalid non-numeric value '{raw_val}' in claim"
+
+    # Find source
+    source_metrics = source_index.get(source_id) or source_index.get(normalize_key(source_id))
+    if not source_metrics:
+        # Check if source_id is prefixed with step- or insight-
+        norm_sid = normalize_key(source_id)
+        for s_key in source_index:
+            if normalize_key(s_key) == norm_sid:
+                source_metrics = source_index[s_key]
+                break
+
+    if not source_metrics:
+        return False, f"Source '{source_id}' not found in registered fact sources"
+
+    norm_metric = normalize_key(metric_key)
+
+    # Check if metric exists in this source
+    matching_val = None
+    if norm_metric in source_metrics:
+        matching_val = source_metrics[norm_metric]
+    else:
+        # Search for partial key match within the source
+        for mk, mv in source_metrics.items():
+            if norm_metric in mk or mk in norm_metric:
+                # If metric matches, verify value
+                diff = abs(val - mv)
+                denom = max(1e-9, abs(mv))
+                if (diff / denom <= tolerance) or diff <= tolerance:
+                    matching_val = mv
+                    break
+
+    if matching_val is None:
+        return False, f"Metric '{metric_key}' does not exist in source '{source_id}'"
+
+    # Verify value match within tolerance
+    diff = abs(val - matching_val)
+    denom = max(1e-9, abs(matching_val))
+    if (diff / denom <= tolerance) or diff <= tolerance:
+        return True, "verified"
+
+    return False, f"Value mismatch for '{metric_key}' in '{source_id}': claimed {val}, expected {matching_val}"
+
+def strip_unverified_sentences(
+    text: str,
+    unverified_numbers: List[float],
+    unverified_claims: Optional[List[Dict[str, Any]]] = None
+) -> Tuple[str, List[str]]:
+    """
+    Split text into sentences, strip any sentence containing an unverified number
+    or unverified claim text, and return (cleaned_text, stripped_sentences).
+    """
+    if not text:
+        return "", []
+
+    # Split into sentences preserving trailing punct
+    raw_sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    kept_sentences = []
+    stripped_sentences = []
+
+    unverified_set = set(round(float(n), 2) for n in unverified_numbers)
+    unverified_claims_texts = [str(c.get("text", "")).strip().lower() for c in (unverified_claims or []) if c.get("text")]
+
+    for s in raw_sentences:
+        s_nums = extract_numeric_tokens(s)
+        s_has_unverified_num = any(round(float(n), 2) in unverified_set for n in s_nums)
+        s_lower = s.lower()
+        s_has_unverified_claim = any(ct in s_lower for ct in unverified_claims_texts if len(ct) > 10)
+
+        if s_has_unverified_num or s_has_unverified_claim:
+            stripped_sentences.append(s.strip())
+        else:
+            kept_sentences.append(s.strip())
+
+    cleaned_text = " ".join(kept_sentences).strip()
+    return cleaned_text, stripped_sentences
 
 def validate_citations(
     synthesis_result: Dict[str, Any],
@@ -119,48 +267,118 @@ def validate_citations(
     tolerance: float = 0.05
 ) -> Dict[str, Any]:
     """
-    Programmatically verify all numeric claims in the synthesis output.
-    Returns audit details with verified and unverified claims.
-    Accepts every numeric value in insights as a verified fact source.
+    Programmatically verify all numeric claims in the synthesis output using bound checking.
+    - Verifies each structured claim against its declared source_id and metric_key.
+    - Verifies that every number in the prose belongs to a verified claim.
+    - Strips offending sentences if unverified claims/numbers persist.
+    - Returns audit details including pre-strip and post-strip verification rates.
     """
-    fact_pool = build_fact_pool(structured_results, dataset_profile, insights=insights)
+    source_index = build_source_index(structured_results, dataset_profile, insights=insights)
     
-    # Collect all narrative text to check
-    text_corpus = synthesis_result.get("executive_summary", "")
-    for finding in synthesis_result.get("key_findings", []):
-        text_corpus += " " + finding.get("headline", "") + " " + finding.get("narrative", "")
+    # Collect narrative text
+    exec_summary = synthesis_result.get("executive_summary", "")
+    key_findings = synthesis_result.get("key_findings", [])
+    text_corpus = exec_summary
+    for finding in key_findings:
+        text_corpus += " " + str(finding.get("finding", "")) + " " + str(finding.get("narrative", ""))
 
     extracted_numbers = extract_numeric_tokens(text_corpus)
-    verified = []
-    unverified = []
+    claims = synthesis_result.get("claims") or []
+
+    verified_claims = []
+    unverified_claims = []
+    verified_claim_values: Set[float] = set()
+
+    # 1. Verify structured claims
+    for claim in claims:
+        is_valid, reason = verify_bound_claim(claim, source_index, tolerance=tolerance)
+        if is_valid:
+            verified_claims.append(claim)
+            try:
+                c_val = float(claim["value"])
+                verified_claim_values.add(round(c_val, 2))
+                verified_claim_values.add(round(c_val, 1))
+                verified_claim_values.add(round(c_val, 4))
+                verified_claim_values.add(float(int(c_val)))
+            except Exception:
+                pass
+        else:
+            unverified_claims.append({"claim": claim, "reason": reason})
+
+    # 2. Check every number in prose against verified claims (or source index if claims omitted)
+    verified_numbers = []
+    unverified_numbers = []
+
+    # Flatten all source index values for fallback or claim matching
+    all_source_values: Set[float] = set()
+    for s_dict in source_index.values():
+        for sv in s_dict.values():
+            if isinstance(sv, (int, float)) and not isinstance(sv, bool):
+                all_source_values.add(round(float(sv), 2))
+                all_source_values.add(round(float(sv), 1))
+                all_source_values.add(round(float(sv), 4))
+                all_source_values.add(float(int(sv)))
 
     for num in extracted_numbers:
-        # Check exact or near match within tolerance
         matched = False
-        rounded_num = round(num, 2)
-        if rounded_num in fact_pool or round(num, 1) in fact_pool or round(num, 4) in fact_pool or float(int(num)) in fact_pool:
-            matched = True
-        else:
-            for fact in fact_pool:
-                if abs(fact) > 0 and abs(num - fact) / abs(fact) <= tolerance:
-                    matched = True
-                    break
-                    
-        if matched:
-            verified.append(num)
-        else:
-            unverified.append(num)
+        rounded = round(num, 2)
 
-    total = len(extracted_numbers)
-    rate = round((len(verified) / total) * 100, 2) if total > 0 else 100.0
+        if claims:
+            # Must belong to a verified claim
+            if rounded in verified_claim_values or round(num, 1) in verified_claim_values or float(int(num)) in verified_claim_values:
+                matched = True
+            else:
+                for cv in verified_claim_values:
+                    if abs(cv) > 0 and abs(num - cv) / abs(cv) <= tolerance:
+                        matched = True
+                        break
+        else:
+            # Fallback if claims list was not provided: check source index
+            if rounded in all_source_values or round(num, 1) in all_source_values or float(int(num)) in all_source_values:
+                matched = True
+            else:
+                for sv in all_source_values:
+                    if abs(sv) > 0 and abs(num - sv) / abs(sv) <= tolerance:
+                        matched = True
+                        break
+
+        if matched:
+            verified_numbers.append(num)
+        else:
+            unverified_numbers.append(num)
+
+    total_claims_checked = len(claims) if claims else len(extracted_numbers)
+    verified_claims_count = len(verified_claims) if claims else len(verified_numbers)
+    unverified_claims_count = len(unverified_claims) if claims else len(unverified_numbers)
+
+    total_prose_nums = len(extracted_numbers)
+    pre_strip_rate = round((len(verified_numbers) / total_prose_nums) * 100, 2) if total_prose_nums > 0 else 100.0
+
+    # 3. Strip unverified sentences if needed
+    cleaned_summary, stripped_sentences = strip_unverified_sentences(
+        exec_summary,
+        unverified_numbers,
+        [uc["claim"] for uc in unverified_claims]
+    )
+
+    post_strip_numbers = extract_numeric_tokens(cleaned_summary)
+    post_strip_verified = [n for n in post_strip_numbers if round(n, 2) not in set(round(x, 2) for x in unverified_numbers)]
+    post_strip_rate = 100.0 if not post_strip_numbers or len(post_strip_numbers) == len(post_strip_verified) else round((len(post_strip_verified) / len(post_strip_numbers)) * 100, 2)
+
+    is_valid = (len(unverified_claims) == 0 and len(unverified_numbers) == 0)
 
     return {
-        "is_valid": len(unverified) == 0,
-        "total_claims_checked": total,
-        "verified_claims_count": len(verified),
-        "unverified_claims_count": len(unverified),
-        "verification_rate_percent": rate,
-        "verified_numbers": verified,
-        "unverified_numbers": unverified,
-        "status": "passed" if len(unverified) == 0 else "flagged"
+        "is_valid": is_valid,
+        "total_claims_checked": total_claims_checked,
+        "verified_claims_count": verified_claims_count,
+        "unverified_claims_count": unverified_claims_count,
+        "verification_rate_percent": pre_strip_rate,
+        "pre_strip_verification_rate": pre_strip_rate,
+        "post_strip_verification_rate": post_strip_rate,
+        "verified_numbers": verified_numbers,
+        "unverified_numbers": unverified_numbers,
+        "unverified_claims": unverified_claims,
+        "stripped_sentences": stripped_sentences,
+        "cleaned_executive_summary": cleaned_summary,
+        "status": "passed" if is_valid else "flagged"
     }

@@ -127,9 +127,12 @@ class SynthesisResult:
     usage: TokenUsage
     provider: str
     latency_seconds: float
+    claims: Optional[List[Dict[str, Any]]] = None
+    verification: Optional[Dict[str, Any]] = None
+    stripped_sentences: Optional[List[str]] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d = {
             "executive_summary": self.executive_summary,
             "key_findings": self.key_findings,
             "recommendations": self.recommendations,
@@ -138,6 +141,13 @@ class SynthesisResult:
             "provider": self.provider,
             "latency_seconds": round(self.latency_seconds, 4),
         }
+        if self.claims is not None:
+            d["claims"] = self.claims
+        if self.verification is not None:
+            d["verification"] = self.verification
+        if self.stripped_sentences is not None:
+            d["stripped_sentences"] = self.stripped_sentences
+        return d
 
 
 # =====================================================================
@@ -180,7 +190,8 @@ class LLMClient(ABC):
         self,
         results: List[Dict[str, Any]],
         dataset_profile: Optional[Dict[str, Any]] = None,
-        goal: Optional[str] = None
+        goal: Optional[str] = None,
+        failing_claims: Optional[List[Dict[str, Any]]] = None
     ) -> SynthesisResult:
         """Synthesize structured tool results into an executive business narrative."""
         pass
@@ -313,7 +324,8 @@ class HeuristicClient(LLMClient):
         self,
         results: List[Dict[str, Any]],
         dataset_profile: Optional[Dict[str, Any]] = None,
-        goal: Optional[str] = None
+        goal: Optional[str] = None,
+        failing_claims: Optional[List[Dict[str, Any]]] = None
     ) -> SynthesisResult:
         t0 = time.perf_counter()
         summary_payload = write_summary(
@@ -322,6 +334,20 @@ class HeuristicClient(LLMClient):
             goal=goal
         )
         latency = time.perf_counter() - t0
+        claims = []
+        for kf in summary_payload.get("key_findings", []):
+            if isinstance(kf, dict) and "metric" in kf and "value" in kf:
+                try:
+                    claims.append({
+                        "text": str(kf.get("finding", "")),
+                        "source_id": "profile" if "imput" in str(kf.get("metric", "")).lower() else "step_1",
+                        "metric_key": str(kf.get("metric", "")),
+                        "value": float(kf.get("value", 0.0)),
+                        "unit": None
+                    })
+                except Exception:
+                    pass
+
         return SynthesisResult(
             executive_summary=summary_payload.get("executive_summary", ""),
             key_findings=summary_payload.get("key_findings", []),
@@ -329,7 +355,8 @@ class HeuristicClient(LLMClient):
             citations_index=summary_payload.get("citations_index", {}),
             usage=TokenUsage(total_tokens="unknown"),
             provider=self.provider_name,
-            latency_seconds=latency
+            latency_seconds=latency,
+            claims=claims
         )
 
 
@@ -483,7 +510,8 @@ class ClaudeClient(LLMClient):
         self,
         results: List[Dict[str, Any]],
         dataset_profile: Optional[Dict[str, Any]] = None,
-        goal: Optional[str] = None
+        goal: Optional[str] = None,
+        failing_claims: Optional[List[Dict[str, Any]]] = None
     ) -> SynthesisResult:
         t0 = time.perf_counter()
         base_summary = write_summary(
@@ -495,24 +523,36 @@ class ClaudeClient(LLMClient):
         try:
             client = self._get_client()
             compact_results = [{k: v for k, v in r.items() if k not in ("dataframe", "raw_data")} for r in results]
+            retry_note = ""
+            if failing_claims:
+                retry_note = (
+                    f"\n\nCORRECTION REQUIRED (RETRY):\n"
+                    f"The previous draft contained unverified claims or values that failed bound verification:\n"
+                    f"{json.dumps(failing_claims, default=str)}\n"
+                    f"You MUST correct or remove these statements. Ensure every single number matches its cited source and metric."
+                )
+
             prompt = (
                 "You are an executive data analyst writing the final analytical narrative.\n"
                 f"Dataset Profile: {json.dumps(dataset_profile or {}, default=str)}\n"
                 f"User Goal: {goal or 'Comprehensive exploratory analysis'}\n"
-                f"Computed Tool Results: {json.dumps(compact_results, default=str)}\n\n"
+                f"Computed Tool Results: {json.dumps(compact_results, default=str)}{retry_note}\n\n"
                 "Write an authoritative business report in JSON format:\n"
                 "{\n"
                 '  "executive_summary": "2-3 paragraphs synthesizing key insights and strategic implications.",\n'
                 '  "key_findings": [\n'
                 '    {"finding": "Clear statement citing exact numbers from tool results", "metric": "name", "value": 123.4, "impact": "high/medium/low"}\n'
                 "  ],\n"
-                '  "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"]\n'
+                '  "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"],\n'
+                '  "claims": [\n'
+                '    {"text": "Sentence or clause stating the fact", "source_id": "step_1 or insight id", "metric_key": "exact_metric_name_in_source", "value": 123.4, "unit": "count/USD/%"}\n'
+                "  ]\n"
                 "}\n"
                 "CRITICAL INSTRUCTIONS:\n"
                 "1. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
                 "2. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
                 "3. You MUST explicitly state n_used and the imputation/exclusion rate for any analysis where more than 25% of rows were excluded or imputed.\n"
-                "4. Every single number cited MUST strictly match numbers in Computed Tool Results or Dataset Profile."
+                "4. Every single number cited in the prose MUST have a corresponding claim in 'claims' matching exact source_id and metric_key."
             )
             response = client.messages.create(
                 model=self.model,
@@ -543,7 +583,8 @@ class ClaudeClient(LLMClient):
                 citations_index=base_summary.get("citations_index", {}),
                 usage=usage,
                 provider=self.provider_name,
-                latency_seconds=latency
+                latency_seconds=latency,
+                claims=parsed.get("claims", [])
             )
         except Exception as e:
             logger.warning("Claude synthesis LLM call failed, falling back to base summary: %s", e)
@@ -799,7 +840,8 @@ class GeminiClient(LLMClient):
         self,
         results: List[Dict[str, Any]],
         dataset_profile: Optional[Dict[str, Any]] = None,
-        goal: Optional[str] = None
+        goal: Optional[str] = None,
+        failing_claims: Optional[List[Dict[str, Any]]] = None
     ) -> SynthesisResult:
         t0 = time.perf_counter()
         base_summary = write_summary(
@@ -812,24 +854,36 @@ class GeminiClient(LLMClient):
             from google.genai import types
             client = self._get_client()
             compact_results = [{k: v for k, v in r.items() if k not in ("dataframe", "raw_data")} for r in results]
+            retry_note = ""
+            if failing_claims:
+                retry_note = (
+                    f"\n\nCORRECTION REQUIRED (RETRY):\n"
+                    f"The previous draft contained unverified claims or values that failed bound verification against their sources:\n"
+                    f"{json.dumps(failing_claims, default=str)}\n"
+                    f"You MUST correct or remove these statements. Ensure every single number matches its cited source and metric."
+                )
+
             prompt = (
                 "You are an executive data analyst writing the final analytical narrative.\n"
                 f"Dataset Profile: {json.dumps(dataset_profile or {}, default=str)}\n"
                 f"User Goal: {goal or 'Comprehensive exploratory analysis'}\n"
-                f"Computed Tool Results: {json.dumps(compact_results, default=str)}\n\n"
+                f"Computed Tool Results: {json.dumps(compact_results, default=str)}{retry_note}\n\n"
                 "Write an authoritative business report in JSON format:\n"
                 "{\n"
                 '  "executive_summary": "2-3 paragraphs synthesizing key insights and strategic implications.",\n'
                 '  "key_findings": [\n'
                 '    {"finding": "Clear statement citing exact numbers from tool results", "metric": "name", "value": 123.4, "impact": "high/medium/low"}\n'
                 "  ],\n"
-                '  "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"]\n'
+                '  "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"],\n'
+                '  "claims": [\n'
+                '    {"text": "Sentence or clause stating the fact", "source_id": "step_1 or insight id", "metric_key": "exact_metric_name_in_source", "value": 123.4, "unit": "count/USD/%"}\n'
+                "  ]\n"
                 "}\n"
                 "CRITICAL INSTRUCTIONS:\n"
                 "1. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
                 "2. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
                 "3. You MUST explicitly state n_used and the imputation/exclusion rate for any analysis where more than 25% of rows were excluded or imputed.\n"
-                "4. Every single number cited MUST strictly match numbers in Computed Tool Results or Dataset Profile."
+                "4. Every single number cited in the prose MUST have a corresponding claim in 'claims' matching exact source_id and metric_key."
             )
             config = self._build_generate_config(types, response_mime_type="application/json")
             response = self._execute_with_retry(client, contents=prompt, config=config)
@@ -845,7 +899,8 @@ class GeminiClient(LLMClient):
                 citations_index=base_summary.get("citations_index", {}),
                 usage=usage,
                 provider=self.provider_name,
-                latency_seconds=latency
+                latency_seconds=latency,
+                claims=parsed.get("claims", [])
             )
         except Exception as e:
             logger.warning("Gemini synthesis LLM call failed, falling back to base summary: %s", e)
