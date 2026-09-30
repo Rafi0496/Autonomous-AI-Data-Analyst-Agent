@@ -686,8 +686,8 @@ class ClaudeClient(LLMClient):
                 "CRITICAL INSTRUCTIONS:\n"
                 "1. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
                 "2. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
-                "3. You MUST explicitly state n_used and the imputation/exclusion rate for any analysis where more than 25% of rows were excluded or imputed.\n"
-                "4. Every single number cited in the prose MUST have a corresponding claim in 'claims' matching exact source_id and metric_key."
+                "3. If citing sample size or exclusion/imputation rate, cite the exact numbers from the tool results (e.g. n_used, n_excluded_imputed, exclusion_rate_percent). DO NOT compute custom arithmetic percentages that are not in the tool results.\n"
+                "4. EVERY SINGLE NUMBER cited in 'executive_summary' or 'key_findings' MUST belong to a declared claim in 'claims' matching exact source_id and metric_key. If a number is not in 'claims', do NOT write it in the narrative."
             )
             response = client.messages.create(
                 model=self.model,
@@ -1096,8 +1096,8 @@ class GeminiClient(LLMClient):
                 "CRITICAL INSTRUCTIONS:\n"
                 "1. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
                 "2. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
-                "3. You MUST explicitly state n_used and the imputation/exclusion rate for any analysis where more than 25% of rows were excluded or imputed.\n"
-                "4. Every single number cited in the prose MUST have a corresponding claim in 'claims' matching exact source_id and metric_key."
+                "3. If citing sample size or exclusion/imputation rate, cite the exact numbers from the tool results (e.g. n_used, n_excluded_imputed, exclusion_rate_percent). DO NOT compute custom arithmetic percentages that are not in the tool results.\n"
+                "4. EVERY SINGLE NUMBER cited in 'executive_summary' or 'key_findings' MUST belong to a declared claim in 'claims' matching exact source_id and metric_key. If a number is not in 'claims', do NOT write it in the narrative."
             )
             config = self._build_generate_config(types, response_mime_type="application/json")
             response = self._execute_with_retry(client, contents=prompt, config=config)

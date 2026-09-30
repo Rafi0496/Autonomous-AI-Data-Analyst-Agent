@@ -25,6 +25,10 @@ def extract_numeric_tokens(text: str) -> List[float]:
     text_clean = re.sub(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b", " ", text_clean)
     # 2. Strip hyphenated codes/IDs like TXN-1003, CUST-102
     text_clean = re.sub(r"\b[A-Za-z0-9]+-\d+\b", " ", text_clean)
+    # 3. Strip bullet numbering like '1. ', '2) ', '(1) ', '[2] ' at start of lines or sentences
+    text_clean = re.sub(r"(?:^|(?<=[.!?\n]))\s*\(?\d+\)?[.\-:]\s+", " ", text_clean)
+    # 4. Strip step / stage / source references like 'step 1', 'round 2', 'source 1'
+    text_clean = re.sub(r"\b(?:step|round|stage|source|insight|item|phase)\s+\d+\b", " ", text_clean, flags=re.IGNORECASE)
 
     # Regex matching numbers with optional decimals, commas, negatives, currency, or percentages
     pattern = r"[-+]?\$?\b(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?%?\b"
@@ -145,6 +149,19 @@ def build_source_index(
             res_dict = res.model_dump() if hasattr(res, "model_dump") else (res if isinstance(res, dict) else res.__dict__)
             step_metrics = extract_flat_metrics(res_dict)
             
+            tot = step_metrics.get("total_records")
+            if tot and tot > 0:
+                for k, v in list(step_metrics.items()):
+                    if ("n_excluded" in k or "excluded" in k) and isinstance(v, (int, float)) and v >= 0:
+                        pct = round((float(v) / float(tot)) * 100, 2)
+                        rate = round(float(v) / float(tot), 4)
+                        step_metrics[normalize_key(f"{k}_rate")] = rate
+                        step_metrics[normalize_key(f"{k}_percent")] = pct
+                        step_metrics[normalize_key(f"{k}_pct")] = pct
+                        step_metrics[normalize_key("exclusion_rate")] = rate
+                        step_metrics[normalize_key("exclusion_rate_percent")] = pct
+                        step_metrics[normalize_key("imputation_rate_percent")] = pct
+
             # Index by step number and tool name
             source_index[str(idx)] = step_metrics
             source_index[f"step_{idx}"] = step_metrics

@@ -301,9 +301,12 @@ class PlanActReflectOrchestrator:
 
         # Retry once if unverified claims/numbers exist and LLM is configured
         if not verification["is_valid"] and self.llm_client.provider_name != "heuristic":
-            failing_claims = verification["unverified_claims"]
-            if not failing_claims and verification["unverified_numbers"]:
-                failing_claims = [{"unverified_value": n} for n in verification["unverified_numbers"]]
+            failing_claims = list(verification.get("unverified_claims", []))
+            for un in verification.get("unverified_numbers", []):
+                failing_claims.append({
+                    "unverified_number": un,
+                    "instruction": f"Remove any sentence containing {un} or provide an exact matching claim in 'claims'."
+                })
             retry_start = time.perf_counter()
             retry_res = self.llm_client.synthesize(
                 results=executed_results,
