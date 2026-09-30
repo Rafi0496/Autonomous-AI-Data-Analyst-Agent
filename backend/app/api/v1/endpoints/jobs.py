@@ -20,6 +20,8 @@ class JobStatusResponse(BaseModel):
     job_id: str
     dataset_id: str
     status: str
+    phase: str = "queued"
+    current_step: int = 0
     current_step_name: str
     total_steps: int
     step_limit: int
@@ -125,6 +127,8 @@ def get_job_status(job_id: str, db: Session = Depends(get_db)):
         job_id=job.id,
         dataset_id=job.dataset_id,
         status=job.status,
+        phase=job.phase or "queued",
+        current_step=job.current_step or 0,
         current_step_name=job.current_step_name,
         total_steps=job.total_steps or 0,
         step_limit=job.step_limit or 5,

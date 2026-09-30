@@ -25,8 +25,22 @@ def get_db():
         db.close()
 
 def init_db():
-    """Initialize all tables defined in models."""
+    """Initialize all tables defined in models and ensure new columns exist."""
+    from sqlalchemy import text
     import backend.app.models.dataset  # ensure models are loaded
     import backend.app.models.user
     import backend.app.models.job
     Base.metadata.create_all(bind=engine)
+    
+    with engine.connect() as conn:
+        try:
+            res = conn.execute(text("PRAGMA table_info(analysis_jobs)")).fetchall()
+            existing_cols = {row[1] for row in res}
+            if existing_cols:
+                if "current_step" not in existing_cols:
+                    conn.execute(text("ALTER TABLE analysis_jobs ADD COLUMN current_step INTEGER DEFAULT 0"))
+                if "phase" not in existing_cols:
+                    conn.execute(text("ALTER TABLE analysis_jobs ADD COLUMN phase VARCHAR DEFAULT 'queued'"))
+                conn.commit()
+        except Exception:
+            pass

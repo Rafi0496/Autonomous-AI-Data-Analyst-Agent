@@ -13,13 +13,15 @@ def execute_job_synchronously(
     token_budget: int = 15000
 ) -> Dict[str, Any]:
     """Helper used both by Celery workers and FastAPI BackgroundTasks fallback."""
-    def progress_callback(step_name: str, step_index: int):
+    def progress_callback(step_name: str, step_index: int, phase: str = "execution"):
         db = SessionLocal()
         try:
             job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
             if job:
                 job.current_step_name = step_name
-                job.total_steps = step_index
+                job.current_step = step_index
+                job.total_steps = max(job.total_steps or 0, step_index)
+                job.phase = phase
                 db.commit()
         finally:
             db.close()

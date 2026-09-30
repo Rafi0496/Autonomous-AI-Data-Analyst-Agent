@@ -74,10 +74,15 @@ class PlanActReflectOrchestrator:
             for idx, tc in enumerate(plan_res.tool_calls)
         ]
 
-    def _emit_progress(self, message: str, step_index: int = 0):
+    def _emit_progress(self, message: str, step_index: int = 0, phase: str = "execution"):
         if self.progress_callback:
             try:
-                self.progress_callback(message, step_index)
+                self.progress_callback(message, step_index, phase)
+            except TypeError:
+                try:
+                    self.progress_callback(message, step_index)
+                except Exception:
+                    pass
             except Exception:
                 pass
 
@@ -106,11 +111,13 @@ class PlanActReflectOrchestrator:
             job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
             if job:
                 job.status = "running"
-                job.current_step_name = "profiling dataset"
+                job.phase = "profiling"
+                job.current_step = 0
+                job.current_step_name = "Profiling dataset"
                 db.commit()
 
         # Step 0: Ensure dataset is profiled
-        self._emit_progress("Profiling dataset structure and quality...", 0)
+        self._emit_progress("Profiling dataset structure and quality...", 0, phase="profiling")
         df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
         profile_obj = profile_dataset(df, dataset_id=dataset_id)
         profile_dict = profile_obj.model_dump()
@@ -128,7 +135,13 @@ class PlanActReflectOrchestrator:
             profile_dict["missing_values_imputed"] = cleaning_report.get("missing_values_imputed", {})
 
         # Step 1: PLAN (Provider-agnostic via LLMClient)
-        self._emit_progress(f"Step 0/{self.max_steps}: Initial Plan (calling LLM {self.llm_client.provider_name})...", 0)
+        if job:
+            job.phase = "planning"
+            job.current_step = 0
+            job.current_step_name = f"Planning analysis via {self.llm_client.provider_name}"
+            db.commit()
+
+        self._emit_progress(f"Step 0/{self.max_steps}: Initial Plan (calling LLM {self.llm_client.provider_name})...", 0, phase="planning")
         plan_result = self.llm_client.plan(
             profile=profile_dict,
             goal=goal,
@@ -178,8 +191,10 @@ class PlanActReflectOrchestrator:
             # Ensure dataset_id is correct
             args["dataset_id"] = dataset_id
 
-            self._emit_progress(f"Step {self.step_count}/{self.max_steps}: {tool_name}...", self.step_count)
+            self._emit_progress(f"Step {self.step_count}/{self.max_steps}: {tool_name}...", self.step_count, phase="execution")
             if job:
+                job.phase = "execution"
+                job.current_step = self.step_count
                 job.current_step_name = f"Step {self.step_count}: {tool_name}"
                 job.total_steps = self.step_count
                 db.commit()
@@ -208,7 +223,10 @@ class PlanActReflectOrchestrator:
 
             # REFLECT: Merged dynamic observation & bounded follow-up (only when queue is empty)
             if not pending_plan and self.step_count < self.max_steps:
-                self._emit_progress(f"Step {self.step_count}/{self.max_steps}: Assessing findings & planning next action (calling LLM...)", self.step_count)
+                self._emit_progress(f"Step {self.step_count}/{self.max_steps}: Assessing findings & planning next action (calling LLM...)", self.step_count, phase="reflection")
+                if job:
+                    job.phase = "reflection"
+                    db.commit()
                 try:
                     reflect_res = self.llm_client.reflect(
                         step_result=tool_output,
@@ -238,8 +256,10 @@ class PlanActReflectOrchestrator:
         profile_dict["insights"] = insights
 
         # Step 5: SYNTHESIZE (via LLMClient)
-        self._emit_progress(f"Step {self.step_count + 1}/{self.max_steps + 1}: Synthesizing executive report (calling LLM...)", self.step_count + 1)
+        self._emit_progress(f"Step {self.step_count + 1}/{self.max_steps + 1}: Synthesizing executive report (calling LLM...)", self.step_count + 1, phase="synthesis")
         if job:
+            job.phase = "synthesis"
+            job.current_step = self.step_count + 1
             job.current_step_name = "Synthesizing executive report"
             db.commit()
 
@@ -327,6 +347,8 @@ class PlanActReflectOrchestrator:
         # Update DB Job
         if job:
             job.status = final_status
+            job.phase = "completed" if not self.budget_tripped else "budget_tripped"
+            job.current_step = self.step_count
             job.current_step_name = "Completed"
             job.total_steps = self.step_count
             job.tokens_used = self.tokens_used

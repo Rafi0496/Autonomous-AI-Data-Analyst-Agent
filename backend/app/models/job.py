@@ -13,6 +13,8 @@ class AnalysisJob(Base):
     dataset_id = Column(String(36), nullable=False, index=True)
     status = Column(String(50), nullable=False, default="pending")  # pending, running, completed, budget_tripped, failed
     current_step_name = Column(String(100), nullable=False, default="queued")
+    current_step = Column(Integer, default=0)
+    phase = Column(String(50), nullable=False, default="queued")
     goal = Column(String(500), nullable=True)
     
     # Budgets and Resource Tracking

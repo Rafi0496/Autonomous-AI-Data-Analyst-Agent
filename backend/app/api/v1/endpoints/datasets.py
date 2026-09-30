@@ -189,3 +189,24 @@ def get_dataset_preview(
         "columns": list(df.columns),
         "rows": sample_records
     }
+
+@router.get("/{dataset_id}/cleaning-report")
+def get_dataset_cleaning_report_endpoint(dataset_id: str, db: Session = Depends(get_db)):
+    """Retrieve full cleaning report (sentinels, invalid values, returns, imputation)."""
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset with ID {dataset_id} not found."
+        )
+    summary = dataset.get_cleaning_summary()
+    if not summary:
+        import json
+        report_file = settings.PROCESSED_DIR / f"{dataset_id}_cleaned_cleaning_report.json"
+        if report_file.exists():
+            try:
+                with open(report_file, "r", encoding="utf-8") as f:
+                    summary = json.load(f)
+            except Exception:
+                pass
+    return summary or {}

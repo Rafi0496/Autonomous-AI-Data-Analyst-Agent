@@ -1,7 +1,9 @@
+"""Upload & Profiling page with Data Cleaning Diagnostics and Analysis Dispatch."""
 import reflex as rx
 from frontend.components.layout import app_layout
 from frontend.components.stats_card import stat_card
 from frontend.state import AppState
+
 
 def sample_dataset_card(title: str, description: str, filename: str, icon_name: str) -> rx.Component:
     return rx.box(
@@ -37,6 +39,7 @@ def sample_dataset_card(title: str, description: str, filename: str, icon_name: 
         transition="all 0.2s ease",
         width="100%"
     )
+
 
 def upload_zone() -> rx.Component:
     return rx.box(
@@ -108,8 +111,286 @@ def upload_zone() -> rx.Component:
         width="100%"
     )
 
+
+def cleaning_report_panel() -> rx.Component:
+    """Displays data cleaning diagnostics: sentinels, invalid values, returns, imputation."""
+    return rx.box(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(tag="shield-check", size=20, color="#10b981"),
+                    padding="0.4rem",
+                    border_radius="0.4rem",
+                    background_color="rgba(16, 185, 129, 0.15)"
+                ),
+                rx.vstack(
+                    rx.text("Data Cleaning & Quality Diagnostics", font_weight="700", font_size="1.1rem", color="#ffffff"),
+                    rx.text("Audit of detected placeholders, invalid domain bounds, returns, and deterministic imputation.", font_size="0.8rem", color="#94a3b8"),
+                    spacing="0",
+                    align_items="flex-start"
+                ),
+                spacing="3",
+                align_items="center",
+                width="100%"
+            ),
+            rx.divider(border_color="rgba(255, 255, 255, 0.08)"),
+
+            # 4 Summary Badges
+            rx.grid(
+                rx.box(
+                    rx.vstack(
+                        rx.text("Placeholder Sentinels", font_size="0.75rem", color="#94a3b8"),
+                        rx.text(f"{AppState.sentinels_list.length()} detected", font_weight="700", font_size="1rem", color="#ef4444"),
+                        spacing="1"
+                    ),
+                    padding="0.75rem",
+                    border_radius="0.5rem",
+                    background_color="rgba(239, 68, 68, 0.08)",
+                    border="1px solid rgba(239, 68, 68, 0.2)"
+                ),
+                rx.box(
+                    rx.vstack(
+                        rx.text("Domain Invalids", font_size="0.75rem", color="#94a3b8"),
+                        rx.text(f"{AppState.invalid_values_list.length()} detected", font_weight="700", font_size="1rem", color="#f59e0b"),
+                        spacing="1"
+                    ),
+                    padding="0.75rem",
+                    border_radius="0.5rem",
+                    background_color="rgba(245, 158, 11, 0.08)",
+                    border="1px solid rgba(245, 158, 11, 0.2)"
+                ),
+                rx.box(
+                    rx.vstack(
+                        rx.text("Suspected Returns", font_size="0.75rem", color="#94a3b8"),
+                        rx.text(f"{AppState.suspected_returns_list.length()} kept", font_weight="700", font_size="1rem", color="#06b6d4"),
+                        spacing="1"
+                    ),
+                    padding="0.75rem",
+                    border_radius="0.5rem",
+                    background_color="rgba(6, 182, 212, 0.08)",
+                    border="1px solid rgba(6, 182, 212, 0.2)"
+                ),
+                rx.box(
+                    rx.vstack(
+                        rx.text("Imputed Features", font_size="0.75rem", color="#94a3b8"),
+                        rx.text(f"{AppState.imputation_stats_list.length()} columns", font_weight="700", font_size="1rem", color="#818cf8"),
+                        spacing="1"
+                    ),
+                    padding="0.75rem",
+                    border_radius="0.5rem",
+                    background_color="rgba(99, 102, 241, 0.08)",
+                    border="1px solid rgba(99, 102, 241, 0.2)"
+                ),
+                columns=rx.breakpoints(initial="2", md="4"),
+                spacing="3",
+                width="100%"
+            ),
+
+            # Sentinels Table (if any)
+            rx.cond(
+                AppState.sentinels_list.length() > 0,
+                rx.box(
+                    rx.vstack(
+                        rx.text("Sanitized Placeholder Sentinels (Auto-converted to NaN & Imputed)", font_size="0.85rem", font_weight="600", color="#f87171"),
+                        rx.table.root(
+                            rx.table.header(
+                                rx.table.row(
+                                    rx.table.column_header_cell("Column"),
+                                    rx.table.column_header_cell("Placeholder Value"),
+                                    rx.table.column_header_cell("Occurrences"),
+                                    rx.table.column_header_cell("Action")
+                                )
+                            ),
+                            rx.table.body(
+                                rx.foreach(
+                                    AppState.sentinels_list,
+                                    lambda s: rx.table.row(
+                                        rx.table.cell(rx.text(s["column"], font_weight="600")),
+                                        rx.table.cell(rx.badge(s["value"], color_scheme="red")),
+                                        rx.table.cell(f"{s['count']} rows"),
+                                        rx.table.cell(rx.badge("Converted to NaN & Imputed", color_scheme="red", variant="soft"))
+                                    )
+                                )
+                            ),
+                            variant="surface",
+                            size="1",
+                            width="100%"
+                        ),
+                        spacing="2",
+                        width="100%"
+                    ),
+                    padding="1rem",
+                    border_radius="0.5rem",
+                    background_color="rgba(15, 23, 42, 0.4)",
+                    border="1px solid rgba(255, 255, 255, 0.06)",
+                    width="100%"
+                )
+            ),
+
+            # Suspected Returns & Extremes (if any)
+            rx.cond(
+                AppState.suspected_returns_list.length() > 0,
+                rx.box(
+                    rx.vstack(
+                        rx.text("Suspected Returns & Valid Extreme Values (Preserved in Dataset)", font_size="0.85rem", font_weight="600", color="#38bdf8"),
+                        rx.table.root(
+                            rx.table.header(
+                                rx.table.row(
+                                    rx.table.column_header_cell("Column"),
+                                    rx.table.column_header_cell("Pattern"),
+                                    rx.table.column_header_cell("Count"),
+                                    rx.table.column_header_cell("Treatment")
+                                )
+                            ),
+                            rx.table.body(
+                                rx.foreach(
+                                    AppState.suspected_returns_list,
+                                    lambda sr: rx.table.row(
+                                        rx.table.cell(rx.text(sr["column"], font_weight="600")),
+                                        rx.table.cell("Negative values in quantity/count"),
+                                        rx.table.cell(f"{sr['count']} rows"),
+                                        rx.table.cell(rx.badge("Kept (Suspected Returns)", color_scheme="cyan", variant="soft"))
+                                    )
+                                )
+                            ),
+                            variant="surface",
+                            size="1",
+                            width="100%"
+                        ),
+                        spacing="2",
+                        width="100%"
+                    ),
+                    padding="1rem",
+                    border_radius="0.5rem",
+                    background_color="rgba(15, 23, 42, 0.4)",
+                    border="1px solid rgba(255, 255, 255, 0.06)",
+                    width="100%"
+                )
+            ),
+
+            # Imputation Rates Table
+            rx.cond(
+                AppState.imputation_stats_list.length() > 0,
+                rx.box(
+                    rx.vstack(
+                        rx.text("Deterministic Imputation Rates by Column", font_size="0.85rem", font_weight="600", color="#a5b4fc"),
+                        rx.table.root(
+                            rx.table.header(
+                                rx.table.row(
+                                    rx.table.column_header_cell("Column"),
+                                    rx.table.column_header_cell("Imputation Rate"),
+                                    rx.table.column_header_cell("Rows Imputed"),
+                                    rx.table.column_header_cell("Strategy")
+                                )
+                            ),
+                            rx.table.body(
+                                rx.foreach(
+                                    AppState.imputation_stats_list,
+                                    lambda imp: rx.table.row(
+                                        rx.table.cell(rx.text(imp["column"], font_weight="600")),
+                                        rx.table.cell(rx.badge(imp["rate"], color_scheme="amber", variant="surface")),
+                                        rx.table.cell(rx.text(imp["count"].to_string(), " rows")),
+                                        rx.table.cell(rx.badge(imp["strategy"], color_scheme="gray", variant="soft"))
+                                    )
+                                )
+                            ),
+                            variant="surface",
+                            size="1",
+                            width="100%"
+                        ),
+                        spacing="2",
+                        width="100%"
+                    ),
+                    padding="1rem",
+                    border_radius="0.5rem",
+                    background_color="rgba(15, 23, 42, 0.4)",
+                    border="1px solid rgba(255, 255, 255, 0.06)",
+                    width="100%"
+                )
+            ),
+
+            spacing="4",
+            width="100%"
+        ),
+        padding="1.5rem",
+        border_radius="0.75rem",
+        background_color="rgba(15, 23, 42, 0.6)",
+        border="1px solid rgba(255, 255, 255, 0.08)",
+        width="100%"
+    )
+
+
+def start_analysis_dispatch_panel() -> rx.Component:
+    """Prominent launch panel to start autonomous analysis."""
+    return rx.box(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(tag="bot", size=24, color="#818cf8"),
+                    padding="0.5rem",
+                    border_radius="0.5rem",
+                    background_color="rgba(99, 102, 241, 0.2)"
+                ),
+                rx.vstack(
+                    rx.text("Launch Autonomous Analysis Agent", font_size="1.2rem", font_weight="700", color="#ffffff"),
+                    rx.text("Dispatches the multi-step Plan-Act-Reflect orchestrator with statistical testing, insights, and citation audits.", font_size="0.825rem", color="#94a3b8"),
+                    spacing="0",
+                    align_items="flex-start"
+                ),
+                spacing="3",
+                align_items="center",
+                width="100%"
+            ),
+            rx.divider(border_color="rgba(255, 255, 255, 0.08)"),
+            
+            rx.vstack(
+                rx.text("Analysis Objective / Goal", font_size="0.85rem", font_weight="600", color="#cbd5e1"),
+                rx.input(
+                    value=AppState.analysis_goal,
+                    on_change=AppState.set_analysis_goal,
+                    size="3",
+                    width="100%",
+                    variant="surface"
+                ),
+                rx.text("Guide the agent or leave default for comprehensive discovery across all dimensions.", font_size="0.75rem", color="#64748b"),
+                spacing="1",
+                align_items="flex-start",
+                width="100%"
+            ),
+
+            rx.hstack(
+                rx.button(
+                    rx.hstack(
+                        rx.icon(tag="play", size=18),
+                        rx.text("Start Analysis", font_weight="700"),
+                        spacing="2",
+                        align_items="center"
+                    ),
+                    size="3",
+                    variant="solid",
+                    color_scheme="indigo",
+                    is_loading=AppState.is_analyzing,
+                    on_click=AppState.start_analysis
+                ),
+                rx.badge(f"Active Provider: {AppState.active_provider.upper()} ({AppState.active_model})", color_scheme="indigo", variant="surface", size="2"),
+                spacing="3",
+                align_items="center",
+                width="100%",
+                padding_top="0.5rem"
+            ),
+            spacing="4",
+            width="100%"
+        ),
+        padding="1.5rem",
+        border_radius="0.75rem",
+        background_color="rgba(99, 102, 241, 0.08)",
+        border="1px solid rgba(99, 102, 241, 0.25)",
+        width="100%"
+    )
+
+
 def profile_results_view() -> rx.Component:
-    """Data profile results view driven by AppState."""
+    """Full profile, cleaning report, and launch controls for active dataset."""
     return rx.vstack(
         # Action Toolbar
         rx.hstack(
@@ -124,7 +405,7 @@ def profile_results_view() -> rx.Component:
                 rx.button(
                     rx.hstack(
                         rx.icon(tag="sparkles", size=16),
-                        rx.text("Run Data Cleaning"),
+                        rx.text("Clean Data"),
                         spacing="2",
                         align_items="center"
                     ),
@@ -151,10 +432,13 @@ def profile_results_view() -> rx.Component:
             ),
             width="100%",
             align_items="center",
-            padding_bottom="1rem",
+            padding_bottom="0.5rem",
             border_bottom="1px solid rgba(255, 255, 255, 0.08)"
         ),
         
+        # Start Analysis Button Panel
+        start_analysis_dispatch_panel(),
+
         # Metric Cards Grid
         rx.grid(
             stat_card("Data Quality Score", f"{AppState.quality_score}/100", "Composite health score", "shield-check", "#10b981"),
@@ -165,6 +449,9 @@ def profile_results_view() -> rx.Component:
             spacing="4",
             width="100%"
         ),
+
+        # Cleaning Report Panel
+        cleaning_report_panel(),
         
         # Warnings & Quality Feedback
         rx.cond(
@@ -172,7 +459,7 @@ def profile_results_view() -> rx.Component:
             rx.box(
                 rx.vstack(
                     rx.hstack(
-                        rx.icon(tag="alert-triangle", size=18, color="#f59e0b"),
+                        rx.icon(tag="triangle-alert", size=18, color="#f59e0b"),
                         rx.text("Data Quality Alerts & Observations", font_weight="600", font_size="0.9rem", color="#fbbf24"),
                         spacing="2",
                         align_items="center"
@@ -254,6 +541,7 @@ def profile_results_view() -> rx.Component:
         width="100%"
     )
 
+
 def upload_page() -> rx.Component:
     AppState.active_tab = "upload"
     return app_layout(
@@ -274,7 +562,7 @@ def upload_page() -> rx.Component:
                 AppState.error_message != "",
                 rx.callout(
                     AppState.error_message,
-                    icon="alert-circle",
+                    icon="circle-alert",
                     color_scheme="red",
                     variant="soft",
                     width="100%"
@@ -284,7 +572,7 @@ def upload_page() -> rx.Component:
             # File Upload Zone
             upload_zone(),
             
-            # Benchmark Sample Datasets Section (Phase 1 §8.1)
+            # Benchmark Sample Datasets Section
             rx.box(
                 rx.vstack(
                     rx.text("QUICK TEST BENCHMARK DATASETS (PLAN §8.1)", font_size="0.75rem", font_weight="700", color="#818cf8", letter_spacing="0.06em"),
@@ -319,7 +607,7 @@ def upload_page() -> rx.Component:
                 padding_y="0.5rem"
             ),
             
-            # Profile Results View (Shown if dataset selected)
+            # Profile & Cleaning Results View
             rx.cond(
                 AppState.selected_dataset_id != "",
                 profile_results_view(),

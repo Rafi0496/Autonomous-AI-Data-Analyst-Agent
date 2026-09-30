@@ -1,3 +1,4 @@
+"""System Configuration & Settings page for Autonomous AI Data Analyst Agent (Milestone 3)."""
 import reflex as rx
 from frontend.components.layout import app_layout
 from frontend.state import AppState
@@ -9,42 +10,116 @@ def settings_page() -> rx.Component:
         rx.vstack(
             rx.box(
                 rx.vstack(
-                    rx.text("LLM & Agent Configuration", font_size="1.1rem", font_weight="700", color="#ffffff"),
-                    rx.text("Configure API keys, budget guardrails, and orchestration parameters.", font_size="0.85rem", color="#94a3b8"),
+                    rx.hstack(
+                        rx.icon(tag="sliders-horizontal", size=20, color="#818cf8"),
+                        rx.text("Active LLM & Execution Configuration", font_size="1.1rem", font_weight="700", color="#ffffff"),
+                        spacing="2",
+                        align_items="center"
+                    ),
+                    rx.text(
+                        "Runtime orchestration parameters, active provider models, and safety budget guardrails.",
+                        font_size="0.85rem",
+                        color="#94a3b8"
+                    ),
                     rx.divider(border_color="rgba(255, 255, 255, 0.08)"),
                     
-                    rx.vstack(
-                        rx.text("Anthropic Claude API Key", font_size="0.875rem", font_weight="600", color="#f1f5f9"),
-                        rx.input(placeholder="sk-ant-api03-...", type="password", size="3", width="100%", variant="surface"),
-                        rx.text("Used for Plan-Act-Reflect autonomous loop and natural language synthesis.", font_size="0.75rem", color="#64748b"),
-                        spacing="1",
-                        align_items="flex-start",
+                    # LLM Provider info
+                    rx.grid(
+                        rx.box(
+                            rx.vstack(
+                                rx.text("Active LLM Provider", font_size="0.8rem", font_weight="600", color="#94a3b8"),
+                                rx.hstack(
+                                    rx.badge(AppState.active_provider.upper(), color_scheme="indigo", variant="solid", size="2"),
+                                    rx.text("Provider-Agnostic Interface", font_size="0.75rem", color="#64748b"),
+                                    spacing="2",
+                                    align_items="center"
+                                ),
+                                rx.text("Configured via LLM_PROVIDER in .env (gemini | claude | heuristic).", font_size="0.75rem", color="#64748b"),
+                                spacing="2",
+                                align_items="flex-start"
+                            ),
+                            padding="1.25rem",
+                            border_radius="0.5rem",
+                            background_color="rgba(30, 41, 59, 0.4)",
+                            border="1px solid rgba(255, 255, 255, 0.05)"
+                        ),
+                        rx.box(
+                            rx.vstack(
+                                rx.text("Active Model", font_size="0.8rem", font_weight="600", color="#94a3b8"),
+                                rx.badge(AppState.active_model, color_scheme="blue", variant="surface", size="2"),
+                                rx.text("Used for Plan-Act-Reflect orchestration and synthesis.", font_size="0.75rem", color="#64748b"),
+                                spacing="2",
+                                align_items="flex-start"
+                            ),
+                            padding="1.25rem",
+                            border_radius="0.5rem",
+                            background_color="rgba(30, 41, 59, 0.4)",
+                            border="1px solid rgba(255, 255, 255, 0.05)"
+                        ),
+                        columns=rx.breakpoints(initial="1", sm="2"),
+                        spacing="3",
                         width="100%"
                     ),
 
-                    rx.vstack(
-                        rx.text("Per-Session Token Budget Cap", font_size="0.875rem", font_weight="600", color="#f1f5f9"),
-                        rx.input(placeholder="50,000 tokens ($0.25 cap)", default_value="50000", size="3", width="100%", variant="surface"),
-                        rx.text("Enforces strict safety guardrails preventing unbounded API calls (PRD Section 3.4).", font_size="0.75rem", color="#64748b"),
-                        spacing="1",
-                        align_items="flex-start",
+                    # Safety Budgets
+                    rx.grid(
+                        rx.box(
+                            rx.vstack(
+                                rx.text("Step Budget Cap", font_size="0.8rem", font_weight="600", color="#94a3b8"),
+                                rx.hstack(
+                                    rx.badge(f"{AppState.step_budget_setting} Max Steps", color_scheme="amber", variant="solid", size="2"),
+                                    rx.text("Guardrail limit", font_size="0.75rem", color="#64748b"),
+                                    spacing="2",
+                                    align_items="center"
+                                ),
+                                rx.text("Hard limit preventing infinite autonomous tool call loops.", font_size="0.75rem", color="#64748b"),
+                                spacing="2",
+                                align_items="flex-start"
+                            ),
+                            padding="1.25rem",
+                            border_radius="0.5rem",
+                            background_color="rgba(30, 41, 59, 0.4)",
+                            border="1px solid rgba(255, 255, 255, 0.05)"
+                        ),
+                        rx.box(
+                            rx.vstack(
+                                rx.text("Token Budget Cap", font_size="0.8rem", font_weight="600", color="#94a3b8"),
+                                rx.hstack(
+                                    rx.badge(f"{AppState.token_budget_setting} Tokens", color_scheme="purple", variant="solid", size="2"),
+                                    rx.text("Cost protection", font_size="0.75rem", color="#64748b"),
+                                    spacing="2",
+                                    align_items="center"
+                                ),
+                                rx.text("Strict safety guardrail halting execution if token usage exceeds cap.", font_size="0.75rem", color="#64748b"),
+                                spacing="2",
+                                align_items="flex-start"
+                            ),
+                            padding="1.25rem",
+                            border_radius="0.5rem",
+                            background_color="rgba(30, 41, 59, 0.4)",
+                            border="1px solid rgba(255, 255, 255, 0.05)"
+                        ),
+                        columns=rx.breakpoints(initial="1", sm="2"),
+                        spacing="3",
                         width="100%"
                     ),
 
-                    rx.vstack(
-                        rx.text("Max Iteration Steps", font_size="0.875rem", font_weight="600", color="#f1f5f9"),
-                        rx.input(placeholder="10 steps", default_value="10", size="3", width="100%", variant="surface"),
-                        rx.text("Maximum tool invocations per analysis job.", font_size="0.75rem", color="#64748b"),
-                        spacing="1",
-                        align_items="flex-start",
+                    # Stack info
+                    rx.box(
+                        rx.vstack(
+                            rx.text("Stack Architecture", font_size="0.85rem", font_weight="600", color="#f1f5f9"),
+                            rx.text("Backend: FastAPI + Celery Async Task Queue with Redis / In-memory backend", font_size="0.8rem", color="#94a3b8"),
+                            rx.text("Frontend: Pure Python Reflex Reactive Web App", font_size="0.8rem", color="#94a3b8"),
+                            rx.text("Reporting: ReportLab (PDF) & python-docx (Word) headless generators", font_size="0.8rem", color="#94a3b8"),
+                            rx.text("Visualization: Headless Matplotlib + Reflex Recharts", font_size="0.8rem", color="#94a3b8"),
+                            spacing="1",
+                            align_items="flex-start"
+                        ),
+                        padding="1.25rem",
+                        border_radius="0.5rem",
+                        background_color="rgba(15, 23, 42, 0.4)",
+                        border="1px solid rgba(255, 255, 255, 0.05)",
                         width="100%"
-                    ),
-
-                    rx.button(
-                        "Save Settings",
-                        size="3",
-                        variant="solid",
-                        color_scheme="indigo"
                     ),
 
                     spacing="4",
