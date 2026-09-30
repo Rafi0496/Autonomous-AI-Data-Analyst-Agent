@@ -44,10 +44,9 @@ def trend_analysis(
     date_imputed = get_column_imputed_mask(df, date_column)
     val_imputed = get_column_imputed_mask(df, value_column)
     imputed_mask = (date_imputed | val_imputed)
-    n_excluded_imputed = int(imputed_mask.sum())
-
     ts_df = pd.DataFrame({"ds": dates, "y": val_series})[~imputed_mask].dropna().sort_values("ds").reset_index(drop=True)
     n_used = len(ts_df)
+    n_excluded_imputed = len(df) - n_used
 
     if n_used < 3:
         return {
@@ -55,6 +54,7 @@ def trend_analysis(
             "tool": "trend_analysis",
             "status": "skipped",
             "message": "Fewer than 3 valid non-imputed date/value pairs found for trend analysis.",
+            "total_records": len(df),
             "total_points": n_used,
             "n_used": n_used,
             "n_excluded_imputed": n_excluded_imputed
@@ -90,12 +90,21 @@ def trend_analysis(
     # Linear slope
     slope, intercept = np.polyfit(x_idx, y_vals, 1) if len(y_vals) > 1 else (0.0, float(y_vals[0]))
     
+    # OLS statistical test for trend
+    trend_p_val = None
+    std_slope = 0.0
+    if len(y_vals) >= 3 and np.std(y_vals) > 0:
+        from scipy import stats
+        reg = stats.linregress(x_idx, y_vals)
+        trend_p_val = round(float(reg.pvalue), 5)
+        std_slope = round(float(reg.rvalue), 4)
+
     # Percentage change
     start_val = float(y_vals[0])
     end_val = float(y_vals[-1])
     pct_change = round(((end_val - start_val) / abs(start_val)) * 100, 2) if start_val != 0 else 0.0
     
-    # Classify direction based on percentage change
+    # Classify direction based on percentage change and statistical test
     if pct_change <= -STABILITY_THRESHOLD_PCT:
         direction = "downward"
     elif pct_change >= STABILITY_THRESHOLD_PCT:
@@ -133,12 +142,16 @@ def trend_analysis(
         "timespan_days": timespan_days,
         "start_date": str(ts_df["ds"].min())[:10],
         "end_date": str(ts_df["ds"].max())[:10],
+        "total_records": len(df),
         "total_observations": len(ts_df),
         "n_used": len(ts_df),
         "n_excluded_imputed": n_excluded_imputed,
         "aggregated_periods": len(resampled),
+        "n_periods": len(resampled),
         "overall_trend": direction,
         "linear_slope": round(float(slope), 4),
+        "standardized_slope": std_slope,
+        "p_value": trend_p_val,
         "percentage_change": pct_change,
         "start_value": round(start_val, 2),
         "end_value": round(end_val, 2),

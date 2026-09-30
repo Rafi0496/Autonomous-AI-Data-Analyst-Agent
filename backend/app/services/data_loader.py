@@ -1,6 +1,6 @@
 """Data loader helper to retrieve DataFrames for tools by dataset_id or filename."""
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 import pandas as pd
 from backend.app.core.config import settings
 from backend.app.core.database import SessionLocal
@@ -61,12 +61,15 @@ def get_column_imputed_mask(df: pd.DataFrame, col: str) -> pd.Series:
         return df[indicator].astype(bool)
     return pd.Series(False, index=df.index)
 
-def get_dataset_dataframe(dataset_id: str, prefer_cleaned: bool = False) -> pd.DataFrame:
+def get_dataset_dataframe(dataset_id: Any, prefer_cleaned: bool = False) -> pd.DataFrame:
     """
-    Resolve dataset by ID (UUID in DB) or filename (in data/samples or backend/tests/test_datasets).
+    Resolve dataset by ID (UUID in DB) or filename (in data/samples or backend/tests/test_datasets),
+    or return directly if already a DataFrame.
     When prefer_cleaned=True, returns the cleaned dataframe (with normalized casing/whitespace)
     so segment_compare and the orchestrator always operate on clean data.
     """
+    if isinstance(dataset_id, pd.DataFrame):
+        return dataset_id
     stem = Path(dataset_id).stem
 
     # 1. If prefer_cleaned, check processed dir first (only if companion mask also exists)

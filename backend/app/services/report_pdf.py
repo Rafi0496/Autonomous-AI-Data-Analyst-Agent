@@ -220,20 +220,23 @@ def generate_pdf_report(
     story.append(Spacer(1, 15))
     
     # ---------------------------------------------------------
-    # 3. TOP RANKED INSIGHTS WITH CHARTS
+    # 3. TOP RANKED ANALYTICAL INSIGHTS WITH CHARTS
     # ---------------------------------------------------------
-    story.append(Paragraph("2. Top Autonomous Insights & Visualizations", styles["ReportH1"]))
-    story.append(Paragraph("Each insight is objectively scored and categorized with full statistical sample bounds and caveats.", styles["ReportBody"]))
+    story.append(Paragraph("2. Top Analytical Insights & Visualizations (Top 6)", styles["ReportH1"]))
+    story.append(Paragraph("Ranked statistical findings scored by effect size, statistical significance, and sample coverage.", styles["ReportBody"]))
     
     # Temporary directory for chart images
     temp_dir = out_p.parent / f"tmp_charts_{out_p.stem}"
     temp_dir.mkdir(parents=True, exist_ok=True)
     
+    analytical_insights = results.get("analytical_insights") or [i for i in insights if i.get("type") != "data_quality"][:6]
+    dq_insights = results.get("data_quality_insights") or [i for i in insights if i.get("type") == "data_quality"][:4]
+
     chart_files = []
     try:
-        for idx, ins in enumerate(insights[:8]):
+        for idx, ins in enumerate(analytical_insights[:6]):
             ins_story = []
-            title = ins.get("title", f"Insight #{idx+1}")
+            title = ins.get("title", f"Analytical Finding #{idx+1}")
             summary = ins.get("summary", "")
             ins_type = ins.get("type", "insight")
             conf = ins.get("confidence", "high").upper()
@@ -257,7 +260,7 @@ def generate_pdf_report(
                 
             # Render chart image if spec exists
             if chart_spec:
-                img_path = temp_dir / f"chart_{idx}.png"
+                img_path = temp_dir / f"chart_analytical_{idx}.png"
                 try:
                     render_chart_to_png(chart_spec, output_path=img_path, width_in=6.0, height_in=2.8, dpi=130)
                     chart_files.append(img_path)
@@ -268,6 +271,31 @@ def generate_pdf_report(
                     
             ins_story.append(Spacer(1, 12))
             story.append(KeepTogether(ins_story))
+
+        # Data Quality Insights List
+        if dq_insights:
+            story.append(Spacer(1, 10))
+            story.append(Paragraph("3. Data Quality Findings & Caveats (Max 4)", styles["ReportH1"]))
+            story.append(Paragraph("Identified data anomalies, sanitized sentinels, and sample-size caveats affecting interpretation.", styles["ReportBody"]))
+            for idx, ins in enumerate(dq_insights[:4]):
+                ins_story = []
+                title = ins.get("title", f"Data Quality Caveat #{idx+1}")
+                summary = ins.get("summary", "")
+                conf = ins.get("confidence", "low").upper()
+                impact = ins.get("impact_score", 0.0)
+                n_used = ins.get("n_used", 0)
+                n_excl = ins.get("n_excluded", 0)
+                excl_rate = round(ins.get("exclusion_rate", 0.0) * 100, 1)
+                caveats = ins.get("caveats", [])
+
+                ins_story.append(Paragraph(f"#{idx+1} {title} <font color='#f59e0b'>[data_quality]</font>", styles["ReportH2"]))
+                ins_story.append(Paragraph(summary, styles["ReportBody"]))
+                badge_text = f"<b>Confidence:</b> {conf} | <b>Impact Score:</b> {impact:.2f} | <b>Sample:</b> n={n_used} used, {n_excl} excluded ({excl_rate}%)"
+                ins_story.append(Paragraph(badge_text, styles["ReportBody"]))
+                for c in caveats:
+                    ins_story.append(Paragraph(f"⚠️ <i>Caveat:</i> {c}", styles["ReportCaveat"]))
+                ins_story.append(Spacer(1, 10))
+                story.append(KeepTogether(ins_story))
     finally:
         pass
         

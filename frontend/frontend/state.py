@@ -130,6 +130,8 @@ class AppState(rx.State):
     job_key_findings: List[Dict[str, Any]] = []
     job_recommendations: List[str] = []
     job_insights: List[InsightModel] = []
+    job_analytical_insights: List[InsightModel] = []
+    job_data_quality_insights: List[InsightModel] = []
     job_chart_specs: List[Dict[str, Any]] = []
     job_verification: Dict[str, Any] = {}
     verification_verified_count: int = 0
@@ -549,6 +551,8 @@ class AppState(rx.State):
                                         chart_spec=cs_obj
                                     ))
                                 self.job_insights = parsed_insights
+                                self.job_analytical_insights = [i for i in parsed_insights if i.type != "data_quality"][:6]
+                                self.job_data_quality_insights = [i for i in parsed_insights if i.type == "data_quality"][:4]
                                 self.job_chart_specs = res_obj.get("chart_specifications") or []
                                 
                                 ver = data.get("verification") or {}

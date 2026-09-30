@@ -212,6 +212,8 @@ class PlanActReflectOrchestrator:
                 "arguments": args,
                 "duration_ms": duration_ms,
                 "llm_latency_ms": current_llm_latency,
+                "reflection_latency_ms": 0.0,
+                "reflection": None,
                 "status": tool_output.get("status", "success"),
                 "rationale": rationale,
                 "planner": self.llm_client.provider_name,
@@ -234,7 +236,9 @@ class PlanActReflectOrchestrator:
                         dataset_id=dataset_id
                     )
                     self._accumulate_tokens(reflect_res.usage)
-                    reflect_latency_ms = round(reflect_res.latency_seconds * 1000, 2)
+                    reflect_latency_ms = round(reflect_res.latency_seconds * 1000, 3)
+                    log_entry["reflection"] = reflect_res.observation
+                    log_entry["reflection_latency_ms"] = reflect_latency_ms
                     for f_idx, follow_up in enumerate(reflect_res.tool_calls):
                         pending_plan.append({
                             "step": self.step_count + len(pending_plan) + 1,
@@ -246,14 +250,18 @@ class PlanActReflectOrchestrator:
                 except Exception:
                     pass
 
-        # Step 4: Generate Structured Insights (ranked and deduplicated, capped at 8)
+        # Step 4: Generate Structured Insights (ranked and deduplicated: top 6 analytical, max 4 data quality)
         insights_objects = generate_insights(
             executed_results=executed_results,
             dataset_profile=profile_dict,
             run_log=self.run_log
         )
         insights = [i.model_dump() for i in insights_objects]
+        analytical_insights = [i for i in insights if i.get("type") != "data_quality"][:6]
+        data_quality_insights = [i for i in insights if i.get("type") == "data_quality"][:4]
         profile_dict["insights"] = insights
+        profile_dict["analytical_insights"] = analytical_insights
+        profile_dict["data_quality_insights"] = data_quality_insights
 
         # Step 5: SYNTHESIZE (via LLMClient)
         self._emit_progress(f"Step {self.step_count + 1}/{self.max_steps + 1}: Synthesizing executive report (calling LLM...)", self.step_count + 1, phase="synthesis")
@@ -349,7 +357,7 @@ class PlanActReflectOrchestrator:
 
 
         final_status = "budget_tripped" if self.budget_tripped else "completed"
-        total_runtime_seconds = round(time.perf_counter() - self.start_time, 2)
+        total_runtime_seconds = round(time.perf_counter() - self.start_time, 3)
 
         # Real token accounting: report exact integer or "unknown"
         if self.tokens_used > 0:
@@ -359,7 +367,8 @@ class PlanActReflectOrchestrator:
         else:
             tokens_reported = 0
 
-        total_llm_latency = sum(s.get("llm_latency_ms", 0.0) for s in self.run_log) + synth_latency_ms
+        total_tool_latency = sum(s.get("duration_ms", 0.0) for s in self.run_log)
+        total_llm_latency = sum(s.get("llm_latency_ms", 0.0) + s.get("reflection_latency_ms", 0.0) for s in self.run_log) + synth_latency_ms
 
         final_payload = {
             "dataset_id": dataset_id,
@@ -372,11 +381,14 @@ class PlanActReflectOrchestrator:
             "tokens_consumed": tokens_reported,
             "token_budget": self.token_budget,
             "execution_time_seconds": total_runtime_seconds,
-            "synthesis_llm_latency_ms": synth_latency_ms,
-            "total_llm_latency_ms": round(total_llm_latency, 2),
+            "synthesis_llm_latency_ms": round(synth_latency_ms, 3),
+            "total_tool_latency_ms": round(total_tool_latency, 3),
+            "total_llm_latency_ms": round(total_llm_latency, 3),
             "budget_tripped": self.budget_tripped,
             "trip_reason": self.trip_reason if self.budget_tripped else None,
             "insights": insights,
+            "analytical_insights": analytical_insights,
+            "data_quality_insights": data_quality_insights,
             "synthesis": synthesis,
             "chart_specifications": chart_specs,
             "citation_audit": verification,
@@ -392,13 +404,15 @@ class PlanActReflectOrchestrator:
             job.current_step_name = "Completed"
             job.total_steps = self.step_count
             job.tokens_used = self.tokens_used
-            job.execution_time_seconds = int(total_runtime_seconds)
+            job.execution_time_seconds = float(total_runtime_seconds)
             job.set_run_log(self.run_log)
             job.set_insights(insights)
             job.set_results({
                 "synthesis": synthesis,
                 "chart_specifications": chart_specs,
-                "insights": insights
+                "insights": insights,
+                "analytical_insights": analytical_insights,
+                "data_quality_insights": data_quality_insights
             })
             job.set_verification(verification)
             db.commit()

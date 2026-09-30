@@ -3,7 +3,7 @@ import json
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text
 from backend.app.core.database import Base
 
 class AnalysisJob(Base):
@@ -22,7 +22,7 @@ class AnalysisJob(Base):
     step_limit = Column(Integer, default=6)
     tokens_used = Column(Integer, default=0)
     token_budget = Column(Integer, default=15000)
-    execution_time_seconds = Column(Integer, default=0)
+    execution_time_seconds = Column(Float, default=0.0)
 
     # Persisted JSON Artifacts
     run_log_json = Column(Text, nullable=True)        # Ordered list of execution steps (explainability)

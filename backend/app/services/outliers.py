@@ -48,16 +48,18 @@ def detect_outliers(
         }
 
     method = method.lower()
-    n_rows_used = len(df)
-    total_rows = n_rows_used
+    total_rows = len(df)
+    row_imputed_mask = pd.Series(False, index=df.index)
+    for col in num_df.columns:
+        row_imputed_mask = (row_imputed_mask | get_column_imputed_mask(df, col))
+    total_excluded_imputed = int(row_imputed_mask.sum())
+    n_rows_used = total_rows - total_excluded_imputed
     column_outliers = {}
     anomalous_indices = set()
-    total_excluded_imputed = 0
 
     if method == "iqr":
         for col in num_df.columns:
             col_imputed = get_column_imputed_mask(df, col)
-            total_excluded_imputed += int(col_imputed.sum())
             series = num_df.loc[~col_imputed, col].dropna()
             if len(series) < 4:
                 continue

@@ -492,25 +492,25 @@ def dashboard_page() -> rx.Component:
                 rx.vstack(
                     render_executive_summary(),
 
-                    # Ranked Insights Section
+                    # Top Analytical Insights Section (Top 6)
                     rx.box(
                         rx.vstack(
                             rx.hstack(
                                 rx.icon(tag="sparkles", size=18, color="#818cf8"),
-                                rx.text("Ranked Autonomous Insights (Top 8)", font_weight="700", font_size="1.1rem", color="#ffffff"),
+                                rx.text("Top Analytical Insights (Top 6)", font_weight="700", font_size="1.1rem", color="#ffffff"),
                                 rx.spacer(),
-                                rx.badge("Impact Score Sorted", color_scheme="indigo", variant="surface"),
+                                rx.badge("Effect & Significance Ranked", color_scheme="indigo", variant="surface"),
                                 spacing="2",
                                 align_items="center",
                                 width="100%"
                             ),
                             rx.text(
-                                "Each insight includes confidence classification, sample coverage (n_used/exclusion rate), caveats, and embedded visualization.",
+                                "Core statistical findings scored by effect size, p-value significance, and sample coverage (n_used/exclusion rate).",
                                 font_size="0.85rem",
                                 color="#94a3b8"
                             ),
                             rx.grid(
-                                rx.foreach(AppState.job_insights, render_insight_card),
+                                rx.foreach(AppState.job_analytical_insights, render_insight_card),
                                 columns=rx.breakpoints(initial="1", md="2"),
                                 spacing="4",
                                 width="100%"
@@ -523,6 +523,42 @@ def dashboard_page() -> rx.Component:
                         background_color="rgba(15, 23, 42, 0.6)",
                         border="1px solid rgba(255, 255, 255, 0.08)",
                         width="100%"
+                    ),
+
+                    # Data Quality Findings & Caveats Section (Max 4)
+                    rx.cond(
+                        AppState.job_data_quality_insights.length() > 0,
+                        rx.box(
+                            rx.vstack(
+                                rx.hstack(
+                                    rx.icon(tag="shield_alert", size=18, color="#f59e0b"),
+                                    rx.text("Data Quality Findings & Caveats (Max 4)", font_weight="700", font_size="1.1rem", color="#ffffff"),
+                                    rx.spacer(),
+                                    rx.badge("Quality & Sanitization Audit", color_scheme="amber", variant="surface"),
+                                    spacing="2",
+                                    align_items="center",
+                                    width="100%"
+                                ),
+                                rx.text(
+                                    "Sanitized sentinel placeholders, domain invalid values, elevated imputation rates, and small sample caveats.",
+                                    font_size="0.85rem",
+                                    color="#94a3b8"
+                                ),
+                                rx.grid(
+                                    rx.foreach(AppState.job_data_quality_insights, render_insight_card),
+                                    columns=rx.breakpoints(initial="1", md="2"),
+                                    spacing="4",
+                                    width="100%"
+                                ),
+                                spacing="4",
+                                width="100%"
+                            ),
+                            padding="1.5rem",
+                            border_radius="0.75rem",
+                            background_color="rgba(15, 23, 42, 0.6)",
+                            border="1px solid rgba(245, 158, 11, 0.2)",
+                            width="100%"
+                        )
                     ),
 
                     # Data Quality Panel

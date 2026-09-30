@@ -50,7 +50,11 @@ def run_correlation(
     corr_dict = {c: {} for c in matrix_cols}
     strong_relationships = []
     all_pairs = []
-    total_excluded_imputed = 0
+    row_imputed = pd.Series(False, index=df.index)
+    for c in matrix_cols:
+        row_imputed = (row_imputed | get_column_imputed_mask(df, c))
+    total_excluded_imputed = int(row_imputed.sum())
+    n_used = len(df) - total_excluded_imputed
 
     for i in range(len(matrix_cols)):
         col_x = matrix_cols[i]
@@ -65,7 +69,6 @@ def run_correlation(
             
             pair_n_used = int(len(pair_subset))
             pair_n_excluded = int(pair_imputed.sum())
-            total_excluded_imputed = max(total_excluded_imputed, pair_n_excluded)
 
             if pair_n_used >= 2:
                 r_val = round(float(pair_subset[col_x].corr(pair_subset[col_y])), 4)
@@ -120,6 +123,7 @@ def run_correlation(
         "strong_relationships": strong_relationships,
         "highest_correlation": highest,
         "correlation_matrix": corr_dict,
-        "n_used": len(num_df),
+        "total_records": len(df),
+        "n_used": n_used,
         "n_excluded_imputed": total_excluded_imputed
     }

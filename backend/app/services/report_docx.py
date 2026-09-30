@@ -148,12 +148,15 @@ def generate_docx_report(
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
     
     # ---------------------------------------------------------
-    # 3. TOP RANKED INSIGHTS WITH CHARTS
+    # 3. TOP RANKED ANALYTICAL INSIGHTS WITH CHARTS
     # ---------------------------------------------------------
-    doc.add_heading(level=1).add_run("2. Top Autonomous Insights & Visualizations").font.color.rgb = COLOR_DARK
+    doc.add_heading(level=1).add_run("2. Top Analytical Insights & Visualizations (Top 6)").font.color.rgb = COLOR_DARK
     
-    for idx, ins in enumerate(insights[:8]):
-        title = ins.get("title", f"Insight #{idx+1}")
+    analytical_insights = results.get("analytical_insights") or [i for i in insights if i.get("type") != "data_quality"][:6]
+    dq_insights = results.get("data_quality_insights") or [i for i in insights if i.get("type") == "data_quality"][:4]
+
+    for idx, ins in enumerate(analytical_insights[:6]):
+        title = ins.get("title", f"Analytical Finding #{idx+1}")
         summary = ins.get("summary", "")
         ins_type = ins.get("type", "insight")
         conf = ins.get("confidence", "high").upper()
@@ -203,6 +206,47 @@ def generate_docx_report(
                 pass
                 
         doc.add_paragraph().paragraph_format.space_after = Pt(8)
+
+    # Data Quality Insights List
+    if dq_insights:
+        doc.add_heading(level=1).add_run("3. Data Quality Findings & Caveats (Max 4)").font.color.rgb = COLOR_DARK
+        for idx, ins in enumerate(dq_insights[:4]):
+            title = ins.get("title", f"Data Quality Caveat #{idx+1}")
+            summary = ins.get("summary", "")
+            conf = ins.get("confidence", "low").upper()
+            impact = ins.get("impact_score", 0.0)
+            n_used = ins.get("n_used", 0)
+            n_excl = ins.get("n_excluded", 0)
+            excl_rate = round(ins.get("exclusion_rate", 0.0) * 100, 1)
+            caveats = ins.get("caveats", [])
+
+            h_dq = doc.add_heading(level=2)
+            r_dq = h_dq.add_run(f"#{idx+1} {title} [data_quality]")
+            r_dq.font.color.rgb = RGBColor(245, 158, 11)
+
+            p_dq_body = doc.add_paragraph()
+            r_dq_body = p_dq_body.add_run(summary)
+            r_dq_body.font.name = "Arial"
+            r_dq_body.font.size = Pt(9.5)
+            p_dq_body.paragraph_format.space_after = Pt(4)
+
+            p_dq_badge = doc.add_paragraph()
+            r_dq_badge = p_dq_badge.add_run(f"Confidence: {conf} | Impact Score: {impact:.2f} | Sample: n={n_used} used, {n_excl} excluded ({excl_rate}%)")
+            r_dq_badge.font.name = "Arial"
+            r_dq_badge.font.size = Pt(8.5)
+            r_dq_badge.font.bold = True
+            r_dq_badge.font.color.rgb = COLOR_MUTED
+            p_dq_badge.paragraph_format.space_after = Pt(4)
+
+            for c in caveats:
+                p_cav = doc.add_paragraph()
+                r_cav = p_cav.add_run(f"⚠️ Caveat: {c}")
+                r_cav.font.name = "Arial"
+                r_cav.font.size = Pt(8.5)
+                r_cav.font.italic = True
+                r_cav.font.color.rgb = COLOR_AMBER
+                p_cav.paragraph_format.space_after = Pt(2)
+            doc.add_paragraph().paragraph_format.space_after = Pt(6)
         
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
     
