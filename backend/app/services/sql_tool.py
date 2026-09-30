@@ -53,16 +53,27 @@ def query_sql(dataset_id: str, sql: str, max_rows: int = 200) -> Dict[str, Any]:
     if not re.match(r"^(SELECT|WITH)\b", clean_query, re.IGNORECASE):
         raise ValueError("Query must begin with SELECT or WITH.")
 
-    # Load dataset
-    df = get_dataset_dataframe(dataset_id)
+    # Load cleaned dataset and prepare observed view (imputed cells set to NULL)
+    clean_df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
+    from backend.app.services.data_loader import get_column_imputed_mask
+    observed_df = clean_df.copy()
+    for col in clean_df.columns:
+        mask = get_column_imputed_mask(clean_df, col)
+        if mask.any():
+            observed_df.loc[mask, col] = None
 
     # Execute in an isolated in-memory DuckDB instance
     start_time = time.perf_counter()
     con = duckdb.connect(database=":memory:", read_only=False)
     try:
         # Register dataframe strictly under local aliases
-        con.register("df", df)
-        con.register("dataset", df)
+        # 'data_clean': all cleaned rows (sentinels and invalid values sanitized/imputed)
+        # 'data_observed': only observed non-imputed rows (imputed cells are NULL)
+        # 'df' and 'dataset': aliases pointing to data_clean for backward compatibility
+        con.register("data_clean", clean_df)
+        con.register("data_observed", observed_df)
+        con.register("df", clean_df)
+        con.register("dataset", clean_df)
 
         # Enforce limit if missing
         if not re.search(r"\bLIMIT\s+\d+", clean_query, re.IGNORECASE):

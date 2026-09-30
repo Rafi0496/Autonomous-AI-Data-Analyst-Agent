@@ -125,12 +125,12 @@ CANONICAL_TOOL_DEFINITIONS = [
     },
     {
         "name": "query_sql",
-        "description": "Executes a safe, read-only SQL query over the dataset via DuckDB (the dataset table is named 'df').",
+        "description": "Executes a safe, read-only SQL query over the dataset via DuckDB. Two tables are exposed: 'data_clean' (all cleaned rows with sentinels and domain-invalid values converted to NULL and imputed) and 'data_observed' (only non-imputed observed values, with imputed cells set to NULL). 'df' and 'dataset' are aliases for data_clean.",
         "parameters": {
             "type": "object",
             "properties": {
                 "dataset_id": {"type": "string", "description": "The dataset identifier or sample filename."},
-                "sql": {"type": "string", "description": "Read-only SELECT query over table 'df' (e.g., 'SELECT Category, AVG(Quantity) FROM df GROUP BY 1')."},
+                "sql": {"type": "string", "description": "Read-only SELECT query over table 'data_clean' or 'data_observed' (e.g., 'SELECT Category, SUM(Quantity) FROM data_clean GROUP BY 1')."},
                 "rationale": {
                     "type": "string",
                     "description": "Specific analytical justification or hypothesis explaining why this query is executed."
