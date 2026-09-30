@@ -17,8 +17,12 @@ scipy>=1.12.0
 scikit-learn>=1.4.1.post1
 statsmodels>=0.14.1
 
-# Visualization
+# Visualization & Reporting
 plotly>=5.20.0
+matplotlib>=3.8.0
+python-docx>=1.1.0
+reportlab>=4.1.0
+pypdf>=4.0.0
 
 # Frontend
 reflex>=0.6.0
@@ -30,4 +34,5 @@ pytest-asyncio>=0.23.5
 
 # Agent & Async Queue
 anthropic>=0.20.0
+google-genai>=1.0.0
 celery[redis]>=5.3.0

@@ -153,3 +153,21 @@ def get_job_run_log(job_id: str, db: Session = Depends(get_db)):
         "total_steps": job.total_steps,
         "run_log": job.get_run_log()
     }
+
+@router.get("/{job_id}/insights")
+def get_job_insights(job_id: str, db: Session = Depends(get_db)):
+    """Retrieve ranked insights for an analysis job."""
+    job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis job '{job_id}' not found."
+        )
+
+    insights = job.get_insights()
+    return {
+        "job_id": job.id,
+        "status": job.status,
+        "total_insights": len(insights),
+        "insights": insights
+    }

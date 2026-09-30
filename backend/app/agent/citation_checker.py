@@ -36,8 +36,12 @@ def extract_numeric_tokens(text: str) -> List[float]:
             
     return numbers
 
-def build_fact_pool(structured_results: List[Dict[str, Any]], dataset_profile: Optional[Dict[str, Any]] = None) -> Set[float]:
-    """Extract all computed numerical values across all tools into a set of known facts."""
+def build_fact_pool(
+    structured_results: List[Dict[str, Any]],
+    dataset_profile: Optional[Dict[str, Any]] = None,
+    insights: Optional[List[Any]] = None
+) -> Set[float]:
+    """Extract all computed numerical values across all tools and insights into a set of known facts."""
     fact_pool = set()
 
     def add_num(val):
@@ -47,27 +51,60 @@ def build_fact_pool(structured_results: List[Dict[str, Any]], dataset_profile: O
             fact_pool.add(round(float(val), 4))
             fact_pool.add(float(int(val)))
 
+    def harvest_obj(obj):
+        if isinstance(obj, dict):
+            for v in obj.values():
+                harvest_obj(v)
+        elif isinstance(obj, (list, tuple)):
+            for item in obj:
+                harvest_obj(item)
+        elif hasattr(obj, "model_dump"):
+            harvest_obj(obj.model_dump())
+        elif hasattr(obj, "__dict__"):
+            harvest_obj(obj.__dict__)
+        elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
+            add_num(obj)
+
     if dataset_profile:
         add_num(dataset_profile.get("row_count"))
+        add_num(dataset_profile.get("cleaned_row_count"))
+        add_num(dataset_profile.get("n_rows_used"))
         add_num(dataset_profile.get("column_count"))
         q = dataset_profile.get("quality_summary", {})
         add_num(q.get("quality_score"))
         add_num(q.get("duplicate_rows"))
         add_num(q.get("missing_percentage"))
 
-    for res in structured_results:
-        # Recursively search dictionary values for numbers
-        def harvest(obj):
-            if isinstance(obj, dict):
-                for k, v in obj.items():
-                    harvest(v)
-            elif isinstance(obj, list):
-                for item in obj:
-                    harvest(item)
-            elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
-                add_num(obj)
+        # Harvest Data Quality Facts
+        for s in dataset_profile.get("sentinels_detected", []):
+            add_num(s.get("count"))
+            add_num(s.get("sentinel_value"))
+        for iv in dataset_profile.get("invalid_values_detected", []):
+            add_num(iv.get("count"))
+        for sr in dataset_profile.get("suspected_returns", []):
+            add_num(sr.get("count"))
+        for re_item in dataset_profile.get("suspected_repeated_extremes", []):
+            add_num(re_item.get("count"))
+            add_num(re_item.get("value"))
+        for col, stats in dataset_profile.get("column_imputation_stats", {}).items():
+            add_num(stats.get("imputed_count"))
+            imp_rate = stats.get("imputation_rate")
+            if imp_rate is not None:
+                add_num(round(imp_rate * 100, 2))
+                add_num(round(imp_rate * 100, 1))
+                add_num(round(imp_rate, 4))
+        for col, cnt in dataset_profile.get("missing_values_imputed", {}).items():
+            add_num(cnt)
 
-        harvest(res)
+        # Harvest embedded insights if present in profile
+        if "insights" in dataset_profile:
+            harvest_obj(dataset_profile["insights"])
+
+    if insights:
+        harvest_obj(insights)
+
+    for res in structured_results:
+        harvest_obj(res)
 
     return fact_pool
 
@@ -75,13 +112,15 @@ def validate_citations(
     synthesis_result: Dict[str, Any],
     structured_results: List[Dict[str, Any]],
     dataset_profile: Optional[Dict[str, Any]] = None,
+    insights: Optional[List[Any]] = None,
     tolerance: float = 0.05
 ) -> Dict[str, Any]:
     """
     Programmatically verify all numeric claims in the synthesis output.
     Returns audit details with verified and unverified claims.
+    Accepts every numeric value in insights as a verified fact source.
     """
-    fact_pool = build_fact_pool(structured_results, dataset_profile)
+    fact_pool = build_fact_pool(structured_results, dataset_profile, insights=insights)
     
     # Collect all narrative text to check
     text_corpus = synthesis_result.get("executive_summary", "")

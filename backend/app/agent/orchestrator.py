@@ -11,20 +11,18 @@ import os
 import time
 import json
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 import pandas as pd
 
 from backend.app.agent.citation_checker import validate_citations
+from backend.app.agent.llm_client import LLMClient, TokenUsage, get_llm_client
 from backend.app.core.database import SessionLocal
 from backend.app.models.job import AnalysisJob
 from backend.app.services.charts import generate_chart
 from backend.app.services.data_loader import get_dataset_dataframe
+from backend.app.services.insights import generate_insights
 from backend.app.services.profiling import profile_dataset
-from backend.app.services.summary import write_summary
-from backend.app.services.tool_catalogue import (
-    CLAUDE_TOOL_DEFINITIONS,
-    execute_tool
-)
+from backend.app.services.tool_catalogue import execute_tool
 
 class PlanActReflectOrchestrator:
     def __init__(
@@ -32,25 +30,29 @@ class PlanActReflectOrchestrator:
         max_steps: int = 5,
         token_budget: int = 15000,
         timeout_seconds: float = 45.0,
-        progress_callback: Optional[Callable[[str, int], None]] = None
+        progress_callback: Optional[Callable[[str, int], None]] = None,
+        llm_client: Optional[LLMClient] = None,
+        provider: Optional[str] = None
     ):
         self.max_steps = max_steps
         self.token_budget = token_budget
         self.timeout_seconds = timeout_seconds
         self.progress_callback = progress_callback
-        self.tokens_used = 0
+        self.llm_client = llm_client or get_llm_client(provider=provider)
+        self.tokens_used: int = 0
+        self.tokens_unknown: bool = False
         self.step_count = 0
         self.start_time = 0.0
         self.run_log: List[Dict[str, Any]] = []
         self.budget_tripped = False
         self.trip_reason = ""
 
-    def _emit_progress(self, message: str, step_index: int = 0):
-        if self.progress_callback:
-            try:
-                self.progress_callback(message, step_index)
-            except Exception:
-                pass
+    def _accumulate_tokens(self, usage: TokenUsage):
+        """Accumulate token accounting from real provider usage metadata."""
+        if usage.is_known and isinstance(usage.total_tokens, int):
+            self.tokens_used += usage.total_tokens
+        else:
+            self.tokens_unknown = True
 
     def _generate_heuristic_plan(
         self,
@@ -58,101 +60,26 @@ class PlanActReflectOrchestrator:
         dataset_id: str,
         goal: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        """
-        Generate an ordered initial plan based on profile diagnostics and semantic cues.
-        Used as primary planning strategy or fallback when Anthropic API key is absent.
-        """
-        plan = []
-        columns = profile.get("columns", {})
-        num_cols = [c for c, p in columns.items() if p.get("inferred_type") == "numeric"]
-        cat_cols = [c for c, p in columns.items() if p.get("inferred_type") in ("categorical", "text")]
-        date_cols = [c for c, p in columns.items() if p.get("inferred_type") == "datetime"]
-        
-        # 1. First step: Outlier detection
-        if num_cols:
-            plan.append({
-                "step": 1,
-                "tool": "detect_outliers",
-                "arguments": {"dataset_id": dataset_id, "method": "iqr", "columns": num_cols},
-                "rationale": "Identify statistical anomalies and extreme values that could distort analytical aggregates."
-            })
+        """Delegates to HeuristicClient for offline/test plan generation."""
+        from backend.app.agent.llm_client import HeuristicClient
+        client = HeuristicClient()
+        plan_res = client.plan(profile=profile, goal=goal, dataset_id=dataset_id)
+        return [
+            {
+                "step": idx + 1,
+                "tool": tc.name,
+                "arguments": tc.arguments,
+                "rationale": tc.rationale
+            }
+            for idx, tc in enumerate(plan_res.tool_calls)
+        ]
 
-        # 2. Second step: Correlation analysis
-        if len(num_cols) >= 2:
-            plan.append({
-                "step": len(plan) + 1,
-                "tool": "run_correlation",
-                "arguments": {"dataset_id": dataset_id, "columns": num_cols, "threshold": 0.3},
-                "rationale": "Measure pairwise linear associations across quantitative features to surface dependencies."
-            })
-
-        # 3. Third step: Segment comparison
-        if cat_cols and num_cols:
-            plan.append({
-                "step": len(plan) + 1,
-                "tool": "segment_compare",
-                "arguments": {"dataset_id": dataset_id, "segment_column": cat_cols[0], "metric_column": num_cols[0]},
-                "rationale": f"Compare distribution of '{num_cols[0]}' across key segment '{cat_cols[0]}'."
-            })
-
-        # 4. Fourth step: Chronological Trend
-        if date_cols and num_cols:
-            plan.append({
-                "step": len(plan) + 1,
-                "tool": "trend_analysis",
-                "arguments": {"dataset_id": dataset_id, "date_column": date_cols[0], "value_column": num_cols[0]},
-                "rationale": f"Evaluate rolling trajectory of '{num_cols[0]}' across chronological index '{date_cols[0]}'."
-            })
-
-        return plan
-
-    def _call_claude_planner(
-        self,
-        profile: Dict[str, Any],
-        dataset_id: str,
-        goal: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
-        """Call Claude API for multi-step plan generation with function calling."""
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key or api_key.startswith("your-") or api_key == "dummy":
-            return self._generate_heuristic_plan(profile, dataset_id, goal)
-
-        try:
-            import anthropic
-            client = anthropic.Anthropic(api_key=api_key)
-            prompt = (
-                f"You are an autonomous senior data analyst. You have access to a tool catalogue.\n"
-                f"Dataset Profile:\n{json.dumps(profile, indent=2)}\n\n"
-                f"User Goal: {goal or 'Comprehensive exploratory analysis'}\n"
-                f"Return an ordered plan of 2 to 4 tool calls with dataset_id='{dataset_id}' and explicit arguments."
-            )
-            
-            response = client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=1500,
-                tools=CLAUDE_TOOL_DEFINITIONS,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            
-            self.tokens_used += response.usage.input_tokens + response.usage.output_tokens
-            
-            plan = []
-            for block in response.content:
-                if block.type == "tool_use":
-                    plan.append({
-                        "step": len(plan) + 1,
-                        "tool": block.name,
-                        "arguments": block.input,
-                        "rationale": f"Claude tool selection: {block.name}"
-                    })
-                    
-            if plan:
-                return plan
-        except Exception as e:
-            # Fall back safely on error
-            pass
-
-        return self._generate_heuristic_plan(profile, dataset_id, goal)
+    def _emit_progress(self, message: str, step_index: int = 0):
+        if self.progress_callback:
+            try:
+                self.progress_callback(message, step_index)
+            except Exception:
+                pass
 
     def run_analysis(
         self,
@@ -167,6 +94,7 @@ class PlanActReflectOrchestrator:
         self.start_time = time.perf_counter()
         self.step_count = 0
         self.tokens_used = 0
+        self.tokens_unknown = False
         self.run_log = []
         self.budget_tripped = False
         self.trip_reason = ""
@@ -183,18 +111,45 @@ class PlanActReflectOrchestrator:
 
         # Step 0: Ensure dataset is profiled
         self._emit_progress("Profiling dataset structure and quality...", 0)
-        df = get_dataset_dataframe(dataset_id)
+        df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
         profile_obj = profile_dataset(df, dataset_id=dataset_id)
         profile_dict = profile_obj.model_dump()
+        profile_dict["cleaned_row_count"] = len(df)
+        profile_dict["n_rows_used"] = len(df)
 
-        # Step 1: PLAN
-        self._emit_progress("Generating autonomous analysis plan...", 1)
-        plan = self._call_claude_planner(profile_dict, dataset_id, goal)
+        # Surface data quality findings (sentinels, invalid values, imputation rates)
+        from backend.app.services.data_loader import get_dataset_cleaning_report
+        cleaning_report = df.attrs.get("cleaning_report") or get_dataset_cleaning_report(df, dataset_id)
+        if cleaning_report:
+            profile_dict["cleaning_report"] = cleaning_report
+            profile_dict["sentinels_detected"] = cleaning_report.get("sentinels_detected", [])
+            profile_dict["invalid_values_detected"] = cleaning_report.get("invalid_values_detected", [])
+            profile_dict["column_imputation_stats"] = cleaning_report.get("column_imputation_stats", {})
+            profile_dict["missing_values_imputed"] = cleaning_report.get("missing_values_imputed", {})
+
+        # Step 1: PLAN (Provider-agnostic via LLMClient)
+        self._emit_progress(f"Step 0/{self.max_steps}: Initial Plan (calling LLM {self.llm_client.provider_name})...", 0)
+        plan_result = self.llm_client.plan(
+            profile=profile_dict,
+            goal=goal,
+            dataset_id=dataset_id
+        )
+        self._accumulate_tokens(plan_result.usage)
+        initial_llm_latency_ms = round(plan_result.latency_seconds * 1000, 2)
         
         executed_results = []
-        pending_plan = list(plan)
+        pending_plan = [
+            {
+                "step": idx + 1,
+                "tool": tc.name,
+                "arguments": tc.arguments,
+                "rationale": tc.rationale,
+                "llm_latency_ms": initial_llm_latency_ms if idx == 0 else 0.0
+            }
+            for idx, tc in enumerate(plan_result.tool_calls)
+        ]
 
-        # Loop: ACT & REFLECT
+        # Loop: ACT & REFLECT (merged plan-act with bounded follow-ups)
         while pending_plan:
             # Check budgets before execution
             elapsed = time.perf_counter() - self.start_time
@@ -208,7 +163,7 @@ class PlanActReflectOrchestrator:
                 self.trip_reason = f"Maximum step budget reached ({self.step_count} >= {self.max_steps} steps limit)"
                 break
 
-            if self.tokens_used >= self.token_budget:
+            if self.step_count > 0 and self.tokens_used >= self.token_budget:
                 self.budget_tripped = True
                 self.trip_reason = f"Token budget exceeded ({self.tokens_used} >= {self.token_budget} tokens limit)"
                 break
@@ -218,11 +173,12 @@ class PlanActReflectOrchestrator:
             tool_name = current_step["tool"]
             args = current_step["arguments"]
             rationale = current_step.get("rationale", "")
+            current_llm_latency = current_step.get("llm_latency_ms", 0.0)
 
             # Ensure dataset_id is correct
             args["dataset_id"] = dataset_id
 
-            self._emit_progress(f"Executing step {self.step_count}: {tool_name}...", self.step_count)
+            self._emit_progress(f"Step {self.step_count}/{self.max_steps}: {tool_name}...", self.step_count)
             if job:
                 job.current_step_name = f"Step {self.step_count}: {tool_name}"
                 job.total_steps = self.step_count
@@ -232,52 +188,86 @@ class PlanActReflectOrchestrator:
             step_start = time.perf_counter()
             tool_output = execute_tool(tool_name, args)
             duration_ms = round((time.perf_counter() - step_start) * 1000, 2)
-            
-            # Estimate tokens for local reflection simulation
-            self.tokens_used += 350
 
-            # Record step in run log
+            # Record step in run log with explicit planner provider, model label, and llm latency
             log_entry = {
                 "step_number": self.step_count,
                 "timestamp": datetime.utcnow().isoformat(),
                 "tool": tool_name,
                 "arguments": args,
                 "duration_ms": duration_ms,
+                "llm_latency_ms": current_llm_latency,
                 "status": tool_output.get("status", "success"),
                 "rationale": rationale,
+                "planner": self.llm_client.provider_name,
+                "model": self.llm_client.model_name,
                 "summary": str(tool_output.get("message") or f"Executed {tool_name} successfully.")
             }
             self.run_log.append(log_entry)
             executed_results.append(tool_output)
 
-            # REFLECT: Evaluate result & decide on follow-up
-            if tool_name == "detect_outliers" and tool_output.get("total_anomalous_rows", 0) > 0:
-                # If high outliers found, dynamically reflect and check if SQL drilldown or chart needed
-                if len(pending_plan) < 2 and self.step_count < self.max_steps:
-                    top_cols = tool_output.get("top_outlier_columns", [])
-                    if top_cols:
-                        col_target = top_cols[0]["column"]
-                        pending_plan.insert(0, {
-                            "step": self.step_count + 1,
-                            "tool": "query_sql",
-                            "arguments": {
-                                "dataset_id": dataset_id,
-                                "sql": f"SELECT {col_target}, COUNT(*) as frequency FROM df GROUP BY {col_target} ORDER BY frequency DESC LIMIT 5"
-                            },
-                            "rationale": f"Reflect: High anomaly rate in '{col_target}'; drill down to investigate value distribution."
+            # REFLECT: Merged dynamic observation & bounded follow-up (only when queue is empty)
+            if not pending_plan and self.step_count < self.max_steps:
+                self._emit_progress(f"Step {self.step_count}/{self.max_steps}: Assessing findings & planning next action (calling LLM...)", self.step_count)
+                try:
+                    reflect_res = self.llm_client.reflect(
+                        step_result=tool_output,
+                        history=self.run_log,
+                        dataset_id=dataset_id
+                    )
+                    self._accumulate_tokens(reflect_res.usage)
+                    reflect_latency_ms = round(reflect_res.latency_seconds * 1000, 2)
+                    for f_idx, follow_up in enumerate(reflect_res.tool_calls):
+                        pending_plan.append({
+                            "step": self.step_count + len(pending_plan) + 1,
+                            "tool": follow_up.name,
+                            "arguments": follow_up.arguments,
+                            "rationale": follow_up.rationale,
+                            "llm_latency_ms": reflect_latency_ms if f_idx == 0 else 0.0
                         })
+                except Exception:
+                    pass
 
-        # Step 4: SYNTHESIZE
-        self._emit_progress("Synthesizing findings and verifying numeric claims...", self.step_count + 1)
+        # Step 4: Generate Structured Insights (ranked and deduplicated, capped at 8)
+        insights_objects = generate_insights(
+            executed_results=executed_results,
+            dataset_profile=profile_dict,
+            run_log=self.run_log
+        )
+        insights = [i.model_dump() for i in insights_objects]
+        profile_dict["insights"] = insights
+
+        # Step 5: SYNTHESIZE (via LLMClient)
+        self._emit_progress(f"Step {self.step_count + 1}/{self.max_steps + 1}: Synthesizing executive report (calling LLM...)", self.step_count + 1)
         if job:
             job.current_step_name = "Synthesizing executive report"
             db.commit()
 
-        synthesis = write_summary(
-            structured_results=executed_results,
-            dataset_profile=profile_dict,
-            goal=goal
+        synth_goal = (
+            f"{goal or 'Comprehensive exploratory analysis'}. "
+            "When citing percentages, use the n_rows_used reported by each tool as the denominator. "
+            "Do not calculate rates against original raw row counts. "
+            "Surface relevant data quality findings (such as placeholder sentinels like Quantity=999, invalid domain values, and imputation) in the findings and narrative."
         )
+        synth_start = time.perf_counter()
+        synth_res = self.llm_client.synthesize(
+            results=executed_results,
+            dataset_profile=profile_dict,
+            goal=synth_goal
+        )
+        synth_latency_ms = round((time.perf_counter() - synth_start) * 1000, 2)
+        self._accumulate_tokens(synth_res.usage)
+
+        synthesis = {
+            "status": "success",
+            "executive_summary": synth_res.executive_summary,
+            "key_findings": synth_res.key_findings,
+            "recommendations": synth_res.recommendations,
+            "total_findings": len(synth_res.key_findings),
+            "total_tools_executed": len(executed_results),
+            "citations_index": synth_res.citations_index,
+            "llm_latency_ms": synth_latency_ms
+        }
 
         # Generate Visualizations for Key Findings
         chart_specs = []
@@ -291,27 +281,43 @@ class PlanActReflectOrchestrator:
                 except Exception:
                     pass
 
-        # Programmatic Citation Verification
+        # Programmatic Citation Verification (accepting all insight values)
         verification = validate_citations(
             synthesis_result=synthesis,
             structured_results=executed_results,
-            dataset_profile=profile_dict
+            dataset_profile=profile_dict,
+            insights=insights
         )
 
         final_status = "budget_tripped" if self.budget_tripped else "completed"
         total_runtime_seconds = round(time.perf_counter() - self.start_time, 2)
 
+        # Real token accounting: report exact integer or "unknown"
+        if self.tokens_used > 0:
+            tokens_reported: Union[int, str] = self.tokens_used
+        elif self.tokens_unknown or self.llm_client.provider_name == "heuristic":
+            tokens_reported = "unknown"
+        else:
+            tokens_reported = 0
+
+        total_llm_latency = sum(s.get("llm_latency_ms", 0.0) for s in self.run_log) + synth_latency_ms
+
         final_payload = {
             "dataset_id": dataset_id,
             "status": final_status,
             "goal": goal,
+            "planner": self.llm_client.provider_name,
+            "model": self.llm_client.model_name,
             "total_steps_executed": self.step_count,
             "max_steps_limit": self.max_steps,
-            "tokens_consumed": self.tokens_used,
+            "tokens_consumed": tokens_reported,
             "token_budget": self.token_budget,
             "execution_time_seconds": total_runtime_seconds,
+            "synthesis_llm_latency_ms": synth_latency_ms,
+            "total_llm_latency_ms": round(total_llm_latency, 2),
             "budget_tripped": self.budget_tripped,
             "trip_reason": self.trip_reason if self.budget_tripped else None,
+            "insights": insights,
             "synthesis": synthesis,
             "chart_specifications": chart_specs,
             "citation_audit": verification,
@@ -326,9 +332,11 @@ class PlanActReflectOrchestrator:
             job.tokens_used = self.tokens_used
             job.execution_time_seconds = int(total_runtime_seconds)
             job.set_run_log(self.run_log)
+            job.set_insights(insights)
             job.set_results({
                 "synthesis": synthesis,
-                "chart_specifications": chart_specs
+                "chart_specifications": chart_specs,
+                "insights": insights
             })
             job.set_verification(verification)
             db.commit()

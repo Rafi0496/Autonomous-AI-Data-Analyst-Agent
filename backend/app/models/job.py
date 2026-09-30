@@ -53,3 +53,14 @@ class AnalysisJob(Base):
 
     def set_verification(self, ver: Dict[str, Any]):
         self.verification_json = json.dumps(ver)
+
+    def get_insights(self) -> List[Dict[str, Any]]:
+        res = self.get_results()
+        if res and isinstance(res, dict) and "insights" in res:
+            return res["insights"]
+        return []
+
+    def set_insights(self, insights: List[Dict[str, Any]]):
+        res = self.get_results() or {}
+        res["insights"] = insights
+        self.set_results(res)

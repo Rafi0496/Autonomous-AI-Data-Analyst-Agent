@@ -27,6 +27,11 @@ class DatasetCleaningResult(BaseModel):
     dropped_columns: List[str] = Field(default_factory=list)
     type_conversions: Dict[str, str] = Field(default_factory=dict)
     missing_values_imputed: Dict[str, int] = Field(default_factory=dict)
+    column_imputation_stats: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    sentinels_detected: List[Dict[str, Any]] = Field(default_factory=list)
+    invalid_values_detected: List[Dict[str, Any]] = Field(default_factory=list)
+    suspected_repeated_extremes: List[Dict[str, Any]] = Field(default_factory=list)
+    suspected_returns: List[Dict[str, Any]] = Field(default_factory=list)
     duplicates_removed: int = 0
     logs: List[CleaningStepLog] = Field(default_factory=list)
     cleaned_file_path: str
