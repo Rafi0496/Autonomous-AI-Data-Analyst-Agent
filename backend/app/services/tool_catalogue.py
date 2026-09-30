@@ -67,13 +67,13 @@ CANONICAL_TOOL_DEFINITIONS = [
     },
     {
         "name": "segment_compare",
-        "description": "Groups dataset by a categorical column and compares a numeric metric across segments (mean, median, sum, counts, relative differences, and ANOVA significance). NOTE: segment_column must be a true categorical business grouping (e.g. 'Department', 'Category', 'Region'). DO NOT select unique IDs or transaction numbers (e.g. Transaction_ID, Customer_ID).",
+        "description": "Groups dataset by a categorical column and compares either a numeric metric (mean, median, sum, ANOVA significance) OR a binary/categorical target rate (e.g. 'Attrition', 'Converted', 'Churn' with proportions, n_used per segment, overall rate and denominator, and Chi-square test). NOTE: segment_column must be a true categorical business grouping (e.g. 'Department', 'Category', 'Region'). DO NOT select unique IDs.",
         "parameters": {
             "type": "object",
             "properties": {
                 "dataset_id": {"type": "string", "description": "The dataset identifier or sample filename."},
-                "segment_column": {"type": "string", "description": "The categorical column to group by (e.g. 'Department', 'Category', 'Region'). Must NOT be an ID or unique identifier column."},
-                "metric_column": {"type": "string", "description": "The numeric column to aggregate and compare (e.g. 'Annual_Salary', 'Unit_Price', 'Conversions')."},
+                "segment_column": {"type": "string", "description": "The categorical column to group by (e.g. 'Department', 'Category', 'Region', 'Channel'). Must NOT be an ID column."},
+                "metric_column": {"type": "string", "description": "The numeric column to compare (e.g. 'Annual_Salary', 'Unit_Price') OR a binary/categorical target column to compare rates for (e.g. 'Attrition', 'Converted', 'Churn')."},
                 "rationale": {
                     "type": "string",
                     "description": "Specific analytical justification or hypothesis explaining why this tool is selected."

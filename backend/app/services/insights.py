@@ -242,62 +242,146 @@ def generate_insights(
         if t_name == "segment_compare":
             seg_col = res.get("segment_column", "Segment")
             met_col = res.get("metric_column", "Metric")
-            n_used = res.get("n_used", cleaned_rows)
-            n_excluded = res.get("n_excluded_imputed", 0)
-            ex_rate = round(n_excluded / max(1, n_used + n_excluded), 4)
-            conf = determine_confidence(n_used, ex_rate)
-            p_val = res.get("anova_p_value")
-            top_seg = res.get("top_segment", {})
-            bot_seg = res.get("bottom_segment", {})
-            ratio = res.get("top_vs_bottom_ratio", 1.0)
-            effect = round(abs(ratio - 1.0), 4) if ratio else 0.2
+            is_cat_rate = (res.get("analysis_type") == "categorical_rate")
 
-            is_significant = (p_val is not None and p_val <= 0.05)
-            if p_val is not None and not is_significant:
-                title = f"No significant difference in {met_col} across {seg_col}"
-                summary = (
-                    f"ANOVA test shows no statistically significant variance in {met_col} "
-                    f"across {seg_col} categories (p={p_val:.4f}, n_used={n_used}). "
-                    f"{top_seg.get('segment')} recorded {top_seg.get('median')} vs {bot_seg.get('median')} for {bot_seg.get('segment')}."
-                )
-            else:
-                title = f"Variance in {met_col} across {seg_col}"
-                p_text = f" (p={p_val:.4f})" if p_val is not None else ""
-                summary = (
-                    f"{top_seg.get('segment')} recorded the highest {met_col} (median {top_seg.get('median')}) "
-                    f"compared to {bot_seg.get('segment')} (median {bot_seg.get('median')}), a {ratio:.2f}x differential{p_text}."
-                )
+            if is_cat_rate:
+                tgt = res.get("target_class", "Target")
+                n_used = res.get("n_used", cleaned_rows)
+                n_excluded = res.get("n_excluded_imputed", 0)
+                ex_rate = round(n_excluded / max(1, n_used + n_excluded), 4)
+                conf = determine_confidence(n_used, ex_rate)
+                p_val = res.get("chi2_p_value")
+                overall_pct = res.get("overall_rate_percent", 0.0)
+                top_seg = res.get("top_segment", {})
+                bot_seg = res.get("bottom_segment", {})
+                diff_pct = res.get("absolute_difference", 0.0)
+                effect = round(diff_pct / 100.0, 4)
 
-            score = compute_impact_score("segment_difference", effect, p_val, n_used, n_excluded, conf)
-            cavs = build_caveats(n_used, ex_rate, p_val)
-            c_spec = build_chart_spec_for_segment(seg_col, met_col, res.get("segments", []))
+                is_significant = (p_val is not None and p_val <= 0.05)
+                if not is_significant:
+                    title = f"No significant difference in {met_col} across {seg_col}"
+                    summary = (
+                        f"Chi-square test shows no significant difference in {met_col} across {seg_col} "
+                        f"(p={p_val if p_val is not None else 'N/A'}, overall rate: {overall_pct}% across {n_used} non-imputed rows). "
+                        f"{top_seg.get('segment')} recorded {top_seg.get('rate_percent')}% vs {bot_seg.get('rate_percent')}% for {bot_seg.get('segment')}."
+                    )
+                else:
+                    title = f"{met_col} rate varies significantly across {seg_col}"
+                    p_text = f" (chi2 p={p_val:.4f})" if p_val is not None else ""
+                    summary = (
+                        f"Overall {met_col} rate is {overall_pct}% across {n_used} non-imputed rows{p_text}. "
+                        f"{top_seg.get('segment')} recorded {top_seg.get('rate_percent')}% (n={top_seg.get('n_used')}), "
+                        f"compared to {bot_seg.get('segment')} at {bot_seg.get('rate_percent')}% (n={bot_seg.get('n_used')})."
+                    )
 
-            candidates.append(Insight(
-                id=f"insight-seg-{seg_col}-{met_col}",
-                type="segment_difference",
-                title=title,
-                summary=summary,
-                metric_values={
+                score = compute_impact_score("segment_difference", effect, p_val, n_used, n_excluded, conf)
+                cavs = build_caveats(n_used, ex_rate, p_val)
+                c_spec = {
+                    "chart_type": "bar",
+                    "orientation": "vertical",
+                    "title": f"{met_col} Rate across {seg_col} (%)",
+                    "x_label": seg_col,
+                    "y_label": f"{met_col} Rate (%)",
+                    "data": [
+                        {"label": s["segment"], "value": s["rate_percent"], "error": 0.0}
+                        for s in res.get("segments", [])
+                    ]
+                }
+                mv = {
                     "segment_column": seg_col,
                     "metric_column": met_col,
+                    "target_class": tgt,
+                    "overall_rate_percent": overall_pct,
+                    "overall_denominator": n_used,
+                    "overall_rate": res.get("overall_rate"),
+                    "chi2_p_value": p_val,
+                    "p_value": p_val,
                     "top_segment": top_seg.get("segment"),
-                    "top_median": top_seg.get("median"),
+                    "top_rate": top_seg.get("rate_percent"),
                     "bottom_segment": bot_seg.get("segment"),
-                    "bottom_median": bot_seg.get("median"),
-                    "ratio": ratio,
+                    "bottom_rate": bot_seg.get("rate_percent"),
+                    "difference": diff_pct,
                     "segments": res.get("segments", [])
-                },
-                evidence_step=step_num,
-                significance=p_val,
-                effect_size=effect,
-                n_used=n_used,
-                n_excluded=n_excluded,
-                exclusion_rate=ex_rate,
-                confidence=conf,
-                caveats=cavs,
-                chart_spec=c_spec,
-                impact_score=score
-            ))
+                }
+                for s in res.get("segments", []):
+                    mv[s["segment"]] = s["rate_percent"]
+                    mv[f"{s['segment']}_rate"] = s["rate_percent"]
+                    mv[f"{s['segment']}_n"] = s.get("n_used", 0)
+
+                candidates.append(Insight(
+                    id=f"insight-seg-{seg_col}-{met_col}",
+                    type="segment_difference",
+                    title=title,
+                    summary=summary,
+                    metric_values=mv,
+                    evidence_step=step_num,
+                    significance=p_val,
+                    effect_size=effect,
+                    n_used=n_used,
+                    n_excluded=n_excluded,
+                    exclusion_rate=ex_rate,
+                    confidence=conf,
+                    caveats=cavs,
+                    chart_spec=c_spec,
+                    impact_score=score
+                ))
+            else:
+                n_used = res.get("n_used", cleaned_rows)
+                n_excluded = res.get("n_excluded_imputed", 0)
+                ex_rate = round(n_excluded / max(1, n_used + n_excluded), 4)
+                conf = determine_confidence(n_used, ex_rate)
+                p_val = res.get("anova_p_value")
+                top_seg = res.get("top_segment", {})
+                bot_seg = res.get("bottom_segment", {})
+                ratio = res.get("top_vs_bottom_ratio", 1.0)
+                effect = round(abs(ratio - 1.0), 4) if ratio else 0.2
+
+                is_significant = (p_val is not None and p_val <= 0.05)
+                if p_val is not None and not is_significant:
+                    title = f"No significant difference in {met_col} across {seg_col}"
+                    summary = (
+                        f"ANOVA test shows no statistically significant variance in {met_col} "
+                        f"across {seg_col} categories (p={p_val:.4f}, n_used={n_used}). "
+                        f"{top_seg.get('segment')} recorded {top_seg.get('median')} vs {bot_seg.get('median')} for {bot_seg.get('segment')}."
+                    )
+                else:
+                    title = f"Variance in {met_col} across {seg_col}"
+                    p_text = f" (p={p_val:.4f})" if p_val is not None else ""
+                    summary = (
+                        f"{top_seg.get('segment')} recorded the highest {met_col} (median {top_seg.get('median')}) "
+                        f"compared to {bot_seg.get('segment')} (median {bot_seg.get('median')}), a {ratio:.2f}x differential{p_text}."
+                    )
+
+                score = compute_impact_score("segment_difference", effect, p_val, n_used, n_excluded, conf)
+                cavs = build_caveats(n_used, ex_rate, p_val)
+                c_spec = build_chart_spec_for_segment(seg_col, met_col, res.get("segments", []))
+
+                candidates.append(Insight(
+                    id=f"insight-seg-{seg_col}-{met_col}",
+                    type="segment_difference",
+                    title=title,
+                    summary=summary,
+                    metric_values={
+                        "segment_column": seg_col,
+                        "metric_column": met_col,
+                        "top_segment": top_seg.get("segment"),
+                        "top_median": top_seg.get("median"),
+                        "bottom_segment": bot_seg.get("segment"),
+                        "bottom_median": bot_seg.get("median"),
+                        "ratio": ratio,
+                        "segments": res.get("segments", [])
+                    },
+                    evidence_step=step_num,
+                    significance=p_val,
+                    effect_size=effect,
+                    n_used=n_used,
+                    n_excluded=n_excluded,
+                    exclusion_rate=ex_rate,
+                    confidence=conf,
+                    caveats=cavs,
+                    chart_spec=c_spec,
+                    impact_score=score
+                ))
 
         # Correlation
         elif t_name == "run_correlation":

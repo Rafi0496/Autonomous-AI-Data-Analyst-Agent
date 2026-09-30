@@ -32,19 +32,130 @@ def segment_compare(
         df = df.copy()
         df[segment_column] = df[segment_column].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
-    # Clean metric column if formatted as currency or string
-    metric_series = df[metric_column]
-    if not pd.api.types.is_numeric_dtype(metric_series):
-        metric_series = pd.to_numeric(
-            metric_series.astype(str).str.replace(r"[$,€£¥]", "", regex=True),
+    # Detect if metric_column is categorical/binary (e.g. Attrition, Converted, Churn)
+    from backend.app.services.data_loader import get_column_imputed_mask
+    raw_metric_series = df[metric_column]
+    is_categorical_target = False
+    
+    if not pd.api.types.is_numeric_dtype(raw_metric_series):
+        cleaned_num = pd.to_numeric(
+            raw_metric_series.astype(str).str.replace(r"[$,€£¥]", "", regex=True),
             errors="coerce"
         )
-    
+        if cleaned_num.notnull().mean() >= 0.5:
+            metric_series = cleaned_num
+        else:
+            is_categorical_target = True
+    elif raw_metric_series.nunique() <= 2 and set(raw_metric_series.dropna().unique()).issubset({0, 1, 0.0, 1.0}):
+        is_categorical_target = True
+
+    # -------------------------------------------------------------
+    # PATH 1: Categorical / Binary Rate Analysis (e.g. Attrition by Dept)
+    # -------------------------------------------------------------
+    if is_categorical_target:
+        seg_series = df[segment_column].astype(str).str.strip()
+        tar_series = df[metric_column].astype(str).str.strip()
+        seg_imputed = get_column_imputed_mask(df, segment_column)
+        tar_imputed = get_column_imputed_mask(df, metric_column)
+        imputed_mask = (seg_imputed | tar_imputed)
+        
+        working_df = pd.DataFrame({"segment": seg_series, "target": tar_series})[~imputed_mask].dropna()
+        working_df = working_df[~working_df["target"].str.lower().isin(["nan", "none", "<na>", ""])]
+        working_df = working_df[~working_df["segment"].str.lower().isin(["nan", "none", "<na>", ""])]
+
+        if working_df.empty:
+            return {
+                "dataset_id": dataset_id,
+                "tool": "segment_compare",
+                "analysis_type": "categorical_rate",
+                "status": "error",
+                "message": "No non-null rows remaining for rate analysis.",
+                "segment_column": segment_column,
+                "metric_column": metric_column,
+                "segments": []
+            }
+
+        # Identify positive class (prefer 'Yes', 'True', '1', or first category)
+        unique_targets = list(working_df["target"].unique())
+        pos_class = unique_targets[0]
+        for candidate_pos in ["yes", "true", "1", "left", "churn"]:
+            match = next((t for t in unique_targets if t.lower() == candidate_pos), None)
+            if match:
+                pos_class = match
+                break
+
+        overall_n = len(working_df)
+        overall_pos = int((working_df["target"].str.lower() == pos_class.lower()).sum())
+        overall_rate = overall_pos / overall_n if overall_n > 0 else 0.0
+
+        segment_stats = []
+        for seg_name, group in working_df.groupby("segment"):
+            n_seg = len(group)
+            if n_seg == 0:
+                continue
+            pos_seg = int((group["target"].str.lower() == pos_class.lower()).sum())
+            s_rate = pos_seg / n_seg
+            segment_stats.append({
+                "segment": str(seg_name),
+                "n_used": n_seg,
+                "count": n_seg,
+                "positive_count": pos_seg,
+                "rate": round(float(s_rate), 4),
+                "rate_percent": round(float(s_rate * 100), 2),
+                "mean": round(float(s_rate * 100), 2),
+                "denominator": n_seg
+            })
+
+        segment_stats.sort(key=lambda x: x["rate"], reverse=True)
+        top_seg = segment_stats[0] if segment_stats else {}
+        bot_seg = segment_stats[-1] if segment_stats else {}
+        rate_diff = round((top_seg.get("rate_percent", 0.0) - bot_seg.get("rate_percent", 0.0)), 2)
+
+        # Chi-square test of independence
+        p_val = None
+        chi2_stat = None
+        ct = pd.crosstab(working_df["segment"], working_df["target"])
+        if ct.shape[0] >= 2 and ct.shape[1] >= 2:
+            try:
+                c_res = stats.chi2_contingency(ct)
+                chi2_stat = round(float(c_res.statistic), 4)
+                p_val = round(float(c_res.pvalue), 5)
+            except Exception:
+                pass
+
+        return {
+            "dataset_id": dataset_id,
+            "tool": "segment_compare",
+            "analysis_type": "categorical_rate",
+            "status": "success",
+            "segment_column": segment_column,
+            "metric_column": metric_column,
+            "target_class": pos_class,
+            "total_records": len(df),
+            "n_used": overall_n,
+            "n_excluded_imputed": int(imputed_mask.sum()),
+            "overall_rate": round(float(overall_rate), 4),
+            "overall_rate_percent": round(float(overall_rate * 100), 2),
+            "overall_numerator": overall_pos,
+            "overall_denominator": overall_n,
+            "total_segments": len(segment_stats),
+            "top_segment": top_seg,
+            "bottom_segment": bot_seg,
+            "absolute_difference": rate_diff,
+            "chi2_statistic": chi2_stat,
+            "chi2_p_value": p_val,
+            "anova_p_value": p_val,
+            "is_statistically_significant": bool(p_val is not None and p_val < 0.05),
+            "segments": segment_stats
+        }
+
+    # -------------------------------------------------------------
+    # PATH 2: Continuous Numeric Metric Comparison
+    # -------------------------------------------------------------
     # Strip string segments
     seg_series = df[segment_column].astype(str).str.strip()
 
     # Exclude imputed values from statistical segment comparison
-    from backend.app.services.data_loader import get_column_imputed_mask
     seg_imputed = get_column_imputed_mask(df, segment_column)
     metric_imputed = get_column_imputed_mask(df, metric_column)
     imputed_mask = (seg_imputed | metric_imputed)
@@ -60,6 +171,7 @@ def segment_compare(
         return {
             "dataset_id": dataset_id,
             "tool": "segment_compare",
+            "analysis_type": "continuous_mean",
             "status": "error",
             "message": "No valid non-null rows remaining after alignment.",
             "segment_column": segment_column,
