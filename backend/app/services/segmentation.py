@@ -1,6 +1,7 @@
 """Segment comparison tool: segment_compare().
 
 Groups dataset by a categorical feature and compares key metrics across segments.
+Includes cardinality guardrails to reject individual record IDs and ensure meaningful comparisons.
 """
 from typing import Any, Dict, List, Optional
 import numpy as np
@@ -11,18 +12,25 @@ from backend.app.services.data_loader import get_dataset_dataframe
 def segment_compare(
     dataset_id: str,
     segment_column: str,
-    metric_column: str
+    metric_column: str,
+    allow_high_cardinality: bool = False
 ) -> Dict[str, Any]:
     """
     Compare a numeric metric across categories in a segment column.
     Computes summary metrics, relative differences, and statistical significance.
+    Rejects high-cardinality identifier columns (e.g. Transaction_ID) by default.
     """
-    df = get_dataset_dataframe(dataset_id)
+    df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
     
     if segment_column not in df.columns:
         raise ValueError(f"Segment column '{segment_column}' not found in dataset. Available: {list(df.columns)}")
     if metric_column not in df.columns:
         raise ValueError(f"Metric column '{metric_column}' not found in dataset. Available: {list(df.columns)}")
+
+    # Normalize whitespace on segment_column; casing is preserved from cleaned data canonicalization
+    if df[segment_column].dtype == "object" or str(df[segment_column].dtype).startswith("str"):
+        df = df.copy()
+        df[segment_column] = df[segment_column].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
     # Clean metric column if formatted as currency or string
     metric_series = df[metric_column]
@@ -35,10 +43,18 @@ def segment_compare(
     # Strip string segments
     seg_series = df[segment_column].astype(str).str.strip()
 
+    # Exclude imputed values from statistical segment comparison
+    from backend.app.services.data_loader import get_column_imputed_mask
+    seg_imputed = get_column_imputed_mask(df, segment_column)
+    metric_imputed = get_column_imputed_mask(df, metric_column)
+    imputed_mask = (seg_imputed | metric_imputed)
+    n_excluded_imputed = int(imputed_mask.sum())
+
     working_df = pd.DataFrame({
         "segment": seg_series,
         "metric": metric_series
-    }).dropna()
+    })[~imputed_mask].dropna()
+    n_used = len(working_df)
 
     if working_df.empty:
         return {
@@ -50,6 +66,28 @@ def segment_compare(
             "metric_column": metric_column,
             "segments": []
         }
+
+    # Guard against high-cardinality ID-like columns
+    unique_segments = int(working_df["segment"].nunique())
+    total_rows = len(working_df)
+    cardinality_ratio = unique_segments / total_rows if total_rows > 0 else 0.0
+    is_id_name = any(
+        segment_column.lower().endswith(suffix) or segment_column.lower().startswith(suffix)
+        for suffix in ["_id", "id", "uuid", "guid", "key", "code", "hash", "num", "number"]
+    )
+
+    if not allow_high_cardinality:
+        if cardinality_ratio >= 0.70 and unique_segments > 15:
+            raise ValueError(
+                f"Column '{segment_column}' has high cardinality ({unique_segments} unique values across {total_rows} rows, {cardinality_ratio:.1%}) "
+                f"and resembles a unique record identifier rather than a categorical business segment. "
+                f"Segment comparison requires a categorical grouping column with shared groups (e.g. Category, Region, Department)."
+            )
+        if is_id_name and (cardinality_ratio >= 0.50 or unique_segments > 30):
+            raise ValueError(
+                f"Column '{segment_column}' appears to be a unique identifier (ID-like name and {unique_segments} distinct values). "
+                f"Please choose a categorical segment with repeated groups (e.g. Category, Department, Region, Channel)."
+            )
 
     grouped = working_df.groupby("segment")["metric"]
     total_metric_sum = float(working_df["metric"].sum())
@@ -91,8 +129,18 @@ def segment_compare(
     bottom_segment = segment_stats[-1] if segment_stats else None
     
     relative_diff_ratio = None
-    if top_segment and bottom_segment and bottom_segment["mean"] > 0:
-        relative_diff_ratio = round(top_segment["mean"] / bottom_segment["mean"], 2)
+    abs_diff = None
+    if top_segment and bottom_segment:
+        top_m = top_segment["mean"]
+        bot_m = bottom_segment["mean"]
+        abs_diff = round(top_m - bot_m, 2)
+        if bot_m > 0 and top_m >= bot_m:
+            relative_diff_ratio = round(top_m / bot_m, 2)
+        elif bot_m > 0 and top_m < bot_m:
+            relative_diff_ratio = round(bot_m / top_m, 2)
+        else:
+            # Baseline is negative or zero, ratio is mathematically undefined
+            relative_diff_ratio = None
 
     # Statistical significance test (One-way ANOVA) if >= 2 groups
     p_value = None
@@ -113,12 +161,15 @@ def segment_compare(
         "segment_column": segment_column,
         "metric_column": metric_column,
         "total_records": len(working_df),
+        "n_used": len(working_df),
+        "n_excluded_imputed": n_excluded_imputed,
         "overall_mean": round(overall_mean, 2),
         "overall_sum": round(total_metric_sum, 2),
         "total_segments": len(segment_stats),
         "top_segment": top_segment,
         "bottom_segment": bottom_segment,
         "top_vs_bottom_ratio": relative_diff_ratio,
+        "absolute_difference": abs_diff,
         "anova_p_value": p_value,
         "is_statistically_significant": is_significant,
         "segments": segment_stats

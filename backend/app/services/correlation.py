@@ -16,7 +16,8 @@ def run_correlation(
     Compute pairwise correlation across numeric columns in the dataset.
     Flags strong linear relationships (|r| >= threshold).
     """
-    df = get_dataset_dataframe(dataset_id)
+    df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
+    from backend.app.services.data_loader import get_column_imputed_mask
     
     # Filter to requested columns or all numeric columns
     if columns:
@@ -24,7 +25,7 @@ def run_correlation(
     else:
         valid_cols = df.columns.tolist()
         
-    num_df = df[valid_cols].select_dtypes(include=[np.number])
+    num_df = df[valid_cols].select_dtypes(include=[np.number]).copy()
     
     # Try converting numeric-like object columns if too few numeric cols
     if len(num_df.columns) < 2:
@@ -45,22 +46,40 @@ def run_correlation(
             "highest_correlation": None
         }
 
-    corr_matrix = num_df.corr(method="pearson").round(4)
-    
-    # Extract pairs without duplicates (upper triangle)
+    matrix_cols = list(num_df.columns)
+    corr_dict = {c: {} for c in matrix_cols}
     strong_relationships = []
     all_pairs = []
-    matrix_cols = list(corr_matrix.columns)
-    
+    total_excluded_imputed = 0
+
     for i in range(len(matrix_cols)):
+        col_x = matrix_cols[i]
+        corr_dict[col_x][col_x] = 1.0
+        x_imputed = get_column_imputed_mask(df, col_x)
+
         for j in range(i + 1, len(matrix_cols)):
-            col_x = matrix_cols[i]
             col_y = matrix_cols[j]
-            r_val = corr_matrix.loc[col_x, col_y]
+            y_imputed = get_column_imputed_mask(df, col_y)
+            pair_imputed = (x_imputed | y_imputed)
+            pair_subset = num_df.loc[~pair_imputed, [col_x, col_y]].dropna()
             
-            if pd.isna(r_val):
+            pair_n_used = int(len(pair_subset))
+            pair_n_excluded = int(pair_imputed.sum())
+            total_excluded_imputed = max(total_excluded_imputed, pair_n_excluded)
+
+            if pair_n_used >= 2:
+                r_val = round(float(pair_subset[col_x].corr(pair_subset[col_y])), 4)
+            else:
+                r_val = float("nan")
+
+            corr_dict[col_x][col_y] = None if np.isnan(r_val) else r_val
+            if col_y not in corr_dict:
+                corr_dict[col_y] = {}
+            corr_dict[col_y][col_x] = None if np.isnan(r_val) else r_val
+
+            if pd.isna(r_val) or np.isnan(r_val):
                 continue
-                
+
             abs_r = abs(r_val)
             strength_desc = "weak"
             if abs_r >= 0.7:
@@ -72,15 +91,15 @@ def run_correlation(
                 
             direction = "positive" if r_val > 0 else "negative"
             
-            valid_sample_size = int(num_df[[col_x, col_y]].dropna().shape[0])
-            
             rel_info = {
                 "column_x": col_x,
                 "column_y": col_y,
                 "correlation": float(r_val),
                 "abs_correlation": float(abs_r),
                 "strength": f"{strength_desc} {direction}",
-                "sample_size": valid_sample_size
+                "sample_size": pair_n_used,
+                "n_used": pair_n_used,
+                "n_excluded_imputed": pair_n_excluded
             }
             
             all_pairs.append(rel_info)
@@ -91,9 +110,6 @@ def run_correlation(
     strong_relationships.sort(key=lambda x: x["abs_correlation"], reverse=True)
     highest = all_pairs[0] if all_pairs else None
 
-    # Format correlation matrix for JSON serialization
-    corr_dict = {col: corr_matrix[col].to_dict() for col in corr_matrix.columns}
-
     return {
         "dataset_id": dataset_id,
         "tool": "run_correlation",
@@ -103,5 +119,7 @@ def run_correlation(
         "strong_relationships_count": len(strong_relationships),
         "strong_relationships": strong_relationships,
         "highest_correlation": highest,
-        "correlation_matrix": corr_dict
+        "correlation_matrix": corr_dict,
+        "n_used": len(num_df),
+        "n_excluded_imputed": total_excluded_imputed
     }

@@ -60,3 +60,9 @@ htmlcov/
 # Logs
 *.log
 logs/
+
+# SQLite & Generated Artifacts
+data/*.db
+data/reports/*
+!data/reports/.gitkeep
+data/demo_outputs/

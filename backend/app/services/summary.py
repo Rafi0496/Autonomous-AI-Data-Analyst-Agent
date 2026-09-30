@@ -27,7 +27,7 @@ def write_summary(
     citations: Dict[str, Dict[str, Any]] = {}
     findings: List[Dict[str, Any]] = []
 
-    # 1. Harvest facts from profiling
+    # 1. Harvest facts from profiling and data quality
     if dataset_profile:
         row_cnt = dataset_profile.get("row_count", 0)
         col_cnt = dataset_profile.get("column_count", 0)
@@ -40,6 +40,44 @@ def write_summary(
         citations[str(q_score)] = {"tool": "profile_dataset", "metric": "quality_score", "value": q_score}
         if dup_cnt > 0:
             citations[str(dup_cnt)] = {"tool": "profile_dataset", "metric": "duplicate_rows", "value": dup_cnt}
+
+        # Data Quality Findings: Sentinels
+        for s in dataset_profile.get("sentinels_detected", []):
+            col = s.get("column")
+            val = s.get("sentinel_value")
+            cnt = s.get("count")
+            citations[str(cnt)] = {"tool": "data_cleaning", "metric": f"{col}_sentinel_count", "value": cnt}
+            citations[str(val)] = {"tool": "data_cleaning", "metric": f"{col}_sentinel_value", "value": val}
+            findings.append({
+                "category": "Data Quality",
+                "headline": f"{cnt} placeholder sentinels in {col}",
+                "narrative": f"Sanitized {cnt} placeholder values of {val} in column '{col}' prior to imputation.",
+                "primary_metric": cnt,
+                "source_tool": "data_cleaning"
+            })
+
+        # Data Quality Findings: Invalid Values
+        for iv in dataset_profile.get("invalid_values_detected", []):
+            col = iv.get("column")
+            cnt = iv.get("count")
+            rule = iv.get("rule")
+            citations[str(cnt)] = {"tool": "data_cleaning", "metric": f"{col}_invalid_count", "value": cnt}
+            findings.append({
+                "category": "Data Quality",
+                "headline": f"{cnt} invalid domain values in {col}",
+                "narrative": f"Identified and removed {cnt} invalid values in column '{col}' violating {rule}.",
+                "primary_metric": cnt,
+                "source_tool": "data_cleaning"
+            })
+
+        # Data Quality Findings: Imputation Rates
+        for col, stats in dataset_profile.get("column_imputation_stats", {}).items():
+            imp_cnt = stats.get("imputed_count", 0)
+            imp_rate = stats.get("imputation_rate", 0.0)
+            if imp_cnt > 0:
+                citations[str(imp_cnt)] = {"tool": "data_cleaning", "metric": f"{col}_imputed_count", "value": imp_cnt}
+                pct = round(imp_rate * 100, 2)
+                citations[str(pct)] = {"tool": "data_cleaning", "metric": f"{col}_imputed_pct", "value": pct}
 
     # 2. Harvest facts from tool results
     for res in structured_results:
@@ -77,10 +115,13 @@ def write_summary(
 
         # Outlier findings
         elif tool_name == "detect_outliers":
-            total_anomalies = res.get("total_anomalous_rows", 0)
-            rate = res.get("overall_anomaly_rate_percent", 0.0)
+            total_anomalies = res.get("total_anomalous_rows", res.get("anomaly_count", 0))
+            rate = res.get("overall_anomaly_rate_percent", res.get("anomaly_rate_percent", 0.0))
+            n_rows_used = res.get("n_rows_used", res.get("total_rows_examined", 0))
             citations[str(total_anomalies)] = {"tool": tool_name, "metric": "total_anomalous_rows", "value": total_anomalies}
             citations[str(rate)] = {"tool": tool_name, "metric": "anomaly_rate_percent", "value": rate}
+            if n_rows_used:
+                citations[str(n_rows_used)] = {"tool": tool_name, "metric": "n_rows_used", "value": n_rows_used}
             
             top_cols = res.get("top_outlier_columns", [])
             if top_cols:
@@ -89,7 +130,7 @@ def write_summary(
                 findings.append({
                     "category": "Outlier Detection",
                     "headline": f"{total_anomalies} anomalous records detected ({rate}%)",
-                    "narrative": f"Identified statistical anomalies primarily concentrated in '{top['column']}' ({top['count']} outliers).",
+                    "narrative": f"Identified statistical anomalies primarily concentrated in '{top['column']}' ({top['count']} outliers across {n_rows_used} cleaned rows).",
                     "primary_metric": total_anomalies,
                     "source_tool": tool_name
                 })
@@ -102,17 +143,31 @@ def write_summary(
             p_val = res.get("anova_p_value")
             
             if top_seg and bottom_seg:
-                citations[str(top_seg["mean"])] = {"tool": tool_name, "metric": f"{top_seg['segment']} mean", "value": top_seg["mean"]}
-                citations[str(bottom_seg["mean"])] = {"tool": tool_name, "metric": f"{bottom_seg['segment']} mean", "value": bottom_seg["mean"]}
-                if ratio:
-                    citations[str(ratio)] = {"tool": tool_name, "metric": "top_vs_bottom_ratio", "value": ratio}
-                
+                top_m = top_seg["mean"]
+                bot_m = bottom_seg["mean"]
+                citations[str(top_m)] = {"tool": tool_name, "metric": f"{top_seg['segment']} mean", "value": top_m}
+                citations[str(bot_m)] = {"tool": tool_name, "metric": f"{bottom_seg['segment']} mean", "value": bot_m}
+
+                abs_diff = res.get("absolute_difference")
+                if abs_diff is None:
+                    abs_diff = round(top_m - bot_m, 2)
+                citations[str(abs(abs_diff))] = {"tool": tool_name, "metric": "absolute_difference", "value": abs(abs_diff)}
+
                 sig_note = f" (statistically significant, p={p_val})" if res.get("is_statistically_significant") else ""
+
+                if ratio is not None and ratio > 1.0:
+                    citations[str(ratio)] = {"tool": tool_name, "metric": "top_vs_bottom_ratio", "value": ratio}
+                    headline = f"Top segment '{top_seg['segment']}' outperformed '{bottom_seg['segment']}' by {ratio}x ({top_m} vs {bot_m})"
+                elif ratio is not None and ratio == 1.0:
+                    headline = f"Segments '{top_seg['segment']}' and '{bottom_seg['segment']}' demonstrated equivalent performance ({top_m})"
+                else:
+                    headline = f"Segment '{top_seg['segment']}' exceeded '{bottom_seg['segment']}' by {abs_diff:+} ({top_m} vs {bot_m})"
+
                 findings.append({
                     "category": "Segment Comparison",
-                    "headline": f"Top segment '{top_seg['segment']}' outperformed '{bottom_seg['segment']}' by {ratio or 1.0}x",
-                    "narrative": f"Average {res.get('metric_column')} reached {top_seg['mean']} for '{top_seg['segment']}' compared to {bottom_seg['mean']} for '{bottom_seg['segment']}'{sig_note}.",
-                    "primary_metric": top_seg["mean"],
+                    "headline": headline,
+                    "narrative": f"Average {res.get('metric_column')} reached {top_m} for '{top_seg['segment']}' compared to {bot_m} for '{bottom_seg['segment']}'{sig_note}.",
+                    "primary_metric": top_m,
                     "source_tool": tool_name
                 })
 

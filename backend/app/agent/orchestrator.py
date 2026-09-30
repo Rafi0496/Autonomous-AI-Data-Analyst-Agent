@@ -341,6 +341,7 @@ class PlanActReflectOrchestrator:
             "synthesis": synthesis,
             "chart_specifications": chart_specs,
             "citation_audit": verification,
+            "verification": verification,
             "run_log": self.run_log
         }
 

@@ -8,6 +8,9 @@ import numpy as np
 import pandas as pd
 from backend.app.services.data_loader import get_dataset_dataframe
 
+# Standard stability threshold: within +/- 5.0% change is classified as stable
+STABILITY_THRESHOLD_PCT: float = 5.0
+
 def trend_analysis(
     dataset_id: str,
     date_column: str,
@@ -17,7 +20,8 @@ def trend_analysis(
     """
     Analyze chronological trends and rolling patterns over time.
     """
-    df = get_dataset_dataframe(dataset_id)
+    df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
+    from backend.app.services.data_loader import get_column_imputed_mask
     
     if date_column not in df.columns:
         raise ValueError(f"Date column '{date_column}' not found. Available: {list(df.columns)}")
@@ -37,15 +41,23 @@ def trend_analysis(
             errors="coerce"
         )
         
-    ts_df = pd.DataFrame({"ds": dates, "y": val_series}).dropna().sort_values("ds").reset_index(drop=True)
+    date_imputed = get_column_imputed_mask(df, date_column)
+    val_imputed = get_column_imputed_mask(df, value_column)
+    imputed_mask = (date_imputed | val_imputed)
+    n_excluded_imputed = int(imputed_mask.sum())
 
-    if len(ts_df) < 3:
+    ts_df = pd.DataFrame({"ds": dates, "y": val_series})[~imputed_mask].dropna().sort_values("ds").reset_index(drop=True)
+    n_used = len(ts_df)
+
+    if n_used < 3:
         return {
             "dataset_id": dataset_id,
             "tool": "trend_analysis",
             "status": "skipped",
-            "message": "Fewer than 3 valid date/value pairs found for trend analysis.",
-            "total_points": len(ts_df)
+            "message": "Fewer than 3 valid non-imputed date/value pairs found for trend analysis.",
+            "total_points": n_used,
+            "n_used": n_used,
+            "n_excluded_imputed": n_excluded_imputed
         }
 
     # Aggregate duplicate dates
@@ -83,11 +95,11 @@ def trend_analysis(
     end_val = float(y_vals[-1])
     pct_change = round(((end_val - start_val) / abs(start_val)) * 100, 2) if start_val != 0 else 0.0
     
-    # Direction
-    if slope > 0.05 and pct_change > 5.0:
-        direction = "upward"
-    elif slope < -0.05 and pct_change < -5.0:
+    # Classify direction based on percentage change
+    if pct_change <= -STABILITY_THRESHOLD_PCT:
         direction = "downward"
+    elif pct_change >= STABILITY_THRESHOLD_PCT:
+        direction = "upward"
     else:
         direction = "stable"
 
@@ -122,6 +134,8 @@ def trend_analysis(
         "start_date": str(ts_df["ds"].min())[:10],
         "end_date": str(ts_df["ds"].max())[:10],
         "total_observations": len(ts_df),
+        "n_used": len(ts_df),
+        "n_excluded_imputed": n_excluded_imputed,
         "aggregated_periods": len(resampled),
         "overall_trend": direction,
         "linear_slope": round(float(slope), 4),

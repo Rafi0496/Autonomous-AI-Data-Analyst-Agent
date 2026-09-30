@@ -44,7 +44,7 @@ def run_phase2_verification():
 
     # 2. Budget Guardrails Tripping Validation
     print("\n[STEP 2] Testing Step/Token Budget Tripping & Partial Fallback...")
-    budget_orchestrator = PlanActReflectOrchestrator(max_steps=2, token_budget=10000)
+    budget_orchestrator = PlanActReflectOrchestrator(max_steps=2, token_budget=10000, provider="heuristic")
     budget_run = budget_orchestrator.run_analysis(
         dataset_id=RETAIL_DATASET,
         goal="Trip budget deliberately to verify graceful termination."
@@ -65,6 +65,7 @@ def run_phase2_verification():
     )
 
     print(f" [PASS] Status: {result['status']}")
+    print(f" [PASS] Active Planner: {result['planner']}")
     print(f" [PASS] Total Steps Executed: {result['total_steps_executed']}")
     print(f" [PASS] Total Tokens Used: {result['tokens_consumed']}")
     print(f" [PASS] Execution Time: {result['execution_time_seconds']}s")
@@ -72,7 +73,7 @@ def run_phase2_verification():
     # 4. Ordered Explainability Run Log
     print("\n[STEP 4] Explainability Run Log Trace:")
     for log in result["run_log"]:
-        print(f"   Step {log['step_number']}: [{log['tool']}] ({log['duration_ms']}ms)")
+        print(f"   Step {log['step_number']}: [{log['tool']}] (Tool: {log['duration_ms']}ms, LLM: {log.get('llm_latency_ms', 0)}ms) [Planner: {log.get('planner')}]")
         print(f"     Rationale: {log['rationale']}")
         print(f"     Status: {log['status']}")
 
@@ -81,8 +82,12 @@ def run_phase2_verification():
     print(f"\"{result['synthesis']['executive_summary']}\"")
     print("\nKey Findings:")
     for i, finding in enumerate(result['synthesis']['key_findings'], 1):
-        print(f"  {i}. [{finding['category']}] {finding['headline']}")
-        print(f"     {finding['narrative']}")
+        cat = finding.get('category', 'Key Finding') if isinstance(finding, dict) else 'Finding'
+        headline = finding.get('headline', str(finding)) if isinstance(finding, dict) else str(finding)
+        narrative = finding.get('narrative', '') if isinstance(finding, dict) else ''
+        print(f"  {i}. [{cat}] {headline}")
+        if narrative:
+            print(f"     {narrative}")
 
     # 6. Programmatic Citation & Claim Audit (Phase 2 Exit Criterion)
     print("\n[STEP 6] Programmatic Citation Audit (Tracing Claims to Computed Results):")

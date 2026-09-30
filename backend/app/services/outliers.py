@@ -19,14 +19,15 @@ def detect_outliers(
     """
     Detect statistical outliers across numeric columns using IQR, Z-Score, or Isolation Forest.
     """
-    df = get_dataset_dataframe(dataset_id)
+    df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
+    from backend.app.services.data_loader import get_column_imputed_mask
     
     if columns:
         valid_cols = [c for c in columns if c in df.columns]
     else:
         valid_cols = df.columns.tolist()
         
-    num_df = df[valid_cols].select_dtypes(include=[np.number])
+    num_df = df[valid_cols].select_dtypes(include=[np.number]).copy()
     
     # Check if object cols can be converted
     for c in valid_cols:
@@ -47,13 +48,17 @@ def detect_outliers(
         }
 
     method = method.lower()
-    total_rows = len(df)
+    n_rows_used = len(df)
+    total_rows = n_rows_used
     column_outliers = {}
     anomalous_indices = set()
+    total_excluded_imputed = 0
 
     if method == "iqr":
         for col in num_df.columns:
-            series = num_df[col].dropna()
+            col_imputed = get_column_imputed_mask(df, col)
+            total_excluded_imputed += int(col_imputed.sum())
+            series = num_df.loc[~col_imputed, col].dropna()
             if len(series) < 4:
                 continue
                 
@@ -63,15 +68,18 @@ def detect_outliers(
             lower_bound = round(q25 - (threshold * iqr), 4)
             upper_bound = round(q75 + (threshold * iqr), 4)
             
-            mask = (num_df[col] < lower_bound) | (num_df[col] > upper_bound)
-            outlier_idx = num_df.index[mask].tolist()
+            mask = (series < lower_bound) | (series > upper_bound)
+            outlier_idx = series.index[mask].tolist()
             anomalous_indices.update(outlier_idx)
             
-            outlier_vals = [float(v) for v in num_df.loc[outlier_idx, col].head(10).tolist()]
+            outlier_vals = [float(v) for v in series.loc[outlier_idx].head(10).tolist()]
+            col_used = len(series)
             
             column_outliers[col] = {
                 "outlier_count": len(outlier_idx),
-                "outlier_percentage": round((len(outlier_idx) / total_rows) * 100, 2),
+                "outlier_percentage": round((len(outlier_idx) / col_used) * 100, 2) if col_used > 0 else 0.0,
+                "n_used": col_used,
+                "n_excluded_imputed": int(col_imputed.sum()),
                 "lower_bound": lower_bound,
                 "upper_bound": upper_bound,
                 "q25": round(q25, 4),
@@ -81,9 +89,12 @@ def detect_outliers(
             }
 
     elif method in ("zscore", "z-score"):
-        z_threshold = float(threshold) if threshold != 1.5 else 2.0
+        # Restore standard 3.0 standard deviation threshold for z-score outlier detection
+        z_threshold = float(threshold) if threshold != 1.5 else 3.0
         for col in num_df.columns:
-            series = num_df[col].dropna()
+            col_imputed = get_column_imputed_mask(df, col)
+            total_excluded_imputed += int(col_imputed.sum())
+            series = num_df.loc[~col_imputed, col].dropna()
             if len(series) < 4:
                 continue
                 
@@ -92,18 +103,21 @@ def detect_outliers(
             if std == 0:
                 continue
                 
-            z_scores = (num_df[col] - mean) / std
+            z_scores = (series - mean) / std
             mask = z_scores.abs() > z_threshold
-            outlier_idx = num_df.index[mask].tolist()
+            outlier_idx = series.index[mask].tolist()
             anomalous_indices.update(outlier_idx)
+            col_used = len(series)
             
             column_outliers[col] = {
                 "outlier_count": len(outlier_idx),
-                "outlier_percentage": round((len(outlier_idx) / total_rows) * 100, 2),
+                "outlier_percentage": round((len(outlier_idx) / col_used) * 100, 2) if col_used > 0 else 0.0,
+                "n_used": col_used,
+                "n_excluded_imputed": int(col_imputed.sum()),
                 "mean": round(mean, 4),
                 "std": round(std, 4),
                 "z_threshold": z_threshold,
-                "sample_outlier_values": [float(v) for v in num_df.loc[outlier_idx, col].head(10).tolist()],
+                "sample_outlier_values": [float(v) for v in series.loc[outlier_idx].head(10).tolist()],
                 "outlier_indices": outlier_idx[:20]
             }
 
@@ -118,7 +132,8 @@ def detect_outliers(
             
             column_outliers["multivariate_isolation_forest"] = {
                 "outlier_count": len(outlier_idx),
-                "outlier_percentage": round((len(outlier_idx) / total_rows) * 100, 2),
+                "outlier_percentage": round((len(outlier_idx) / len(clean_subset)) * 100, 2),
+                "n_used": len(clean_subset),
                 "features_used": list(num_df.columns),
                 "outlier_indices": outlier_idx[:20]
             }
@@ -132,14 +147,21 @@ def detect_outliers(
         reverse=True
     )
 
+    anomaly_rate = round((len(anomalous_indices) / n_rows_used) * 100, 2) if n_rows_used > 0 else 0.0
+
     return {
         "dataset_id": dataset_id,
         "tool": "detect_outliers",
         "status": "success",
         "method": method,
-        "total_rows_examined": total_rows,
+        "total_rows_examined": n_rows_used,
+        "n_rows_used": n_rows_used,
+        "n_used": n_rows_used,
+        "n_excluded_imputed": total_excluded_imputed,
         "total_anomalous_rows": len(anomalous_indices),
-        "overall_anomaly_rate_percent": round((len(anomalous_indices) / total_rows) * 100, 2) if total_rows > 0 else 0.0,
+        "anomaly_count": len(anomalous_indices),
+        "overall_anomaly_rate_percent": anomaly_rate,
+        "anomaly_rate_percent": anomaly_rate,
         "columns_with_outliers_count": sum(1 for v in column_outliers.values() if v["outlier_count"] > 0),
         "column_outliers": column_outliers,
         "top_outlier_columns": [{"column": r[0], "count": r[1], "percentage": r[2]} for r in ranked_cols if r[1] > 0]

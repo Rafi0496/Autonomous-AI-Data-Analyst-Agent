@@ -50,10 +50,10 @@ The stack is chosen to be learnable within an academic timeline while still refl
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| LLM reasoning | Anthropic Claude API (function calling / tool use) | Drives planning, tool selection, and plain-language synthesis. |
-| Agent orchestration | LangGraph or LangChain agent framework, or a custom Plan-Act-Reflect loop | Structures the multi-step agent loop, tool routing, and memory. |
-| Tool layer | Custom Python "tools" wrapping pandas / statsmodels / scikit-learn | The concrete actions the agent can call: `clean_column()`, `run_correlation()`, `detect_outliers()`, `plot_trend()`, etc. |
-| Sandboxed execution | Restricted subprocess / Docker-in-Docker / RestrictedPython | Executes any agent-generated analysis code safely, without file-system or network access. |
+| LLM reasoning | **Provider-agnostic LLM layer** (`llm_client.py`): Anthropic Claude API + Google Gemini API (via `google-genai` SDK). Selectable at runtime via `LLM_PROVIDER=claude\|gemini\|heuristic`. | Drives planning, tool selection, reflection, and plain-language synthesis. Real token accounting from provider usage metadata. Heuristic mode available for offline/test runs. Development running on Gemini free tier. |
+| Agent orchestration | Custom Plan-Act-Reflect loop (`orchestrator.py`) | Structures the multi-step agent loop, tool routing, and memory. |
+| Tool layer | Custom Python "tools" wrapping pandas / statsmodels / scikit-learn | The concrete actions the agent can call: `run_correlation()`, `detect_outliers()`, `segment_compare()`, `trend_analysis()`, `query_sql()`, etc. |
+| Sandboxed execution | Closed-catalogue architecture + DuckDB in-memory isolation | Executes analysis within a strictly bounded tool catalogue, without file-system or network access. |
 
 ### 2.4 Data Processing & Storage
 
@@ -174,13 +174,14 @@ Each phase below lists objectives, week-by-week tasks, primary tech touched, and
 
 **Phase 2 As-Built Verification Status (Completed & Fully Verified):**
 - [x] Tool Catalogue: `run_correlation()`, `detect_outliers()`, `segment_compare()`, `trend_analysis()`, `generate_chart()`, `query_sql()`, `write_summary()` returning typed structured data.
-- [x] Single tool-call Claude API prototype tested via `scripts/prototype_tool_call.py`.
-- [x] Plan-Act-Reflect Orchestrator (`backend/app/agent/orchestrator.py`) with reflection-driven follow-ups.
+- [x] Single tool-call Claude/Gemini API prototype tested via `scripts/prototype_tool_call.py` and dedicated live test suite (`backend/tests/test_live_claude_api.py`, marked with `@pytest.mark.live`).
+- [x] Plan-Act-Reflect Orchestrator (`backend/app/agent/orchestrator.py`) with reflection-driven follow-ups and per-step latency and real token tracking.
 - [x] Closed-catalogue & DuckDB in-memory isolation guardrails against SQL writes & filesystem traversals verified with adversarial tests.
 - [x] Step/token budget guardrail tripping verified with automated tests tripping budgets and asserting graceful partial fallbacks.
 - [x] Ordered explainability run log stored in `AnalysisJob` model and exposed via `/api/v1/jobs/{job_id}/logs`.
-- [x] Celery worker task + resilient async polling endpoint (`/api/v1/jobs`).
-- [x] Full agent loop unattended integration test verified on messy retail data with programmatic citation verification (`citation_checker.py`, 100.0% verification rate).
+- [x] Data Cleaning & Integrity: Frequency-based canonical casing (preserving Title Case over lowercase, e.g., Engineering, HR, Marketing, Sales, Accessories, Electronics, LinkedIn, Google Ads), domain validity rules (sanitizing negative metrics and invalid ages [0, 100]), and extreme sentinel detection (e.g. Quantity=999).
+- [x] Statistical Rigor: Restored standard Z-score threshold to 3.0; tracked boolean companion imputation masks on disk; statistical tools exclude imputed rows reporting n_used and clean denominators.
+- [x] Full agent loop unattended integration test verified on messy retail data with programmatic citation verification (`citation_checker.py`, 100.0% verification rate). Data quality findings (sentinels, invalid values, imputation rates) surfaced to executive synthesis and fact pool.
 
 ---
 
@@ -197,11 +198,11 @@ Each phase below lists objectives, week-by-week tasks, primary tech touched, and
 | 11–12 | Insight ranking | Add relevance/significance scoring so the most important findings surface first rather than a flat list. |
 | 12 | Usability pass | Run the flow past 3–5 outside users (classmates/faculty) on real datasets; fix friction points in under 3-click first-insight goal. |
 
-**Deliverables**
-- Interactive dashboard showing ranked insights, charts, and narrative explanations.
-- Working conversational follow-up Q&A grounded in the analyzed dataset.
-- One-click PDF/Word report export suitable for a non-technical stakeholder.
-- Usability test notes and resulting UX fixes.
+**Deliverables (Phase 3 Completed & Verified)**
+- Interactive Reflex dashboard showing ranked insights, charts (`rx.recharts`), confidence badges, data quality stats, and explainability run-log.
+- Working conversational follow-up Q&A grounded in the analyzed dataset (`POST /chat`) with strict guardrails and citation verification.
+- One-click PDF (ReportLab) and Word (python-docx) report export with 5 comprehensive analytical sections and embedded chart PNGs.
+- End-to-end verification script (`scripts/verify_phase3.py`) validating the entire pipeline across 3 benchmark messy datasets.
 
 ---
 

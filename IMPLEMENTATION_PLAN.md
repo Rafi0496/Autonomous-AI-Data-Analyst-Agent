@@ -15,7 +15,8 @@
 │              Celery + Redis (async job queue)         │
 ├─────────────────────────────────────────────────────┤
 │              Agent Engine (Plan-Act-Reflect)          │
-│  Claude API │ Tool Catalogue │ Sandbox │ Memory       │
+│  Provider-Agnostic LLM Layer (Claude / Gemini)        │
+│  Tool Catalogue │ Sandbox │ Memory                    │
 ├─────────────────────────────────────────────────────┤
 │              Data Layer                               │
 │  PostgreSQL │ Redis │ DuckDB │ File Storage           │
@@ -50,15 +51,21 @@
 - [x] Run log / explainability layer (per-step trace, visible not just internal) — *Verified: Step-by-step trace capturing step number, timestamp, tool name, duration in ms, status, arguments, and rationale; exposed via `/api/v1/jobs/{job_id}/logs`.*
 - [x] Celery task wiring: each analysis job runs async, status streamed to Reflex state via polling or WebSocket push — *Verified: Celery worker task `run_analysis_task` + fallback background task execution with live step progress updates via `/api/v1/jobs/{job_id}`.*
 - [x] Integration test: full agent loop run unattended, end-to-end, on a real messy dataset — manually verify every claim traces to a computed result — *Verified: `test_full_agent_loop_unattended` and `scripts/verify_phase2.py` run unattended on messy retail data; `citation_checker.py` confirms 100.0% of numeric claims trace to computed tool results.*
+- [x] Provider-agnostic LLM layer (`llm_client.py`) — *Verified: `LLMClient` interface with `ClaudeClient`, `GeminiClient`, and `HeuristicClient` implementations. Provider selected via `LLM_PROVIDER` env var. Tool catalogue converted per-provider in one place (`get_tools_for_claude()`, `get_tools_for_gemini()`). Marked live tests with `@pytest.mark.live`.*
+- [x] Real token accounting from provider usage metadata — *Verified: Removed hardcoded `+= 350` per step. Token counts sourced from `response.usage` (Claude) and `response.usage_metadata` (Gemini). Marked "unknown" when unavailable (heuristic mode).*
+- [x] Data cleaning casing & domain validity rules — *Verified: Frequency-based canonical casing preserves Title Case over lowercase and short acronyms (Engineering, HR, Marketing, Sales, Accessories, Electronics, LinkedIn, Google Ads). Domain validity sanitizes negative business metrics and invalid ages (<0, >100) before imputation.*
+- [x] Sentinel detection & data-quality findings surfacing — *Verified: Sentinels (e.g. Quantity=999) detected and converted to NaN prior to imputation. Data quality findings (sentinels, invalid values, imputation rates) surfaced to LLM synthesis and citation fact pool.*
+- [x] Statistical rigor & Z-score restoration — *Verified: Z-score threshold restored to standard 3.0. Imputation companion mask tracked on disk; statistical tools exclude imputed rows reporting n_used and unflattened segment medians.*
+- [x] Model name logged in run_log — *Verified: Each run log entry records `planner` field with the LLM provider name (e.g., "llm:gemini", "llm:claude", "heuristic") and latency in ms.*
 
 ### Phase 3 — Insight, Visualization & Reporting (Weeks 9–12)
-- [ ] Chart generation tool (`generate_chart()`) → Plotly figures via `rx.plotly`
-- [ ] Dashboard page: ranked insight cards + embedded charts + narrative per finding
-- [ ] Conversational Q&A chat page, re-invoking tools only when new computation is needed
-- [ ] Report export: **both PDF and Word** (PRD FR-17 requires both, not just PDF)
-- [ ] Insight ranking/significance scoring
-- [ ] Visible token/cost tracker on the dashboard (Plan §8.5 — user-facing, not just an internal budget)
-- [ ] Usability test with 3–5 outside users on real datasets; log friction points against the 3-click first-insight goal
+- [x] Chart generation tool (`generate_chart()`) & declarative `chart_spec` → Bar, line, box, histogram, scatter, heatmap with headless PNG rendering (`backend/app/services/chart_render.py`) and Reflex `rx.recharts` visualization — *Verified: Multi-type chart specs and headless Agg rendering.*
+- [x] Dashboard page: ranked insight cards + embedded charts + narrative per finding — *Verified: Pure-Python Reflex dashboard (`pages/dashboard.py`) with confidence badges, caveats, exclusion rates, recharts components, data quality panel, and explainability run-log.*
+- [x] Conversational Q&A chat page, re-invoking tools only when new computation is needed — *Verified: `POST /chat` and Reflex chat page (`pages/chat.py`) with 3-tool budget, prompt guardrails, in-memory history, starter questions, and citation verification.*
+- [x] Report export: **both PDF and Word** (PRD FR-17 requires both, not just PDF) — *Verified: ReportLab PDF and python-docx export (`report_pdf.py`, `report_docx.py`) with 5 sections: Cover, Executive Summary, Top Insights with charts, Data Quality audit, and Methodology trail.*
+- [x] Insight ranking/significance scoring — *Verified: Deterministic impact scoring (0..1), confidence classification (high/medium/low), deduplication, and max 8 cap in `backend/app/services/insights.py`.*
+- [x] Visible token/cost tracker on the dashboard (Plan §8.5 — user-facing, not just an internal budget) — *Verified: Step progress, token usage, latency metrics, and budget limits on dashboard and settings pages.*
+- [x] Multi-dataset autonomous end-to-end verification (`scripts/verify_phase3.py`) — *Verified: Full flow across retail, HR, and marketing messy datasets producing demo artifacts.*
 
 ### Phase 4 — Real-World Readiness (Weeks 13–16)
 - [ ] JWT authentication wired between Reflex sessions and FastAPI

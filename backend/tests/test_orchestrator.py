@@ -12,6 +12,7 @@ import time
 import pytest
 from fastapi import status
 from backend.app.agent.citation_checker import extract_numeric_tokens, validate_citations
+from backend.app.agent.llm_client import TokenUsage, HeuristicClient
 from backend.app.agent.orchestrator import PlanActReflectOrchestrator
 from backend.app.services.sql_tool import query_sql
 
@@ -23,7 +24,8 @@ def test_full_agent_loop_unattended():
     """Verify that the full Plan-Act-Reflect loop runs unattended on real messy dataset."""
     orchestrator = PlanActReflectOrchestrator(
         max_steps=5,
-        token_budget=20000
+        token_budget=20000,
+        provider="heuristic"
     )
     result = orchestrator.run_analysis(
         dataset_id=RETAIL_DATASET,
@@ -72,7 +74,8 @@ def test_step_budget_tripping_graceful_partial_fallback():
     """
     orchestrator = PlanActReflectOrchestrator(
         max_steps=2,
-        token_budget=50000
+        token_budget=50000,
+        provider="heuristic"
     )
     result = orchestrator.run_analysis(
         dataset_id=RETAIL_DATASET,
@@ -93,9 +96,16 @@ def test_token_budget_tripping_graceful_partial_fallback():
     Deliberately trip the token budget with token_budget=400.
     Asserts loop stops immediately once token limit is breached.
     """
+    class BudgetTrippingClient(HeuristicClient):
+        def plan(self, profile, goal, dataset_id, tools=None):
+            res = super().plan(profile, goal, dataset_id, tools)
+            res.usage = TokenUsage(prompt_tokens=250, completion_tokens=250, total_tokens=500)
+            return res
+
     orchestrator = PlanActReflectOrchestrator(
         max_steps=10,
-        token_budget=400  # Will trip after 1 step
+        token_budget=400,  # 500 >= 400, trips immediately after step 1
+        llm_client=BudgetTrippingClient()
     )
     result = orchestrator.run_analysis(
         dataset_id=HR_DATASET,
@@ -138,7 +148,7 @@ def test_citation_checker_detects_hallucinations():
 # 5. EXPLAINABILITY RUN LOG STRUCTURE TEST
 def test_run_log_explainability():
     """Verify run log contains timestamps, tool name, arguments, execution duration in ms, and rationale."""
-    orchestrator = PlanActReflectOrchestrator(max_steps=2)
+    orchestrator = PlanActReflectOrchestrator(max_steps=2, provider="heuristic")
     result = orchestrator.run_analysis(dataset_id=RETAIL_DATASET)
     run_log = result["run_log"]
 

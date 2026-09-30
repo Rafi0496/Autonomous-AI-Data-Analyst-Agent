@@ -8,10 +8,17 @@ from pydantic_settings import BaseSettings
 BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 class Settings(BaseSettings):
-    model_config = ConfigDict(case_sensitive=True, env_file=".env")
+    model_config = ConfigDict(case_sensitive=True, env_file=".env", extra="ignore")
 
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Autonomous AI Data Analyst Agent"
+    
+    # LLM Provider settings
+    LLM_PROVIDER: str = "claude"
+    ANTHROPIC_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
+    ANTHROPIC_MODEL: str = "claude-sonnet-5-5"
+    GEMINI_MODEL: str = "gemini-3.1-flash-lite"
     
     # Database settings
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "localhost")

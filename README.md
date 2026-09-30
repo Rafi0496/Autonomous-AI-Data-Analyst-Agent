@@ -123,44 +123,60 @@
    cd "Autonomous AI Data Analyst Agent"
    ```
 
-2. **Create virtual environment and install dependencies:**
-   ```bash
-   uv venv --python 3.11
+2. **Set up virtual environment (Windows):**
+   ```powershell
+   python -m venv .venv
    .venv\Scripts\activate
-   uv pip install -r requirements.txt
+   pip install -r requirements.txt
    ```
 
-3. **Generate benchmark sample datasets:**
-   ```bash
-   python data/generate_samples.py
+3. **Configure Environment:**
+   Create a `.env` file in the project root:
+   ```env
+   LLM_PROVIDER=gemini       # Options: gemini, claude, or heuristic (offline mode)
+   GEMINI_API_KEY=your_key_here
+   # ANTHROPIC_API_KEY=your_key_here
    ```
 
-4. **Run backend API:**
-   ```bash
-   uvicorn backend.app.main:app --reload --port 8000
+4. **Run Backend API (Windows):**
+   ```powershell
+   .venv\Scripts\uvicorn backend.app.main:app --reload --port 8000
    ```
-   Interactive API docs are available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+   Interactive API documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
-5. **Run Reflex Frontend:**
-   ```bash
+5. **Run Celery Worker (Windows - Optional for async job queues):**
+   ```powershell
+   .venv\Scripts\celery -A backend.app.core.celery_app worker --loglevel=info -P solo
+   ```
+   *Note: If Celery or Redis is not running, the backend automatically executes analysis jobs via FastAPI BackgroundTasks.*
+
+6. **Run Reflex Frontend (Windows):**
+   ```powershell
    cd frontend
-   reflex run
+   ..\.venv\Scripts\reflex run
    ```
-   The UI will open at [http://localhost:3000](http://localhost:3000).
+   The interactive UI will be available at [http://localhost:3000](http://localhost:3000).
 
 ---
 
 ## 5. Automated Verification & Testing
 
-Run the full pytest suite (15 unit and integration tests):
-```bash
-pytest -v
+Run the full pytest suite (no tests ignored):
+```powershell
+.venv\Scripts\python -m pytest
 ```
 
-Run the live Phase 1 verification script:
-```bash
-python scripts/verify_phase1.py
+Run the Phase 3 End-to-End Pipeline Verification script (runs upload, cleaning, autonomous analysis, insight ranking, chat Q&A, and PDF/Word report exports across all 3 benchmark messy datasets):
+```powershell
+.venv\Scripts\python scripts/verify_phase3.py
 ```
+Output artifacts are saved to `data/demo_outputs/<dataset_name>/`:
+- `insights.json` (ranked insight schemas with impact scores & chart specs)
+- `summary.txt` (executive summary & key findings)
+- `report.pdf` (ReportLab formatted multi-page PDF report with cover, charts, data quality, & audit trail)
+- `report.docx` (python-docx formatted Word report)
+- `chart_*.png` (headless Matplotlib Agg rendered visualizations)
+- `chat_exchange.json` (conversational Q&A grounded answer, evidence, and citation verification)
 
 ---
 
