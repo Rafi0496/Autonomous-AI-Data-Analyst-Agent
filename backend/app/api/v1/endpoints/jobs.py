@@ -1,6 +1,6 @@
 """API endpoints for asynchronous analysis jobs, real-time status polling, and run logs."""
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from backend.app.core.database import get_db
@@ -175,3 +175,13 @@ def get_job_insights(job_id: str, db: Session = Depends(get_db)):
         "total_insights": len(insights),
         "insights": insights
     }
+
+@router.post("/{job_id}/report")
+def create_job_report(
+    job_id: str,
+    format: str = Query("pdf", pattern="^(pdf|docx)$", description="Report format: pdf or docx"),
+    db: Session = Depends(get_db)
+):
+    """Generate and export a publication-ready PDF or Word document for an analysis job."""
+    from backend.app.api.v1.endpoints.reports import generate_report_for_job
+    return generate_report_for_job(job_id=job_id, format=format, db=db)

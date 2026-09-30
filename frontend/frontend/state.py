@@ -57,6 +57,15 @@ class ChatMessageModel(BaseModel):
     verification_is_valid: bool = True
     verification_summary: str = ""
 
+class ReportItemModel(BaseModel):
+    report_id: str = ""
+    job_id: str = ""
+    dataset_name: str = ""
+    format: str = "pdf"
+    filename: str = ""
+    created_at: str = ""
+    download_url: str = ""
+
 class AppState(rx.State):
     """Global reactive state managing datasets, profiling, agent execution, dashboard, and chat."""
     
@@ -147,7 +156,46 @@ class AppState(rx.State):
     # Report Export (Milestone 5)
     is_generating_report: bool = False
     report_download_url: str = ""
-    past_reports: List[Dict[str, Any]] = []
+    past_reports: List[ReportItemModel] = []
+
+    async def fetch_reports(self):
+        """Fetch list of past generated reports from backend."""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.get(f"{API_BASE_URL}/reports")
+                if res.status_code == 200:
+                    raw = res.json()
+                    self.past_reports = [ReportItemModel(**r) for r in raw]
+        except Exception:
+            pass
+
+    async def generate_report(self, fmt: str = "pdf"):
+        """Trigger report generation for active job or selected dataset."""
+        if not self.active_job_id:
+            self.error_message = "No completed analysis job found. Please run an analysis job first."
+            return
+            
+        self.is_generating_report = True
+        self.error_message = ""
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                res = await client.post(f"{API_BASE_URL}/jobs/{self.active_job_id}/report?format={fmt}")
+                if res.status_code == 200:
+                    data = res.json()
+                    self.report_download_url = data.get("download_url", "")
+                    await self.fetch_reports()
+                else:
+                    self.error_message = f"Report generation failed: {res.text}"
+        except Exception as e:
+            self.error_message = f"Error generating report: {str(e)}"
+        finally:
+            self.is_generating_report = False
+
+    async def generate_pdf(self):
+        await self.generate_report("pdf")
+
+    async def generate_docx(self):
+        await self.generate_report("docx")
 
     def set_active_tab(self, tab: str):
         self.active_tab = tab
