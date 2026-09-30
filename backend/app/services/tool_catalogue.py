@@ -191,6 +191,8 @@ def execute_tool(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     func = TOOL_REGISTRY[tool_name]
     # Filter out 'rationale' or other meta-keys before passing to internal function
     exec_args = {k: v for k, v in arguments.items() if k != "rationale"}
+    if tool_name == "query_sql" and "query" in exec_args and "sql" not in exec_args:
+        exec_args["sql"] = exec_args.pop("query")
     try:
         return func(**exec_args)
     except Exception as e:

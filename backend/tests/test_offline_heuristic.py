@@ -78,9 +78,14 @@ def test_offline_heuristic_full_flow(tmp_path, monkeypatch):
     assert len(raw_insights) >= 1
     assert len(raw_insights) <= 8
     
-    # Verify impact score ordering
-    impacts = [ins.impact_score if hasattr(ins, "impact_score") else ins["impact_score"] for ins in raw_insights]
-    assert impacts == sorted(impacts, reverse=True)
+    # Verify impact score ordering per partitioned list (analytical first, then data_quality)
+    analytical_insights = [ins for ins in raw_insights if (ins.type if hasattr(ins, "type") else ins.get("type")) != "data_quality"]
+    dq_insights = [ins for ins in raw_insights if (ins.type if hasattr(ins, "type") else ins.get("type")) == "data_quality"]
+    an_impacts = [ins.impact_score if hasattr(ins, "impact_score") else ins["impact_score"] for ins in analytical_insights]
+    assert an_impacts == sorted(an_impacts, reverse=True)
+    if dq_insights:
+        dq_impacts = [ins.impact_score if hasattr(ins, "impact_score") else ins["impact_score"] for ins in dq_insights]
+        assert dq_impacts == sorted(dq_impacts, reverse=True)
 
     # 5. Citation Audit
     verification = run_result.get("verification") or {}

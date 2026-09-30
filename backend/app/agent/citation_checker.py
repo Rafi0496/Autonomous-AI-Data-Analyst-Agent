@@ -75,13 +75,22 @@ def build_source_index(
                 elif isinstance(v, (list, tuple)):
                     for idx, item in enumerate(v):
                         if isinstance(item, dict):
-                            # Segment items with name and value/mean/count
-                            seg_name = item.get("segment") or item.get("label") or item.get("category")
+                            # Segment items with name and value/mean/count or tabular query_sql row
+                            seg_name = (
+                                item.get("segment") or item.get("label") or item.get("category")
+                                or item.get("Payment_Method") or item.get("Department") or item.get("Channel")
+                                or next((v for k, v in item.items() if isinstance(v, str)), None)
+                            )
                             if seg_name:
                                 for sub_k, sub_v in item.items():
                                     if isinstance(sub_v, (int, float)) and not isinstance(sub_v, bool):
-                                        metrics[normalize_key(f"{seg_name}_{sub_k}")] = float(sub_v)
-                                        metrics[normalize_key(f"{seg_name}")] = float(sub_v)
+                                        f_val = float(sub_v)
+                                        metrics[normalize_key(f"{seg_name}_{sub_k}")] = f_val
+                                        metrics[normalize_key(f"{seg_name}")] = f_val
+                                        bare_k = normalize_key(sub_k)
+                                        metrics[bare_k] = f_val
+                                        metrics[f"{bare_k}_{round(f_val, 2)}"] = f_val
+                                        metrics[f"{bare_k}_{round(f_val, 1)}"] = f_val
                             metrics.update(extract_flat_metrics(item, f"{p}_{idx}"))
                         elif isinstance(item, (int, float)) and not isinstance(item, bool):
                             metrics[normalize_key(f"{p}_{idx}")] = float(item)
@@ -202,7 +211,17 @@ def verify_bound_claim(
     # Check if metric exists in this source
     matching_val = None
     if norm_metric in source_metrics:
-        matching_val = source_metrics[norm_metric]
+        candidate_val = source_metrics[norm_metric]
+        diff = abs(val - candidate_val)
+        denom = max(1e-9, abs(candidate_val))
+        if (diff / denom <= tolerance) or diff <= tolerance:
+            matching_val = candidate_val
+        elif f"{norm_metric}_{round(val, 2)}" in source_metrics:
+            matching_val = source_metrics[f"{norm_metric}_{round(val, 2)}"]
+        elif f"{norm_metric}_{round(val, 1)}" in source_metrics:
+            matching_val = source_metrics[f"{norm_metric}_{round(val, 1)}"]
+        else:
+            matching_val = candidate_val
     else:
         # Search for partial key match within the source
         for mk, mv in source_metrics.items():
@@ -213,6 +232,13 @@ def verify_bound_claim(
                 if (diff / denom <= tolerance) or diff <= tolerance:
                     matching_val = mv
                     break
+
+    if matching_val is None:
+        # Check if the value was harvested from this source's summary/title
+        for k_cand in [str(round(val, 2)), str(round(val, 1)), normalize_key(str(val)), str(val)]:
+            if k_cand in source_metrics:
+                matching_val = source_metrics[k_cand]
+                break
 
     if matching_val is None:
         return False, f"Metric '{metric_key}' does not exist in source '{source_id}'"

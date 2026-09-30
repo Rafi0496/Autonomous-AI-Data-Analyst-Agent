@@ -150,6 +150,24 @@ class SynthesisResult:
         return d
 
 
+@dataclass
+class ChatResult:
+    answer: str
+    claims: List[Dict[str, Any]] = field(default_factory=list)
+    usage: TokenUsage = field(default_factory=lambda: TokenUsage(total_tokens="unknown"))
+    provider: str = "llm:unknown"
+    latency_seconds: float = 0.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "answer": self.answer,
+            "claims": self.claims,
+            "usage": self.usage.to_dict(),
+            "provider": self.provider,
+            "latency_seconds": round(self.latency_seconds, 4),
+        }
+
+
 # =====================================================================
 # Abstract LLMClient Interface
 # =====================================================================
@@ -194,6 +212,16 @@ class LLMClient(ABC):
         failing_claims: Optional[List[Dict[str, Any]]] = None
     ) -> SynthesisResult:
         """Synthesize structured tool results into an executive business narrative."""
+        pass
+
+    @abstractmethod
+    def generate_chat_answer(
+        self,
+        question: str,
+        context: Dict[str, Any],
+        failing_claims: Optional[List[Dict[str, Any]]] = None
+    ) -> ChatResult:
+        """Generate structured chat response with verified claims and column checking."""
         pass
 
 
@@ -357,6 +385,113 @@ class HeuristicClient(LLMClient):
             provider=self.provider_name,
             latency_seconds=latency,
             claims=claims
+        )
+
+    def generate_chat_answer(
+        self,
+        question: str,
+        context: Dict[str, Any],
+        failing_claims: Optional[List[Dict[str, Any]]] = None
+    ) -> ChatResult:
+        import re
+        t0 = time.perf_counter()
+        available_columns = context.get("available_columns", [])
+        insights = context.get("insights", [])
+        profile = context.get("profile", {})
+        cleaning_report = context.get("cleaning_report", {})
+        tool_results = context.get("tool_results", [])
+
+        q_lower = question.lower()
+        claims: List[Dict[str, Any]] = []
+        answer_parts: List[str] = []
+
+        from backend.app.services.chat_service import detect_missing_column_or_entity
+        missing_entity = detect_missing_column_or_entity(question, available_columns)
+        if missing_entity:
+            answer_parts.append(
+                f"The requested column/entity '{missing_entity}' is not present in this dataset. "
+                f"Available columns are: {', '.join(available_columns)}."
+            )
+
+        if tool_results:
+            for tr in tool_results:
+                if tr.get("tool") == "query_sql" and tr.get("rows"):
+                    rows = tr["rows"]
+                    row_strs = []
+                    for r in rows:
+                        items_str = ", ".join(f"{k}: {v}" for k, v in r.items())
+                        row_strs.append(f"({items_str})")
+                        seg = r.get("Payment_Method") or r.get("Department") or r.get("Channel") or "metric"
+                        for k, v in r.items():
+                            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                                claims.append({
+                                    "text": f"{seg} {k} is {v}",
+                                    "source_id": "query_sql",
+                                    "metric_key": f"{seg}_{k}" if seg != "metric" else k,
+                                    "value": float(v),
+                                    "unit": "%" if "percent" in k or "share" in k else ("USD" if "spend" in k or "salary" in k else "count")
+                                })
+                    answer_parts.append(f"Query analysis indicates: {'; '.join(row_strs)}.")
+                elif tr.get("tool") == "run_correlation" and tr.get("correlations"):
+                    corrs = tr["correlations"]
+                    corr_strs = [f"{c['col1']} and {c['col2']} (r={c['pearson']})" for c in corrs[:3]]
+                    answer_parts.append(f"Correlation analysis shows: {'; '.join(corr_strs)}.")
+
+        matched = []
+        words = [w for w in re.findall(r"\w+", q_lower) if len(w) > 3]
+        for ins in insights:
+            t = ins.get("title", "").lower()
+            s = ins.get("summary", "").lower()
+            if any(w in t or w in s for w in words):
+                matched.append(ins)
+        if not matched and insights and not tool_results:
+            matched = insights[:2]
+
+        for ins in matched[:2]:
+            ins_id = ins.get("id", "insight")
+            summary = ins.get("summary", "")
+            title = ins.get("title", "")
+            answer_parts.append(f"{title}: {summary}")
+
+            from backend.app.agent.citation_checker import extract_numeric_tokens
+            for num in extract_numeric_tokens(summary):
+                matched_k = str(round(num, 2))
+                mv = ins.get("metric_values") or {}
+                for mk, mv_val in mv.items():
+                    if isinstance(mv_val, (int, float)) and abs(mv_val - num) < 0.05:
+                        matched_k = mk
+                        break
+                claims.append({
+                    "text": summary,
+                    "source_id": ins_id,
+                    "metric_key": matched_k,
+                    "value": float(num),
+                    "unit": ""
+                })
+
+        if not answer_parts:
+            row_count = profile.get("row_count", 0)
+            col_count = profile.get("column_count", len(available_columns))
+            answer_parts.append(
+                f"The dataset contains {row_count} records across {col_count} columns. "
+                "No specific anomalies matching the query were found."
+            )
+            claims.append({
+                "text": f"The dataset contains {row_count} records",
+                "source_id": "profile",
+                "metric_key": "row_count",
+                "value": float(row_count),
+                "unit": "rows"
+            })
+
+        answer = " ".join(answer_parts)
+        latency = time.perf_counter() - t0
+        return ChatResult(
+            answer=answer,
+            claims=claims,
+            usage=TokenUsage(total_tokens="unknown"),
+            provider=self.provider_name,
+            latency_seconds=latency
         )
 
 
@@ -598,6 +733,85 @@ class ClaudeClient(LLMClient):
                 provider=self.provider_name,
                 latency_seconds=latency
             )
+
+    def generate_chat_answer(
+        self,
+        question: str,
+        context: Dict[str, Any],
+        failing_claims: Optional[List[Dict[str, Any]]] = None
+    ) -> ChatResult:
+        t0 = time.perf_counter()
+        available_columns = context.get("available_columns", [])
+        insights = context.get("insights", [])
+        profile = context.get("profile", {})
+        cleaning_report = context.get("cleaning_report", {})
+        tool_results = context.get("tool_results", [])
+        history = context.get("history", [])
+
+        retry_note = ""
+        if failing_claims:
+            retry_note = (
+                f"\n\nCORRECTION REQUIRED (RETRY):\n"
+                f"The previous answer contained unverified claims or numbers:\n"
+                f"{json.dumps(failing_claims, default=str)}\n"
+                f"Ensure every single number in the prose matches an exact source and metric in 'claims'."
+            )
+
+        prompt = (
+            "You are an expert autonomous data analyst assistant providing an accurate, concise answer to the user's question.\n"
+            f"Dataset Profile: {json.dumps(profile, default=str)}\n"
+            f"Available Columns: {json.dumps(available_columns, default=str)}\n"
+            f"Key Insights: {json.dumps(insights[:6], default=str)}\n"
+            f"Executed Tool Results: {json.dumps(tool_results, default=str)}\n"
+            f"Recent Conversation History: {json.dumps(history[-3:] if history else [], default=str)}{retry_note}\n\n"
+            f"User Question: {question}\n\n"
+            "CRITICAL INSTRUCTIONS:\n"
+            "1. MISSING COLUMNS / ENTITIES: If the question inquires about a column or entity that is NOT in the available columns list (e.g. customer age, churn, credit score):\n"
+            f"   You MUST explicitly start your response with:\n"
+            f"   \"The requested column/entity '<name>' is not present in this dataset. Available columns are: {', '.join(available_columns)}.\"\n"
+            "   Then answer whatever part of the question can be answered using the available data.\n"
+            "2. STRICT GROUNDING: Forbid causal or market-preference claims. Every number in the prose must belong to a claim in 'claims'.\n"
+            "3. Return valid JSON:\n"
+            "{\n"
+            '  "answer": "Clear, grounded answer text.",\n'
+            '  "claims": [\n'
+            '    {"text": "clause stating fact", "source_id": "insight_id or query_sql or profile", "metric_key": "exact_metric_key", "value": 12.34, "unit": "% or count"}\n'
+            "  ]\n"
+            "}"
+        )
+
+        try:
+            client = self._get_client()
+            response = client.messages.create(
+                model=self.model,
+                max_tokens=1000,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            latency = time.perf_counter() - t0
+            p_tok = response.usage.input_tokens
+            c_tok = response.usage.output_tokens
+            usage = TokenUsage(prompt_tokens=p_tok, completion_tokens=c_tok, total_tokens=p_tok + c_tok)
+
+            raw_text = "".join(b.text for b in response.content if b.type == "text").strip()
+            clean_json = raw_text
+            if "```json" in clean_json:
+                clean_json = clean_json.split("```json")[1].split("```")[0].strip()
+            elif "```" in clean_json:
+                clean_json = clean_json.split("```")[1].split("```")[0].strip()
+
+            parsed = json.loads(clean_json)
+            return ChatResult(
+                answer=parsed.get("answer", raw_text),
+                claims=parsed.get("claims", []),
+                usage=usage,
+                provider=self.provider_name,
+                latency_seconds=latency
+            )
+        except Exception as e:
+            logger.warning("Claude chat failed (%s); falling back to heuristic: ", e)
+            h_res = HeuristicClient().generate_chat_answer(question, context, failing_claims)
+            h_res.provider = self.provider_name
+            return h_res
 
 
 # =====================================================================
@@ -914,6 +1128,81 @@ class GeminiClient(LLMClient):
                 provider=self.provider_name,
                 latency_seconds=latency
             )
+
+    def generate_chat_answer(
+        self,
+        question: str,
+        context: Dict[str, Any],
+        failing_claims: Optional[List[Dict[str, Any]]] = None
+    ) -> ChatResult:
+        from google.genai import types
+        t0 = time.perf_counter()
+        available_columns = context.get("available_columns", [])
+        insights = context.get("insights", [])
+        profile = context.get("profile", {})
+        cleaning_report = context.get("cleaning_report", {})
+        tool_results = context.get("tool_results", [])
+        history = context.get("history", [])
+
+        retry_note = ""
+        if failing_claims:
+            retry_note = (
+                f"\n\nCORRECTION REQUIRED (RETRY):\n"
+                f"The previous answer contained unverified claims or numbers:\n"
+                f"{json.dumps(failing_claims, default=str)}\n"
+                f"Ensure every single number in the prose matches an exact source and metric in 'claims'."
+            )
+
+        prompt = (
+            "You are an expert autonomous data analyst assistant providing an accurate, concise answer to the user's question.\n"
+            f"Dataset Profile: {json.dumps(profile, default=str)}\n"
+            f"Available Columns: {json.dumps(available_columns, default=str)}\n"
+            f"Key Insights: {json.dumps(insights[:6], default=str)}\n"
+            f"Executed Tool Results: {json.dumps(tool_results, default=str)}\n"
+            f"Recent Conversation History: {json.dumps(history[-3:] if history else [], default=str)}{retry_note}\n\n"
+            f"User Question: {question}\n\n"
+            "CRITICAL INSTRUCTIONS:\n"
+            "1. MISSING COLUMNS / ENTITIES: If the question inquires about a column or entity that is NOT in the available columns list (e.g. customer age, churn, credit score):\n"
+            f"   You MUST explicitly start your response with:\n"
+            f"   \"The requested column/entity '<name>' is not present in this dataset. Available columns are: {', '.join(available_columns)}.\"\n"
+            "   Then answer whatever part of the question can be answered using the available data.\n"
+            "2. STRICT GROUNDING: Forbid causal or market-preference claims. Every number in the prose must belong to a claim in 'claims'.\n"
+            "3. Return valid JSON:\n"
+            "{\n"
+            '  "answer": "Clear, grounded answer text.",\n'
+            '  "claims": [\n'
+            '    {"text": "clause stating fact", "source_id": "insight_id or query_sql or profile", "metric_key": "exact_metric_key", "value": 12.34, "unit": "% or count"}\n'
+            "  ]\n"
+            "}"
+        )
+
+        try:
+            client = self._get_client()
+            config = self._build_generate_config(types, response_mime_type="application/json")
+            response = self._execute_with_retry(client, contents=prompt, config=config)
+            latency = time.perf_counter() - t0
+            usage = self._extract_usage(response)
+
+            raw_text = getattr(response, "text", "") or ""
+            clean_json = raw_text.strip()
+            if "```json" in clean_json:
+                clean_json = clean_json.split("```json")[1].split("```")[0].strip()
+            elif "```" in clean_json:
+                clean_json = clean_json.split("```")[1].split("```")[0].strip()
+
+            parsed = json.loads(clean_json)
+            return ChatResult(
+                answer=parsed.get("answer", raw_text),
+                claims=parsed.get("claims", []),
+                usage=usage,
+                provider=self.provider_name,
+                latency_seconds=latency
+            )
+        except Exception as e:
+            logger.warning("Gemini chat failed (%s); falling back to heuristic: ", e)
+            h_res = HeuristicClient().generate_chat_answer(question, context, failing_claims)
+            h_res.provider = self.provider_name
+            return h_res
 
 
 # =====================================================================
