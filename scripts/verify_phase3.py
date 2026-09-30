@@ -70,10 +70,10 @@ def verify_phase3():
         out_dir.mkdir(parents=True, exist_ok=True)
 
         # 1. Upload
-        print("[1/6] Uploading dataset via POST /api/v1/datasets/upload...")
+        print("[1/6] Uploading dataset via POST /api/v1/upload...")
         with open(file_path, "rb") as f:
             upload_resp = client.post(
-                "/api/v1/datasets/upload",
+                "/api/v1/upload",
                 files={"file": (filename, f, "text/csv")}
             )
         assert upload_resp.status_code == 201, f"Upload failed: {upload_resp.text}"
