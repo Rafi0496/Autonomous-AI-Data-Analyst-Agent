@@ -85,7 +85,7 @@ def test_chat_process_missing_column_and_tool_call(monkeypatch):
     assert "Transaction_ID" in res_missing["answer"]
     assert res_missing["verification"]["is_valid"] is True
 
-    # Process question with tool call
+    # Process question with tool call (Retail Credit Card share)
     res_tool = process_chat_question(
         db=db,
         job_id="",
@@ -94,5 +94,26 @@ def test_chat_process_missing_column_and_tool_call(monkeypatch):
     )
     assert len(res_tool["tool_calls_used"]) == 1
     assert res_tool["tool_calls_used"][0]["tool"] == "query_sql"
-    assert "59.17" in res_tool["answer"] or "Credit Card" in res_tool["answer"]
+    assert "data_observed" in res_tool["answer"]
+    assert "48.96" in res_tool["answer"]
+    assert "59.17" in res_tool["answer"]
+    assert "24" in res_tool["answer"]
+    assert "imputed" in res_tool["answer"].lower()
     assert res_tool["verification"]["is_valid"] is True
+    assert res_tool["verification"]["post_strip_verification_rate"] == 100.0
+
+    # Process question: Which channel has the highest conversion rate?
+    mkt_cols = ["Campaign_ID", "Date", "Channel", "Ad_Spend", "Impressions", "Clicks", "Conversions"]
+    res_conv = process_chat_question(
+        db=db,
+        job_id="",
+        question="Which channel has the highest conversion rate?",
+        dataset_id="marketing_campaign_messy.csv"
+    )
+    assert len(res_conv["tool_calls_used"]) == 1
+    assert res_conv["tool_calls_used"][0]["tool"] == "query_sql"
+    assert "Email" in res_conv["answer"]
+    assert "8.97" in res_conv["answer"]
+    assert "data_observed" in res_conv["answer"]
+    assert res_conv["verification"]["is_valid"] is True
+    assert res_conv["verification"]["post_strip_verification_rate"] == 100.0

@@ -17,6 +17,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
+from backend.app.services.insights import validate_no_placeholders
 from backend.app.agent.citation_checker import (
     validate_citations,
     strip_unverified_sentences,
@@ -98,24 +99,50 @@ def determine_chat_tool_call(
     dataset_id: str,
     available_columns: List[str]
 ) -> Optional[Tuple[str, Dict[str, Any]]]:
-    """Determine if a chat question requires a read-only tool call (e.g. query_sql)."""
+    """Determine if a chat question requires a read-only tool call (e.g. query_sql).
+    - Questions containing 'non-missing', 'observed' or 'recorded' query data_observed; otherwise data_clean.
+    - Every tool-based answer states its basis and n.
+    """
     q_lower = question.lower()
     norm_cols = [c.lower() for c in available_columns]
 
+    # Basis determination
+    is_observed = any(w in q_lower for w in ["non-missing", "non missing", "observed", "recorded"])
+    table_name = "data_observed" if is_observed else "data_clean"
+
     # 1. Retail: Credit Card payment share
     if ("credit card" in q_lower or "payment" in q_lower) and ("share" in q_lower or "percentage" in q_lower or "proportion" in q_lower) and any("payment" in c for c in norm_cols):
+        # Query both data_observed and data_clean to show both and explain difference
         sql = (
-            "SELECT Payment_Method, COUNT(*) as count, "
-            "ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL), 2) as share_percent "
+            "SELECT 'observed' as basis, Payment_Method, COUNT(*) as count, "
+            "ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM data_observed WHERE Payment_Method IS NOT NULL), 2) as share_percent, "
+            "(SELECT COUNT(*) FROM data_observed WHERE Payment_Method IS NOT NULL) as n_total, "
+            "((SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL) - (SELECT COUNT(*) FROM data_observed WHERE Payment_Method IS NOT NULL)) as imputed_count "
+            "FROM data_observed WHERE Payment_Method IS NOT NULL GROUP BY Payment_Method "
+            "UNION ALL "
+            "SELECT 'data_clean' as basis, Payment_Method, COUNT(*) as count, "
+            "ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL), 2) as share_percent, "
+            "(SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL) as n_total, "
+            "((SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL) - (SELECT COUNT(*) FROM data_observed WHERE Payment_Method IS NOT NULL)) as imputed_count "
             "FROM data_clean WHERE Payment_Method IS NOT NULL GROUP BY Payment_Method"
         )
         return "query_sql", {"dataset_id": dataset_id, "sql": sql}
 
-    # 2. HR: Average salary by department on observed rows
-    if ("salary" in q_lower or "annual_salary" in q_lower) and ("department" in q_lower or "observed" in q_lower) and any("salary" in c for c in norm_cols):
+    # 2. Marketing: Which channel has highest conversion rate? (or conversions / clicks by channel)
+    if ("channel" in q_lower and ("conversion" in q_lower or "convert" in q_lower)) or (("conversions" in q_lower or "clicks" in q_lower) and "channel" in q_lower):
+        chan_col = next((c for c in available_columns if c.lower() == "channel"), "Channel")
+        conv_col = next((c for c in available_columns if "conv" in c.lower()), "Conversions")
+        click_col = next((c for c in available_columns if "click" in c.lower()), "Clicks")
+        # Item 4: Chat must answer via a tool call on observed rows (Conversions and Clicks by Channel)
+        target_table = "data_observed" if (is_observed or "highest conversion rate" in q_lower or "conversion rate" in q_lower) else table_name
         sql = (
-            "SELECT Department, ROUND(AVG(Annual_Salary), 2) as avg_salary, COUNT(*) as n_observed "
-            "FROM data_observed WHERE Annual_Salary IS NOT NULL GROUP BY Department"
+            f"SELECT '{target_table}' as basis, {chan_col} as Channel, "
+            f"SUM({conv_col}) as total_conversions, SUM({click_col}) as total_clicks, "
+            f"ROUND(SUM({conv_col}) * 100.0 / SUM({click_col}), 2) as conversion_rate_percent, "
+            f"COUNT(*) as n_rows, "
+            f"(SELECT COUNT(DISTINCT {chan_col}) FROM {target_table} WHERE {chan_col} IS NOT NULL AND {conv_col} IS NOT NULL AND {click_col} IS NOT NULL) as n_channels "
+            f"FROM {target_table} WHERE {chan_col} IS NOT NULL AND {conv_col} IS NOT NULL AND {click_col} IS NOT NULL "
+            f"GROUP BY {chan_col} ORDER BY conversion_rate_percent DESC"
         )
         return "query_sql", {"dataset_id": dataset_id, "sql": sql}
 
@@ -124,10 +151,23 @@ def determine_chat_tool_call(
         spend_col = "Ad_Spend" if any(c == "ad_spend" for c in norm_cols) else "Spend"
         clicks_col = "Clicks" if any(c == "clicks" for c in norm_cols) else "Clicks"
         chan_col = "Channel" if any(c == "channel" for c in norm_cols) else "Channel"
-        sql = f"SELECT {chan_col}, ROUND(SUM({spend_col}), 2) as total_spend, SUM({clicks_col}) as total_clicks FROM data_clean GROUP BY {chan_col}"
+        sql = (
+            f"SELECT '{table_name}' as basis, {chan_col} as Channel, "
+            f"ROUND(SUM({spend_col}), 2) as total_spend, SUM({clicks_col}) as total_clicks, COUNT(*) as n_rows "
+            f"FROM {table_name} WHERE {chan_col} IS NOT NULL GROUP BY {chan_col}"
+        )
         return "query_sql", {"dataset_id": dataset_id, "sql": sql}
 
-    # 4. Explicit correlation
+    # 4. HR: Average salary by department
+    if ("salary" in q_lower or "annual_salary" in q_lower) and ("department" in q_lower or is_observed) and any("salary" in c for c in norm_cols):
+        sql = (
+            f"SELECT '{table_name}' as basis, Department, "
+            f"ROUND(AVG(Annual_Salary), 2) as avg_salary, COUNT(*) as n_observed "
+            f"FROM {table_name} WHERE Annual_Salary IS NOT NULL GROUP BY Department"
+        )
+        return "query_sql", {"dataset_id": dataset_id, "sql": sql}
+
+    # 5. Explicit correlation
     if "correlation" in q_lower and dataset_id:
         return "run_correlation", {"dataset_id": dataset_id, "threshold": 0.4}
 
@@ -352,6 +392,9 @@ def process_chat_question(
     if job_id:
         append_job_chat_history(job_id, "user", question)
         append_job_chat_history(job_id, "assistant", chat_result.answer)
+
+    # 10. Ensure no placeholder text leaks into chat answer
+    chat_result.answer = validate_no_placeholders(chat_result.answer, "chat answer")
 
     return {
         "answer": chat_result.answer,

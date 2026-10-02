@@ -86,9 +86,11 @@ def build_source_index(
                                 or next((v for k, v in item.items() if isinstance(v, str)), None)
                             )
                             if seg_name:
+                                basis_pfx = f"{item.get('basis')}_" if item.get("basis") else ""
                                 for sub_k, sub_v in item.items():
                                     if isinstance(sub_v, (int, float)) and not isinstance(sub_v, bool):
                                         f_val = float(sub_v)
+                                        metrics[normalize_key(f"{basis_pfx}{seg_name}_{sub_k}")] = f_val
                                         metrics[normalize_key(f"{seg_name}_{sub_k}")] = f_val
                                         metrics[normalize_key(f"{seg_name}")] = f_val
                                         bare_k = normalize_key(sub_k)
