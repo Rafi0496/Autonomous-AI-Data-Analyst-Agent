@@ -6,6 +6,7 @@ strictly traces back to computed values.
 """
 from typing import Any, Dict, List, Optional
 from backend.app.services.insights import validate_no_placeholders
+from backend.app.agent.citation_checker import extract_numeric_tokens
 
 def write_summary(
     structured_results: Optional[List[Dict[str, Any]]] = None,
@@ -25,11 +26,13 @@ def write_summary(
             "message": "No analysis tool results or insights provided for synthesis.",
             "executive_summary": "Analysis was concluded without tool executions.",
             "key_findings": [],
-            "citations_index": {}
+            "citations_index": {},
+            "claims": []
         }
 
     citations: Dict[str, Dict[str, Any]] = {}
     findings: List[Dict[str, Any]] = []
+    claims: List[Dict[str, Any]] = []
 
     if insights:
         for ins in insights:
@@ -43,6 +46,7 @@ def write_summary(
             if p_val is None:
                 p_val = mv.get("p_value") or mv.get("anova_p_value") or mv.get("chi2_p_value")
             n_used = ins_dict.get("n_used", 0)
+            n_excluded = ins_dict.get("n_excluded", 0)
             ex_rate = ins_dict.get("exclusion_rate", 0.0)
 
             # Suppressed insight check
@@ -52,7 +56,7 @@ def write_summary(
                 narrative = f"insufficient data for {analysis} on '{target}' (n_used={n_used}, exclusion_rate={ex_rate*100:.1f}%)"
                 full_nar = f"Analysis for {analysis} on '{target}' was suppressed due to {narrative}."
                 full_nar = validate_no_placeholders(full_nar, f"suppressed-{ins_id}")
-                findings.append({
+                f_obj = {
                     "category": "Data Quality Suppression",
                     "headline": f"Insufficient data for {analysis} on {target}",
                     "narrative": full_nar,
@@ -60,8 +64,18 @@ def write_summary(
                     "source_id": ins_id,
                     "metric": "n_used",
                     "value": float(n_used)
-                })
+                }
+                findings.append(f_obj)
                 citations[str(n_used)] = {"tool": "insights", "metric": "n_used", "value": n_used}
+                for fnum in extract_numeric_tokens(f"{f_obj['headline']} {f_obj['narrative']}"):
+                    mkey = "n_used" if abs(fnum - float(n_used)) < 1e-4 else ("exclusion_rate_percent" if abs(fnum - round(float(ex_rate*100), 1)) < 1e-2 else str(fnum))
+                    claims.append({
+                        "text": f_obj["narrative"],
+                        "source_id": ins_id,
+                        "metric_key": mkey,
+                        "value": float(fnum),
+                        "unit": None
+                    })
                 continue
 
             if ins_type == "segment_difference":
@@ -176,13 +190,40 @@ def write_summary(
                     "value": float(mv.get("count", mv.get("imputed_count", 0)))
                 })
 
+            if findings and findings[-1].get("source_id") == ins_id:
+                latest_f = findings[-1]
+                for fnum in extract_numeric_tokens(f"{latest_f['headline']} {latest_f['narrative']}"):
+                    mkey = latest_f.get("metric", str(fnum))
+                    if n_used is not None and abs(fnum - float(n_used)) < 1e-4:
+                        mkey = "n_used"
+                    elif n_excluded is not None and abs(fnum - float(n_excluded)) < 1e-4:
+                        mkey = "n_excluded"
+                    elif p_val is not None and abs(fnum - float(p_val)) < 1e-4:
+                        mkey = "p_value"
+                    elif abs(fnum - float(latest_f.get("value", 0.0))) < 1e-4:
+                        mkey = latest_f.get("metric", "value")
+                    else:
+                        mkey = str(fnum)
+                    claims.append({
+                        "text": latest_f["narrative"],
+                        "source_id": ins_id,
+                        "metric_key": mkey,
+                        "value": float(fnum),
+                        "unit": None
+                    })
+
         analytical = [f for f in findings if f["category"] not in ("Data Quality", "Data Quality Suppression")]
         suppressed = [f for f in findings if f["category"] == "Data Quality Suppression"]
         dq = [f for f in findings if f["category"] == "Data Quality"]
 
         parts = []
-        goal_str = f" targeting '{goal}'" if goal else ""
-        parts.append(f"Autonomous analysis{goal_str} concluded with {len(analytical)} validated analytical findings.")
+        user_clean_goal = ""
+        if goal:
+            cleaned = goal.split(". When citing")[0].split("When citing")[0].strip()
+            if cleaned and "Comprehensive exploratory analysis" not in cleaned and "Quantity=999" not in cleaned:
+                user_clean_goal = cleaned
+        goal_str = f" targeting '{user_clean_goal}'" if user_clean_goal else ""
+        parts.append(f"Autonomous analysis{goal_str} concluded with validated analytical findings.")
         for a in analytical:
             parts.append(a["narrative"])
         if suppressed:
@@ -206,7 +247,8 @@ def write_summary(
             "recommendations": recommendations,
             "total_findings": len(findings),
             "total_tools_executed": len(structured_results or []),
-            "citations_index": citations
+            "citations_index": citations,
+            "claims": claims
         }
 
     # 1. Harvest facts from profiling and data quality

@@ -365,20 +365,22 @@ class HeuristicClient(LLMClient):
             insights=insights
         )
         latency = time.perf_counter() - t0
-        claims = []
-        for kf in summary_payload.get("key_findings", []):
-            if isinstance(kf, dict) and "metric" in kf and "value" in kf:
-                try:
-                    src_id = kf.get("source_id") or ("profile" if "imput" in str(kf.get("metric", "")).lower() else "step_1")
-                    claims.append({
-                        "text": str(kf.get("narrative") or kf.get("finding", "")),
-                        "source_id": src_id,
-                        "metric_key": str(kf.get("metric", "")),
-                        "value": float(kf.get("value", 0.0)),
-                        "unit": None
-                    })
-                except Exception:
-                    pass
+        claims = summary_payload.get("claims")
+        if not claims:
+            claims = []
+            for kf in summary_payload.get("key_findings", []):
+                if isinstance(kf, dict) and "metric" in kf and "value" in kf:
+                    try:
+                        src_id = kf.get("source_id") or ("profile" if "imput" in str(kf.get("metric", "")).lower() else "step_1")
+                        claims.append({
+                            "text": str(kf.get("narrative") or kf.get("finding", "")),
+                            "source_id": src_id,
+                            "metric_key": str(kf.get("metric", "")),
+                            "value": float(kf.get("value", 0.0)),
+                            "unit": None
+                        })
+                    except Exception:
+                        pass
 
         return SynthesisResult(
             executive_summary=summary_payload.get("executive_summary", ""),
@@ -715,7 +717,7 @@ class ClaudeClient(LLMClient):
         insights: Optional[List[Any]] = None
     ) -> SynthesisResult:
         t0 = time.perf_counter()
-        summary_payload = write_summary(
+        base_summary = write_summary(
             structured_results=results,
             dataset_profile=dataset_profile,
             goal=goal,
@@ -1133,7 +1135,7 @@ class GeminiClient(LLMClient):
         insights: Optional[List[Any]] = None
     ) -> SynthesisResult:
         t0 = time.perf_counter()
-        summary_payload = write_summary(
+        base_summary = write_summary(
             structured_results=results,
             dataset_profile=dataset_profile,
             goal=goal,

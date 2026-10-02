@@ -151,9 +151,12 @@ class PlanActReflectOrchestrator:
         initial_llm_latency_ms = round(plan_result.latency_seconds * 1000, 2)
         
         executed_results = []
+        current_round = 1
+        max_rounds = 3
         pending_plan = [
             {
                 "step": idx + 1,
+                "round": 1,
                 "tool": tc.name,
                 "arguments": tc.arguments,
                 "rationale": tc.rationale,
@@ -162,8 +165,75 @@ class PlanActReflectOrchestrator:
             for idx, tc in enumerate(plan_result.tool_calls)
         ]
 
-        # Loop: ACT & REFLECT (merged plan-act with bounded follow-ups)
-        while pending_plan:
+        # Loop: ACT & REFLECT (up to 3 rounds, <=3 follow-up tool calls per reflection)
+        while pending_plan or current_round < max_rounds:
+            # If current round's queue is empty, trigger reflection to decide on next round
+            if not pending_plan:
+                if current_round >= max_rounds:
+                    break
+
+                # Check budgets before triggering reflection
+                elapsed = time.perf_counter() - self.start_time
+                if elapsed >= self.timeout_seconds:
+                    self.budget_tripped = True
+                    self.trip_reason = f"Execution timeout exceeded ({elapsed:.1f}s >= {self.timeout_seconds}s limit)"
+                    break
+
+                if self.step_count >= self.max_steps:
+                    self.budget_tripped = True
+                    self.trip_reason = f"Maximum step budget reached ({self.step_count} >= {self.max_steps} steps limit)"
+                    break
+
+                if self.step_count > 0 and self.tokens_used >= self.token_budget:
+                    self.budget_tripped = True
+                    self.trip_reason = f"Token budget exceeded ({self.tokens_used} >= {self.token_budget} tokens limit)"
+                    break
+
+                self._emit_progress(f"Round {current_round} complete. Reflecting and assessing follow-ups (calling LLM...)", self.step_count, phase="reflection")
+                if job:
+                    job.phase = "reflection"
+                    db.commit()
+                try:
+                    last_output = executed_results[-1] if executed_results else {}
+                    reflect_res = self.llm_client.reflect(
+                        step_result=last_output,
+                        history=self.run_log,
+                        dataset_id=dataset_id
+                    )
+                    self._accumulate_tokens(reflect_res.usage)
+                    reflect_latency_ms = round(reflect_res.latency_seconds * 1000, 3)
+
+                    # Reflection may request <= 3 follow-up tool calls or stop
+                    follow_ups = reflect_res.tool_calls[:3]
+
+                    # Log reflection on the last step of this round
+                    if self.run_log:
+                        self.run_log[-1]["reflection"] = reflect_res.observation
+                        self.run_log[-1]["reflection_latency_ms"] = reflect_latency_ms
+                        self.run_log[-1]["follow_ups"] = [f.name for f in follow_ups]
+                        self.run_log[-1]["round"] = current_round
+
+                    if not follow_ups:
+                        # Reflection decided to stop
+                        break
+
+                    current_round += 1
+                    for f_idx, follow_up in enumerate(follow_ups):
+                        pending_plan.append({
+                            "step": self.step_count + len(pending_plan) + 1,
+                            "round": current_round,
+                            "tool": follow_up.name,
+                            "arguments": follow_up.arguments,
+                            "rationale": follow_up.rationale,
+                            "llm_latency_ms": reflect_latency_ms if f_idx == 0 else 0.0
+                        })
+                except Exception as e:
+                    logger.warning("Reflection failed in round %d: %s", current_round, e)
+                    break
+
+            if not pending_plan:
+                break
+
             # Check budgets before execution
             elapsed = time.perf_counter() - self.start_time
             if elapsed >= self.timeout_seconds:
@@ -186,16 +256,17 @@ class PlanActReflectOrchestrator:
             tool_name = current_step["tool"]
             args = current_step["arguments"]
             rationale = current_step.get("rationale", "")
+            step_round = current_step.get("round", current_round)
             current_llm_latency = current_step.get("llm_latency_ms", 0.0)
 
             # Ensure dataset_id is correct
             args["dataset_id"] = dataset_id
 
-            self._emit_progress(f"Step {self.step_count}/{self.max_steps}: {tool_name}...", self.step_count, phase="execution")
+            self._emit_progress(f"Round {step_round} - Step {self.step_count}/{self.max_steps}: {tool_name}...", self.step_count, phase="execution")
             if job:
                 job.phase = "execution"
                 job.current_step = self.step_count
-                job.current_step_name = f"Step {self.step_count}: {tool_name}"
+                job.current_step_name = f"Round {step_round} - Step {self.step_count}: {tool_name}"
                 job.total_steps = self.step_count
                 db.commit()
 
@@ -204,9 +275,10 @@ class PlanActReflectOrchestrator:
             tool_output = execute_tool(tool_name, args)
             duration_ms = round((time.perf_counter() - step_start) * 1000, 2)
 
-            # Record step in run log with explicit planner provider, model label, and llm latency
+            # Record step in run log with explicit planner provider, model label, round, and llm latency
             log_entry = {
                 "step_number": self.step_count,
+                "round": step_round,
                 "timestamp": datetime.utcnow().isoformat(),
                 "tool": tool_name,
                 "arguments": args,
@@ -214,6 +286,7 @@ class PlanActReflectOrchestrator:
                 "llm_latency_ms": current_llm_latency,
                 "reflection_latency_ms": 0.0,
                 "reflection": None,
+                "follow_ups": [],
                 "status": tool_output.get("status", "success"),
                 "rationale": rationale,
                 "planner": self.llm_client.provider_name,
@@ -222,33 +295,6 @@ class PlanActReflectOrchestrator:
             }
             self.run_log.append(log_entry)
             executed_results.append(tool_output)
-
-            # REFLECT: Merged dynamic observation & bounded follow-up (only when queue is empty)
-            if not pending_plan and self.step_count < self.max_steps:
-                self._emit_progress(f"Step {self.step_count}/{self.max_steps}: Assessing findings & planning next action (calling LLM...)", self.step_count, phase="reflection")
-                if job:
-                    job.phase = "reflection"
-                    db.commit()
-                try:
-                    reflect_res = self.llm_client.reflect(
-                        step_result=tool_output,
-                        history=self.run_log,
-                        dataset_id=dataset_id
-                    )
-                    self._accumulate_tokens(reflect_res.usage)
-                    reflect_latency_ms = round(reflect_res.latency_seconds * 1000, 3)
-                    log_entry["reflection"] = reflect_res.observation
-                    log_entry["reflection_latency_ms"] = reflect_latency_ms
-                    for f_idx, follow_up in enumerate(reflect_res.tool_calls):
-                        pending_plan.append({
-                            "step": self.step_count + len(pending_plan) + 1,
-                            "tool": follow_up.name,
-                            "arguments": follow_up.arguments,
-                            "rationale": follow_up.rationale,
-                            "llm_latency_ms": reflect_latency_ms if f_idx == 0 else 0.0
-                        })
-                except Exception:
-                    pass
 
         # Step 4: Generate Structured Insights (ranked and deduplicated: top 6 analytical, max 4 data quality)
         insights_objects = generate_insights(

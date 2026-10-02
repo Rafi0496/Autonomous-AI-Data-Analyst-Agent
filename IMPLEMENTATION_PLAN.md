@@ -76,15 +76,14 @@
    - The orchestrator dequeues and executes each tool call sequentially.
    - Each step measures raw execution duration using `time.perf_counter()` with millisecond precision (`duration_ms`).
    - Planning latency (`llm_latency_ms`) is attributed to the initial step of the batch.
-3. **Dynamic Reflection & Bounded Follow-ups:**
-   - When the `pending_plan` queue becomes empty, and if the current step count is below `max_steps`, reflection is triggered (`llm_client.reflect()`).
-   - The model observes execution history and tool findings, generating:
-     a. A synthesis observation (`reflection`), stored in `run_log` on the step entry.
-     b. Bounded follow-up tool calls (if necessary), appended to `pending_plan`.
-   - Reflection latency (`reflection_latency_ms`) is tracked with millisecond precision.
-4. **Max Rounds & Guardrails:**
-   - Maximum execution rounds are strictly bounded by `max_steps` (default 5 or 6).
-   - Additional guardrails include total runtime timeout (default 120s) and token budget limits (e.g. 15,000 tokens).
+3. **Dynamic Multi-Round Reflection & Bounded Follow-ups:**
+   - The agent supports up to 3 execution rounds (Round 1 initial plan, Rounds 2 & 3 follow-ups).
+   - After each round's tool execution queue completes, reflection evaluates findings (`llm_client.reflect()`).
+   - Reflection may request <= 3 follow-up tool calls (drill into a significant segment, a column with many outliers, or a suspicious correlation) or decide to stop.
+   - Round number (`round`), observation text (`reflection`), latency (`reflection_latency_ms`), and requested `follow_ups` are persisted per step in `run_log`.
+4. **Agent Depth & Budget Guardrails:**
+   - Up to 3 rounds maximum; bounded by `max_steps` (default 5 or 6).
+   - Additional guardrails include total runtime timeout (default 120s) and token budget limits (e.g. 15,000 tokens), evaluated before tool execution and reflection.
 5. **Deterministic Insight Ranking & Suppression:**
    - Impact score formula: `raw_score * confidence_factor` (`{"high": 1.0, "medium": 0.75, "low": 0.5}`).
    - Analytical suppression: if `n_used < 20` or `exclusion_rate > 0.5`, analytical finding is suppressed and converted to a data quality caveat (`"insufficient data for <analysis>"`).
