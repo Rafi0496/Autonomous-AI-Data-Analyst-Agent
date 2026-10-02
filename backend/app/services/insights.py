@@ -15,8 +15,9 @@ For data_quality findings:
   severity = min(1.0, (n_excluded / max(1, n_used + n_excluded)) * 1.5)
   impact_score = round(max(0.1, min(0.95, 0.35 + 0.65 * severity)), 4)
 """
-from typing import Any, Dict, List, Optional, Tuple
+import re
 import uuid
+from typing import Any, Dict, List, Optional, Tuple
 from shared.schemas.insight import Insight, InsightType, ConfidenceLevel
 
 def determine_confidence(n_used: int, exclusion_rate: float) -> ConfidenceLevel:
@@ -69,6 +70,41 @@ def compute_impact_score(
     impact_score = raw_score * conf_factor
     return round(max(0.05, min(1.0, impact_score)), 4)
 
+def validate_no_placeholders(text: str, context: str = "") -> str:
+    """Validate that rendered text contains no placeholders like 'None', 'nan', or generic 'Metric across Segment'.
+    Fails loudly if any placeholder or unrendered token is found.
+    """
+    if not text or not isinstance(text, str):
+        raise ValueError(f"Empty or non-string text in {context}: {text}")
+
+    disallowed_exact = [
+        "Metric across Segment",
+        "in Metric across",
+        "highest Metric",
+        "lowest Metric",
+        "median None",
+        "mean None",
+        "across Segment",
+        "None recorded",
+        "compared to None",
+        "for None",
+        "None vs None",
+    ]
+    for pattern in disallowed_exact:
+        if pattern.lower() in text.lower():
+            raise ValueError(f"Disallowed placeholder pattern '{pattern}' found in {context}: '{text}'")
+
+    if re.search(r"\bNone\b", text):
+        raise ValueError(f"Placeholder token 'None' found in {context}: '{text}'")
+    if re.search(r"\b(?:nan|NaN)\b", text):
+        raise ValueError(f"Placeholder token 'nan' found in {context}: '{text}'")
+    if re.search(r"\bnull\b", text, re.IGNORECASE):
+        # Allow standard SQL syntax like 'IS NOT NULL' or 'NOT NULL'
+        if not re.search(r"\b(?:is\s+not\s+null|is\s+null|not\s+null|set\s+null)\b", text, re.IGNORECASE):
+            raise ValueError(f"Placeholder token 'null' found in {context}: '{text}'")
+
+    return text
+
 def check_suppression(
     analysis_type: str,
     target_name: str,
@@ -82,18 +118,43 @@ def check_suppression(
     """
     ex_rate = round(n_excluded / max(1, total_rows), 4)
     if n_used < 20 or ex_rate > 0.5:
+        triggered_rules = []
+        if n_used < 20:
+            triggered_rules.append(f"n_used={n_used} < 20")
+        if ex_rate > 0.5:
+            triggered_rules.append(f"exclusion_rate={ex_rate*100:.1f}% > 50%")
+        rule_desc = " and ".join(triggered_rules)
+        trigger_rule = "n_used < 20" if n_used < 20 and ex_rate <= 0.5 else (
+            "exclusion_rate > 0.5" if ex_rate > 0.5 and n_used >= 20 else
+            "n_used < 20 and exclusion_rate > 0.5"
+        )
+
         reason = f"insufficient data for {analysis_type}"
+        print(f"[SUPPRESSION] Suppressed {analysis_type} on '{target_name}': triggered rule [{rule_desc}] (n_used={n_used}, n_excluded={n_excluded}, total_rows={total_rows})")
+
+        clean_target = str(target_name).replace(" ", "_").replace("/", "_")
+        title = validate_no_placeholders(
+            f"Insufficient data for {analysis_type} on {target_name}",
+            "suppression title"
+        )
+        summary = validate_no_placeholders(
+            f"Analytical finding for {analysis_type} on '{target_name}' was suppressed due to {reason} ({rule_desc}).",
+            "suppression summary"
+        )
         return Insight(
-            id=f"insight-dq-insufficient-{analysis_type}-{target_name}",
+            id=f"insight-dq-insufficient-{analysis_type}-{clean_target}",
             type="data_quality",
-            title=f"Insufficient data for {analysis_type} on {target_name}",
-            summary=f"Analytical finding for {analysis_type} on '{target_name}' was suppressed due to {reason} (n_used={n_used}, exclusion_rate={ex_rate*100:.1f}%).",
+            title=title,
+            summary=summary,
             metric_values={
                 "analysis": analysis_type,
                 "target": target_name,
                 "n_used": n_used,
                 "n_excluded": n_excluded,
-                "exclusion_rate": ex_rate
+                "exclusion_rate": ex_rate,
+                "trigger_rule": trigger_rule,
+                "rule_detail": rule_desc,
+                "rule_reason": rule_desc
             },
             evidence_step=step_num,
             significance=None,
@@ -294,13 +355,20 @@ def generate_insights(
 
     # 1. Process Structured Results
     for res in structured_results:
+        if not isinstance(res, dict):
+            continue
+        if res.get("status") not in (None, "success"):
+            continue
         t_name = res.get("tool", "")
         step_num = find_step(t_name)
 
         # Segment Difference
         if t_name == "segment_compare":
-            seg_col = res.get("segment_column", "Segment")
-            met_col = res.get("metric_column", "Metric")
+            seg_col = res.get("segment_column")
+            met_col = res.get("metric_column")
+            if not seg_col or not met_col or seg_col == "Segment" or met_col == "Metric":
+                raise ValueError(f"segment_compare result missing valid segment_column or metric_column: {res}")
+
             is_cat_rate = (res.get("analysis_type") == "categorical_rate")
 
             if is_cat_rate:
@@ -316,27 +384,40 @@ def generate_insights(
                     conf = determine_confidence(n_used, ex_rate)
                     p_val = res.get("chi2_p_value")
                     overall_pct = res.get("overall_rate_percent", 0.0)
-                    top_seg = res.get("top_segment", {})
-                    bot_seg = res.get("bottom_segment", {})
+                    top_seg = res.get("top_segment")
+                    bot_seg = res.get("bottom_segment")
+                    if not top_seg or not bot_seg or not isinstance(top_seg, dict) or not isinstance(bot_seg, dict):
+                        raise ValueError(f"segment_compare categorical rate missing top/bottom segment: {res}")
+                    top_name = top_seg.get("segment")
+                    bot_name = bot_seg.get("segment")
+                    top_rate = top_seg.get("rate_percent") if top_seg.get("rate_percent") is not None else top_seg.get("mean")
+                    bot_rate = bot_seg.get("rate_percent") if bot_seg.get("rate_percent") is not None else bot_seg.get("mean")
+                    if top_name is None or bot_name is None or top_rate is None or bot_rate is None:
+                        raise ValueError(f"segment_compare categorical stats incomplete: top={top_seg}, bottom={bot_seg}")
+
                     diff_pct = res.get("absolute_difference", 0.0)
                     effect = round(diff_pct / 100.0, 4)
 
                     is_significant = (p_val is not None and p_val <= 0.05)
                     if not is_significant:
                         title = f"No significant difference in {met_col} across {seg_col}"
+                        p_str = f"p={p_val:.4f}" if p_val is not None else "p not available"
                         summary = (
                             f"Chi-square test shows no significant difference in {met_col} across {seg_col} "
-                            f"(p={p_val if p_val is not None else 'N/A'}, overall rate: {overall_pct}% across {n_used} non-imputed rows). "
-                            f"{top_seg.get('segment')} recorded {top_seg.get('rate_percent')}% vs {bot_seg.get('rate_percent')}% for {bot_seg.get('segment')}."
+                            f"({p_str}, overall rate: {overall_pct:.2f}% across {n_used} non-imputed rows). "
+                            f"{top_name} recorded {top_rate:.2f}% vs {bot_rate:.2f}% for {bot_name}."
                         )
                     else:
                         title = f"{met_col} rate varies significantly across {seg_col}"
                         p_text = f" (chi2 p={p_val:.4f})" if p_val is not None else ""
                         summary = (
-                            f"Overall {met_col} rate is {overall_pct}% across {n_used} non-imputed rows{p_text}. "
-                            f"{top_seg.get('segment')} recorded {top_seg.get('rate_percent')}% (n={top_seg.get('n_used')}), "
-                            f"compared to {bot_seg.get('segment')} at {bot_seg.get('rate_percent')}% (n={bot_seg.get('n_used')})."
+                            f"Overall {met_col} rate is {overall_pct:.2f}% across {n_used} non-imputed rows{p_text}. "
+                            f"{top_name} recorded {top_rate:.2f}% (n={top_seg.get('n_used', top_seg.get('count', n_used))}), "
+                            f"compared to {bot_name} at {bot_rate:.2f}% (n={bot_seg.get('n_used', bot_seg.get('count', n_used))})."
                         )
+
+                    title = validate_no_placeholders(title, f"insight-seg-{seg_col}-{met_col} title")
+                    summary = validate_no_placeholders(summary, f"insight-seg-{seg_col}-{met_col} summary")
 
                     score = compute_impact_score("segment_difference", effect, p_val, n_used, n_excluded, conf)
                     cavs = build_caveats(n_used, ex_rate, p_val)
@@ -360,10 +441,12 @@ def generate_insights(
                         "overall_rate": res.get("overall_rate"),
                         "chi2_p_value": p_val,
                         "p_value": p_val,
-                        "top_segment": top_seg.get("segment"),
-                        "top_rate": top_seg.get("rate_percent"),
-                        "bottom_segment": bot_seg.get("segment"),
-                        "bottom_rate": bot_seg.get("rate_percent"),
+                        "top_segment": top_name,
+                        "top_rate": top_rate,
+                        "top_median": top_rate,
+                        "bottom_segment": bot_name,
+                        "bottom_rate": bot_rate,
+                        "bottom_median": bot_rate,
                         "difference": diff_pct,
                         "segments": res.get("segments", [])
                     }
@@ -400,8 +483,17 @@ def generate_insights(
                 else:
                     conf = determine_confidence(n_used, ex_rate)
                     p_val = res.get("anova_p_value")
-                    top_seg = res.get("top_segment", {})
-                    bot_seg = res.get("bottom_segment", {})
+                    top_seg = res.get("top_segment")
+                    bot_seg = res.get("bottom_segment")
+                    if not top_seg or not bot_seg or not isinstance(top_seg, dict) or not isinstance(bot_seg, dict):
+                        raise ValueError(f"segment_compare continuous missing top_segment or bottom_segment dictionary: {res}")
+                    top_name = top_seg.get("segment")
+                    bot_name = bot_seg.get("segment")
+                    top_med = top_seg.get("median") if top_seg.get("median") is not None else top_seg.get("mean")
+                    bot_med = bot_seg.get("median") if bot_seg.get("median") is not None else bot_seg.get("mean")
+                    if top_name is None or bot_name is None or top_med is None or bot_med is None:
+                        raise ValueError(f"segment_compare segment stats incomplete: top={top_seg}, bottom={bot_seg}")
+
                     ratio = res.get("top_vs_bottom_ratio", 1.0)
                     effect = round(abs(ratio - 1.0), 4) if ratio else 0.2
 
@@ -411,15 +503,18 @@ def generate_insights(
                         summary = (
                             f"ANOVA test shows no statistically significant variance in {met_col} "
                             f"across {seg_col} categories (p={p_val:.4f}, n_used={n_used}). "
-                            f"{top_seg.get('segment')} recorded {top_seg.get('median')} vs {bot_seg.get('median')} for {bot_seg.get('segment')}."
+                            f"{top_name} recorded median {top_med:.2f} vs median {bot_med:.2f} for {bot_name}."
                         )
                     else:
                         title = f"Variance in {met_col} across {seg_col}"
                         p_text = f" (p={p_val:.4f})" if p_val is not None else ""
                         summary = (
-                            f"{top_seg.get('segment')} recorded the highest {met_col} (median {top_seg.get('median')}) "
-                            f"compared to {bot_seg.get('segment')} (median {bot_seg.get('median')}), a {ratio:.2f}x differential{p_text}."
+                            f"{top_name} recorded the highest {met_col} (median {top_med:.2f}) "
+                            f"compared to {bot_name} (median {bot_med:.2f}), a {ratio:.2f}x differential{p_text}."
                         )
+
+                    title = validate_no_placeholders(title, f"insight-seg-{seg_col}-{met_col} title")
+                    summary = validate_no_placeholders(summary, f"insight-seg-{seg_col}-{met_col} summary")
 
                     score = compute_impact_score("segment_difference", effect, p_val, n_used, n_excluded, conf)
                     cavs = build_caveats(n_used, ex_rate, p_val)
@@ -433,10 +528,10 @@ def generate_insights(
                         metric_values={
                             "segment_column": seg_col,
                             "metric_column": met_col,
-                            "top_segment": top_seg.get("segment"),
-                            "top_median": top_seg.get("median"),
-                            "bottom_segment": bot_seg.get("segment"),
-                            "bottom_median": bot_seg.get("median"),
+                            "top_segment": top_name,
+                            "top_median": top_med,
+                            "bottom_segment": bot_name,
+                            "bottom_median": bot_med,
                             "ratio": ratio,
                             "segments": res.get("segments", [])
                         },
@@ -474,10 +569,14 @@ def generate_insights(
                 p_val = rel.get("p_value")
                 eff = round(abs(r_val), 4)
                 
-                title = f"{rel.get('strength', 'Statistical').capitalize()} relationship between {cx} and {cy}"
-                summary = (
+                title = validate_no_placeholders(
+                    f"{rel.get('strength', 'Statistical').capitalize()} relationship between {cx} and {cy}",
+                    f"insight-corr-{cx}-{cy} title"
+                )
+                summary = validate_no_placeholders(
                     f"A correlation coefficient of r={r_val:.4f} was observed between {cx} and {cy} "
-                    f"across {pair_n_used} observations (exclusion rate {pair_ex_rate*100:.1f}%)."
+                    f"across {pair_n_used} observations (exclusion rate {pair_ex_rate*100:.1f}%).",
+                    f"insight-corr-{cx}-{cy} summary"
                 )
                 score = compute_impact_score("correlation", eff, p_val, pair_n_used, pair_n_excluded, conf)
                 cavs = build_caveats(pair_n_used, pair_ex_rate, p_val)
@@ -508,11 +607,14 @@ def generate_insights(
 
         # Trend Analysis
         elif t_name == "trend_analysis":
+            val_col = res.get("value_column")
+            date_col = res.get("date_column")
+            if not val_col or not date_col or val_col == "Metric":
+                raise ValueError(f"trend_analysis result missing valid value_column or date_column: {res}")
+
             n_used = res.get("n_used", cleaned_rows)
             n_excluded = total_rows - n_used
             ex_rate = round(n_excluded / max(1, total_rows), 4)
-            val_col = res.get("value_column", "Metric")
-            date_col = res.get("date_column", "Date")
 
             suppressed = check_suppression("trend", val_col, n_used, n_excluded, total_rows, step_num)
             if suppressed:
@@ -535,10 +637,14 @@ def generate_insights(
                     )
                 else:
                     title = f"{direction.capitalize()} trajectory in {val_col} ({pct:+.1f}%)"
+                    p_str = f"p={p_val:.4f}" if p_val is not None else "p not available"
                     summary = (
-                        f"{val_col} followed an overall {direction} trajectory (standardized slope={std_slope:+.4f}, p={p_val if p_val is not None else 'N/A'}) "
+                        f"{val_col} followed an overall {direction} trajectory (standardized slope={std_slope:+.4f}, {p_str}) "
                         f"across {n_periods} time periods ({n_used} rows used)."
                     )
+
+                title = validate_no_placeholders(title, f"insight-trend-{val_col} title")
+                summary = validate_no_placeholders(summary, f"insight-trend-{val_col} summary")
 
                 score = compute_impact_score("trend", eff, p_val, n_used, n_excluded, conf)
                 cavs = build_caveats(n_used, ex_rate, p_val)
@@ -609,6 +715,9 @@ def generate_insights(
                     )
                     score = compute_impact_score("outlier", eff, None, n_used, n_excluded, conf, anomaly_count=anom_cnt)
 
+                title = validate_no_placeholders(title, f"insight-outlier-{top_col_name} title")
+                summary = validate_no_placeholders(summary, f"insight-outlier-{top_col_name} summary")
+
                 cavs = build_caveats(n_used, ex_rate, None)
                 c_spec = build_chart_spec_for_outlier(top_col_name, res.get("column_outliers", {}).get(top_col_name, {}))
 
@@ -655,11 +764,13 @@ def generate_insights(
         conf = determine_confidence(n_used_dq, ex_rate)
         score = compute_impact_score("data_quality", None, None, n_used_dq, cnt, conf)
         c_spec = build_chart_spec_for_data_quality(cl_report, highlight_col=col)
+        title = validate_no_placeholders(f"Placeholder sentinel values sanitized in {col}", f"insight-dq-sentinel-{col} title")
+        summary = validate_no_placeholders(f"Detected and sanitized {cnt} placeholder sentinel values ({val}) in column '{col}' prior to imputation.", f"insight-dq-sentinel-{col} summary")
         candidates.append(Insight(
             id=f"insight-dq-sentinel-{col}",
             type="data_quality",
-            title=f"Placeholder sentinel values sanitized in {col}",
-            summary=f"Detected and sanitized {cnt} placeholder sentinel values ({val}) in column '{col}' prior to imputation.",
+            title=title,
+            summary=summary,
             metric_values={"column": col, "sentinel_value": val, "count": cnt},
             evidence_step=None,
             significance=None,
@@ -683,11 +794,13 @@ def generate_insights(
         conf = determine_confidence(n_used_dq, ex_rate)
         score = compute_impact_score("data_quality", None, None, n_used_dq, cnt, conf)
         c_spec = build_chart_spec_for_data_quality(cl_report, highlight_col=col)
+        title = validate_no_placeholders(f"Invalid domain values sanitized in {col}", f"insight-dq-invalid-{col} title")
+        summary = validate_no_placeholders(f"Identified and sanitized {cnt} invalid values in column '{col}' violating {rule} prior to imputation.", f"insight-dq-invalid-{col} summary")
         candidates.append(Insight(
             id=f"insight-dq-invalid-{col}",
             type="data_quality",
-            title=f"Invalid domain values sanitized in {col}",
-            summary=f"Identified and sanitized {cnt} invalid values in column '{col}' violating {rule} prior to imputation.",
+            title=title,
+            summary=summary,
             metric_values={"column": col, "rule": rule, "count": cnt},
             evidence_step=None,
             significance=None,
@@ -706,11 +819,13 @@ def generate_insights(
         col = sr.get("column")
         cnt = sr.get("count", 0)
         c_spec = build_chart_spec_for_data_quality(cl_report, highlight_col=col)
+        title = validate_no_placeholders(f"Suspected transaction returns in {col}", f"insight-dq-returns-{col} title")
+        summary = validate_no_placeholders(f"Identified {cnt} negative entries in '{col}' flagged as suspected customer returns and preserved in dataset.", f"insight-dq-returns-{col} summary")
         candidates.append(Insight(
             id=f"insight-dq-returns-{col}",
             type="data_quality",
-            title=f"Suspected transaction returns in {col}",
-            summary=f"Identified {cnt} negative entries in '{col}' flagged as suspected customer returns and preserved in dataset.",
+            title=title,
+            summary=summary,
             metric_values={"column": col, "count": cnt},
             evidence_step=None,
             significance=None,
@@ -730,11 +845,13 @@ def generate_insights(
         val = sre.get("value")
         cnt = sre.get("count", 0)
         c_spec = build_chart_spec_for_data_quality(cl_report, highlight_col=col)
+        title = validate_no_placeholders(f"Repeated extreme values in {col}", f"insight-dq-extremes-{col} title")
+        summary = validate_no_placeholders(f"Identified {cnt} occurrences of repeated value {val} in column '{col}' outside 3x IQR fence; preserved as valid extremes.", f"insight-dq-extremes-{col} summary")
         candidates.append(Insight(
             id=f"insight-dq-extremes-{col}",
             type="data_quality",
-            title=f"Repeated extreme values in {col}",
-            summary=f"Identified {cnt} occurrences of repeated value {val} in column '{col}' outside 3x IQR fence; preserved as valid extremes.",
+            title=title,
+            summary=summary,
             metric_values={"column": col, "value": val, "count": cnt},
             evidence_step=None,
             significance=None,
@@ -757,11 +874,13 @@ def generate_insights(
             conf = determine_confidence(n_used_imp, imp_rate)
             score = compute_impact_score("data_quality", imp_rate, None, n_used_imp, imp_cnt, conf)
             c_spec = build_chart_spec_for_data_quality(cl_report, highlight_col=col)
+            title = validate_no_placeholders(f"Elevated imputation rate in {col} ({imp_rate * 100:.1f}%)", f"insight-dq-imputation-{col} title")
+            summary = validate_no_placeholders(f"Column '{col}' required {imp_rate * 100:.1f}% imputation ({imp_cnt} missing entries imputed).", f"insight-dq-imputation-{col} summary")
             candidates.append(Insight(
                 id=f"insight-dq-imputation-{col}",
                 type="data_quality",
-                title=f"Elevated imputation rate in {col} ({imp_rate * 100:.1f}%)",
-                summary=f"Column '{col}' required {imp_rate * 100:.1f}% imputation ({imp_cnt} missing entries imputed).",
+                title=title,
+                summary=summary,
                 metric_values={"column": col, "imputed_count": imp_cnt, "imputation_rate": imp_rate},
                 evidence_step=None,
                 significance=None,
