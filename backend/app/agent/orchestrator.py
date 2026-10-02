@@ -281,12 +281,13 @@ class PlanActReflectOrchestrator:
         synth_res = self.llm_client.synthesize(
             results=executed_results,
             dataset_profile=profile_dict,
-            goal=synth_goal
+            goal=synth_goal,
+            insights=insights
         )
         synth_latency_ms = round((time.perf_counter() - synth_start) * 1000, 2)
         self._accumulate_tokens(synth_res.usage)
 
-        # Initial Bound Citation Verification
+        # Initial Bound Citation Verification (strictly against insights + profile, NEVER raw tool results)
         initial_payload = {
             "executive_summary": synth_res.executive_summary,
             "key_findings": synth_res.key_findings,
@@ -294,7 +295,7 @@ class PlanActReflectOrchestrator:
         }
         verification = validate_citations(
             synthesis_result=initial_payload,
-            structured_results=executed_results,
+            structured_results=None,
             dataset_profile=profile_dict,
             insights=insights
         )
@@ -312,7 +313,8 @@ class PlanActReflectOrchestrator:
                 results=executed_results,
                 dataset_profile=profile_dict,
                 goal=synth_goal,
-                failing_claims=failing_claims
+                failing_claims=failing_claims,
+                insights=insights
             )
             synth_latency_ms += round((time.perf_counter() - retry_start) * 1000, 2)
             self._accumulate_tokens(retry_res.usage)
@@ -323,7 +325,7 @@ class PlanActReflectOrchestrator:
             }
             verification = validate_citations(
                 synthesis_result=retry_payload,
-                structured_results=executed_results,
+                structured_results=None,
                 dataset_profile=profile_dict,
                 insights=insights
             )

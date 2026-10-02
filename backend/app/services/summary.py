@@ -5,20 +5,24 @@ Synthesizes all structured tool results into a structured business narrative whe
 strictly traces back to computed values.
 """
 from typing import Any, Dict, List, Optional
+from backend.app.services.insights import validate_no_placeholders
 
 def write_summary(
-    structured_results: List[Dict[str, Any]],
+    structured_results: Optional[List[Dict[str, Any]]] = None,
     dataset_profile: Optional[Dict[str, Any]] = None,
-    goal: Optional[str] = None
+    goal: Optional[str] = None,
+    insights: Optional[List[Any]] = None
 ) -> Dict[str, Any]:
     """
-    Synthesize structured tool results into an executive business summary.
-    Extracts all exact computed numbers into a citation registry.
+    Synthesize surviving analytical insights and data quality caveats into an executive business summary.
+    Synthesis may use ONLY insights[] as claim sources, never raw tool results.
+    Suppressed analyses appear only as 'insufficient data for X (n_used=..., exclusion_rate=...)'.
+    If p >= 0.05, the narrative states 'no significant difference' and does not present top segment as a finding.
     """
-    if not structured_results:
+    if not structured_results and not insights:
         return {
             "status": "empty",
-            "message": "No analysis tool results provided for synthesis.",
+            "message": "No analysis tool results or insights provided for synthesis.",
             "executive_summary": "Analysis was concluded without tool executions.",
             "key_findings": [],
             "citations_index": {}
@@ -26,6 +30,184 @@ def write_summary(
 
     citations: Dict[str, Dict[str, Any]] = {}
     findings: List[Dict[str, Any]] = []
+
+    if insights:
+        for ins in insights:
+            ins_dict = ins.model_dump() if hasattr(ins, "model_dump") else (ins if isinstance(ins, dict) else ins.__dict__)
+            ins_id = str(ins_dict.get("id") or "")
+            ins_type = str(ins_dict.get("type") or "")
+            title = str(ins_dict.get("title") or "")
+            summary = str(ins_dict.get("summary") or "")
+            mv = ins_dict.get("metric_values") or {}
+            p_val = ins_dict.get("significance")
+            if p_val is None:
+                p_val = mv.get("p_value") or mv.get("anova_p_value") or mv.get("chi2_p_value")
+            n_used = ins_dict.get("n_used", 0)
+            ex_rate = ins_dict.get("exclusion_rate", 0.0)
+
+            # Suppressed insight check
+            if ins_id.startswith("insight-dq-insufficient") or "insufficient data for" in title.lower() or "insufficient data for" in summary.lower():
+                analysis = mv.get("analysis") or "analysis"
+                target = mv.get("target") or title.replace("Insufficient data for ", "")
+                narrative = f"insufficient data for {analysis} on '{target}' (n_used={n_used}, exclusion_rate={ex_rate*100:.1f}%)"
+                full_nar = f"Analysis for {analysis} on '{target}' was suppressed due to {narrative}."
+                full_nar = validate_no_placeholders(full_nar, f"suppressed-{ins_id}")
+                findings.append({
+                    "category": "Data Quality Suppression",
+                    "headline": f"Insufficient data for {analysis} on {target}",
+                    "narrative": full_nar,
+                    "primary_metric": n_used,
+                    "source_id": ins_id,
+                    "metric": "n_used",
+                    "value": float(n_used)
+                })
+                citations[str(n_used)] = {"tool": "insights", "metric": "n_used", "value": n_used}
+                continue
+
+            if ins_type == "segment_difference":
+                seg_col = mv.get("segment_column", "segment")
+                met_col = mv.get("metric_column", "metric")
+                top_name = mv.get("top_segment")
+                bot_name = mv.get("bottom_segment")
+                top_med = mv.get("top_median", mv.get("top_rate"))
+                bot_med = mv.get("bottom_median", mv.get("bottom_rate"))
+                ratio = mv.get("ratio")
+                is_sig = (p_val is not None and p_val < 0.05)
+
+                if p_val is not None and not is_sig:
+                    # Item 2: If p >= 0.05, narrative says "no significant difference" and does NOT present top segment as finding
+                    headline = f"No significant difference in {met_col} across {seg_col}"
+                    narrative = f"Statistical testing demonstrates no significant difference in {met_col} across {seg_col} categories (p={p_val:.4f}, n_used={n_used})."
+                    headline = validate_no_placeholders(headline, f"{ins_id}-headline")
+                    narrative = validate_no_placeholders(narrative, f"{ins_id}-narrative")
+                    findings.append({
+                        "category": "Segment Comparison",
+                        "headline": headline,
+                        "narrative": narrative,
+                        "primary_metric": p_val,
+                        "source_id": ins_id,
+                        "metric": "p_value",
+                        "value": round(float(p_val), 4)
+                    })
+                    citations[str(round(float(p_val), 4))] = {"tool": "insights", "metric": "p_value", "value": round(float(p_val), 4)}
+                else:
+                    headline = f"Variance in {met_col} across {seg_col}"
+                    ratio_str = f", a {ratio:.2f}x differential" if ratio else ""
+                    p_str = f" (p={p_val:.4f})" if p_val is not None else ""
+                    narrative = f"{top_name} recorded the highest {met_col} (median {top_med:.2f}) compared to {bot_name} (median {bot_med:.2f}){ratio_str}{p_str} across {n_used} records."
+                    headline = validate_no_placeholders(headline, f"{ins_id}-headline")
+                    narrative = validate_no_placeholders(narrative, f"{ins_id}-narrative")
+                    findings.append({
+                        "category": "Segment Comparison",
+                        "headline": headline,
+                        "narrative": narrative,
+                        "primary_metric": top_med,
+                        "source_id": ins_id,
+                        "metric": f"{top_name}_median" if f"{top_name}_median" in mv else "top_median",
+                        "value": float(top_med) if top_med is not None else 0.0
+                    })
+                    if top_med is not None:
+                        citations[str(top_med)] = {"tool": "insights", "metric": "top_median", "value": top_med}
+
+            elif ins_type == "correlation":
+                cx = mv.get("column_x", "")
+                cy = mv.get("column_y", "")
+                r = mv.get("correlation", 0.0)
+                headline = f"Significant correlation between {cx} and {cy}"
+                narrative = f"A correlation coefficient of r={r:.4f} was observed between {cx} and {cy} across {n_used} observations."
+                headline = validate_no_placeholders(headline, f"{ins_id}-headline")
+                narrative = validate_no_placeholders(narrative, f"{ins_id}-narrative")
+                findings.append({
+                    "category": "Correlation",
+                    "headline": headline,
+                    "narrative": narrative,
+                    "primary_metric": r,
+                    "source_id": ins_id,
+                    "metric": "correlation",
+                    "value": float(r)
+                })
+                citations[str(round(float(r), 4))] = {"tool": "insights", "metric": "correlation", "value": r}
+
+            elif ins_type == "trend":
+                val_col = mv.get("value_column", "Metric")
+                direction = mv.get("overall_trend", "trajectory")
+                pct = mv.get("percentage_change", 0.0)
+                headline = f"Overall {direction} trajectory in {val_col} ({pct:+.1f}%)"
+                narrative = f"{val_col} followed an overall {direction} trajectory ({pct:+.1f}%) across {n_used} observations."
+                headline = validate_no_placeholders(headline, f"{ins_id}-headline")
+                narrative = validate_no_placeholders(narrative, f"{ins_id}-narrative")
+                findings.append({
+                    "category": "Trend Analysis",
+                    "headline": headline,
+                    "narrative": narrative,
+                    "primary_metric": pct,
+                    "source_id": ins_id,
+                    "metric": "percentage_change",
+                    "value": float(pct)
+                })
+                citations[str(pct)] = {"tool": "insights", "metric": "percentage_change", "value": pct}
+
+            elif ins_type == "outlier":
+                anom_cnt = mv.get("anomaly_count", 0)
+                anom_rate = mv.get("anomaly_rate_percent", 0.0)
+                headline = f"{anom_cnt} statistical outliers identified ({anom_rate:.1f}%)"
+                narrative = f"Identified {anom_cnt} anomalous rows ({anom_rate:.1f}% anomaly rate) across {n_used} records."
+                headline = validate_no_placeholders(headline, f"{ins_id}-headline")
+                narrative = validate_no_placeholders(narrative, f"{ins_id}-narrative")
+                findings.append({
+                    "category": "Outlier Detection",
+                    "headline": headline,
+                    "narrative": narrative,
+                    "primary_metric": anom_cnt,
+                    "source_id": ins_id,
+                    "metric": "anomaly_count",
+                    "value": float(anom_cnt)
+                })
+                citations[str(anom_cnt)] = {"tool": "insights", "metric": "anomaly_count", "value": anom_cnt}
+
+            elif ins_type == "data_quality":
+                findings.append({
+                    "category": "Data Quality",
+                    "headline": title,
+                    "narrative": summary,
+                    "primary_metric": mv.get("count", mv.get("imputed_count", 0)),
+                    "source_id": ins_id,
+                    "metric": "count" if "count" in mv else "imputed_count",
+                    "value": float(mv.get("count", mv.get("imputed_count", 0)))
+                })
+
+        analytical = [f for f in findings if f["category"] not in ("Data Quality", "Data Quality Suppression")]
+        suppressed = [f for f in findings if f["category"] == "Data Quality Suppression"]
+        dq = [f for f in findings if f["category"] == "Data Quality"]
+
+        parts = []
+        goal_str = f" targeting '{goal}'" if goal else ""
+        parts.append(f"Autonomous analysis{goal_str} concluded with {len(analytical)} validated analytical findings.")
+        for a in analytical:
+            parts.append(a["narrative"])
+        if suppressed:
+            supp_text = "; ".join(s["narrative"] for s in suppressed)
+            parts.append(f"Suppressed analyses: {supp_text}.")
+        if dq:
+            dq_text = " ".join(d["narrative"] for d in dq[:2])
+            parts.append(f"Data quality caveats: {dq_text}")
+        executive_summary = validate_no_placeholders(" ".join(parts), "executive summary")
+
+        recommendations = [
+            "Focus operational optimization on segments demonstrating verified efficiency differentials.",
+            "Account for data quality caveats and suppressed dimensions in subsequent strategic modeling.",
+            "Establish recurring automated monitoring on high-confidence analytical indicators."
+        ]
+
+        return {
+            "status": "success",
+            "executive_summary": executive_summary,
+            "key_findings": findings,
+            "recommendations": recommendations,
+            "total_findings": len(findings),
+            "total_tools_executed": len(structured_results or []),
+            "citations_index": citations
+        }
 
     # 1. Harvest facts from profiling and data quality
     if dataset_profile:

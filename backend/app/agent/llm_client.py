@@ -209,7 +209,8 @@ class LLMClient(ABC):
         results: List[Dict[str, Any]],
         dataset_profile: Optional[Dict[str, Any]] = None,
         goal: Optional[str] = None,
-        failing_claims: Optional[List[Dict[str, Any]]] = None
+        failing_claims: Optional[List[Dict[str, Any]]] = None,
+        insights: Optional[List[Any]] = None
     ) -> SynthesisResult:
         """Synthesize structured tool results into an executive business narrative."""
         pass
@@ -353,22 +354,25 @@ class HeuristicClient(LLMClient):
         results: List[Dict[str, Any]],
         dataset_profile: Optional[Dict[str, Any]] = None,
         goal: Optional[str] = None,
-        failing_claims: Optional[List[Dict[str, Any]]] = None
+        failing_claims: Optional[List[Dict[str, Any]]] = None,
+        insights: Optional[List[Any]] = None
     ) -> SynthesisResult:
         t0 = time.perf_counter()
         summary_payload = write_summary(
             structured_results=results,
             dataset_profile=dataset_profile,
-            goal=goal
+            goal=goal,
+            insights=insights
         )
         latency = time.perf_counter() - t0
         claims = []
         for kf in summary_payload.get("key_findings", []):
             if isinstance(kf, dict) and "metric" in kf and "value" in kf:
                 try:
+                    src_id = kf.get("source_id") or ("profile" if "imput" in str(kf.get("metric", "")).lower() else "step_1")
                     claims.append({
-                        "text": str(kf.get("finding", "")),
-                        "source_id": "profile" if "imput" in str(kf.get("metric", "")).lower() else "step_1",
+                        "text": str(kf.get("narrative") or kf.get("finding", "")),
+                        "source_id": src_id,
                         "metric_key": str(kf.get("metric", "")),
                         "value": float(kf.get("value", 0.0)),
                         "unit": None
@@ -646,18 +650,22 @@ class ClaudeClient(LLMClient):
         results: List[Dict[str, Any]],
         dataset_profile: Optional[Dict[str, Any]] = None,
         goal: Optional[str] = None,
-        failing_claims: Optional[List[Dict[str, Any]]] = None
+        failing_claims: Optional[List[Dict[str, Any]]] = None,
+        insights: Optional[List[Any]] = None
     ) -> SynthesisResult:
         t0 = time.perf_counter()
-        base_summary = write_summary(
+        summary_payload = write_summary(
             structured_results=results,
             dataset_profile=dataset_profile,
-            goal=goal
+            goal=goal,
+            insights=insights
         )
 
         try:
             client = self._get_client()
+            compact_insights = [i.model_dump() if hasattr(i, "model_dump") else i for i in (insights or [])]
             compact_results = [{k: v for k, v in r.items() if k not in ("dataframe", "raw_data")} for r in results]
+            source_payload = compact_insights if compact_insights else compact_results
             retry_note = ""
             if failing_claims:
                 retry_note = (
@@ -671,23 +679,25 @@ class ClaudeClient(LLMClient):
                 "You are an executive data analyst writing the final analytical narrative.\n"
                 f"Dataset Profile: {json.dumps(dataset_profile or {}, default=str)}\n"
                 f"User Goal: {goal or 'Comprehensive exploratory analysis'}\n"
-                f"Computed Tool Results: {json.dumps(compact_results, default=str)}{retry_note}\n\n"
+                f"Surviving Analytical Insights and Caveats (ONLY valid claim sources): {json.dumps(source_payload, default=str)}{retry_note}\n\n"
                 "Write an authoritative business report in JSON format:\n"
                 "{\n"
                 '  "executive_summary": "2-3 paragraphs synthesizing key insights and strategic implications.",\n'
                 '  "key_findings": [\n'
-                '    {"finding": "Clear statement citing exact numbers from tool results", "metric": "name", "value": 123.4, "impact": "high/medium/low"}\n'
+                '    {"finding": "Clear statement citing exact numbers from insights", "metric": "name", "value": 123.4, "impact": "high/medium/low"}\n'
                 "  ],\n"
                 '  "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"],\n'
                 '  "claims": [\n'
-                '    {"text": "Sentence or clause stating the fact", "source_id": "step_1 or insight id", "metric_key": "exact_metric_name_in_source", "value": 123.4, "unit": "count/USD/%"}\n'
+                '    {"text": "Sentence or clause stating the fact", "source_id": "exact insight id (e.g. insight-seg-...)", "metric_key": "exact_metric_name_in_source", "value": 123.4, "unit": "count/USD/%"}\n'
                 "  ]\n"
                 "}\n"
                 "CRITICAL INSTRUCTIONS:\n"
-                "1. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
-                "2. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
-                "3. If citing sample size or exclusion/imputation rate, cite the exact numbers from the tool results (e.g. n_used, n_excluded_imputed, exclusion_rate_percent). DO NOT compute custom arithmetic percentages that are not in the tool results.\n"
-                "4. EVERY SINGLE NUMBER cited in 'executive_summary' or 'key_findings' MUST belong to a declared claim in 'claims' matching exact source_id and metric_key. If a number is not in 'claims', do NOT write it in the narrative."
+                "1. Synthesis may use ONLY insights[] (surviving analytical insights plus data-quality caveats) as claim sources, never raw tool results.\n"
+                "2. Suppressed analyses may appear ONLY as 'insufficient data for X (n_used=..., exclusion_rate=...)'. NEVER cite trend percentages, correlation coefficients, or segment comparisons for suppressed analyses.\n"
+                "3. If p >= 0.05, the narrative MUST say 'no significant difference' and must NOT present the top segment as a finding.\n"
+                "4. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
+                "5. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
+                "6. EVERY SINGLE NUMBER cited in 'executive_summary' or 'key_findings' MUST belong to a declared claim in 'claims' matching exact source_id and metric_key. If a number is not in 'claims', do NOT write it in the narrative."
             )
             response = client.messages.create(
                 model=self.model,
@@ -1055,19 +1065,23 @@ class GeminiClient(LLMClient):
         results: List[Dict[str, Any]],
         dataset_profile: Optional[Dict[str, Any]] = None,
         goal: Optional[str] = None,
-        failing_claims: Optional[List[Dict[str, Any]]] = None
+        failing_claims: Optional[List[Dict[str, Any]]] = None,
+        insights: Optional[List[Any]] = None
     ) -> SynthesisResult:
         t0 = time.perf_counter()
-        base_summary = write_summary(
+        summary_payload = write_summary(
             structured_results=results,
             dataset_profile=dataset_profile,
-            goal=goal
+            goal=goal,
+            insights=insights
         )
 
         try:
             from google.genai import types
             client = self._get_client()
+            compact_insights = [i.model_dump() if hasattr(i, "model_dump") else i for i in (insights or [])]
             compact_results = [{k: v for k, v in r.items() if k not in ("dataframe", "raw_data")} for r in results]
+            source_payload = compact_insights if compact_insights else compact_results
             retry_note = ""
             if failing_claims:
                 retry_note = (
@@ -1081,23 +1095,25 @@ class GeminiClient(LLMClient):
                 "You are an executive data analyst writing the final analytical narrative.\n"
                 f"Dataset Profile: {json.dumps(dataset_profile or {}, default=str)}\n"
                 f"User Goal: {goal or 'Comprehensive exploratory analysis'}\n"
-                f"Computed Tool Results: {json.dumps(compact_results, default=str)}{retry_note}\n\n"
+                f"Surviving Analytical Insights and Caveats (ONLY valid claim sources): {json.dumps(source_payload, default=str)}{retry_note}\n\n"
                 "Write an authoritative business report in JSON format:\n"
                 "{\n"
                 '  "executive_summary": "2-3 paragraphs synthesizing key insights and strategic implications.",\n'
                 '  "key_findings": [\n'
-                '    {"finding": "Clear statement citing exact numbers from tool results", "metric": "name", "value": 123.4, "impact": "high/medium/low"}\n'
+                '    {"finding": "Clear statement citing exact numbers from insights", "metric": "name", "value": 123.4, "impact": "high/medium/low"}\n'
                 "  ],\n"
                 '  "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2"],\n'
                 '  "claims": [\n'
-                '    {"text": "Sentence or clause stating the fact", "source_id": "step_1 or insight id", "metric_key": "exact_metric_name_in_source", "value": 123.4, "unit": "count/USD/%"}\n'
+                '    {"text": "Sentence or clause stating the fact", "source_id": "exact insight id (e.g. insight-seg-...)", "metric_key": "exact_metric_name_in_source", "value": 123.4, "unit": "count/USD/%"}\n'
                 "  ]\n"
                 "}\n"
                 "CRITICAL INSTRUCTIONS:\n"
-                "1. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
-                "2. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
-                "3. If citing sample size or exclusion/imputation rate, cite the exact numbers from the tool results (e.g. n_used, n_excluded_imputed, exclusion_rate_percent). DO NOT compute custom arithmetic percentages that are not in the tool results.\n"
-                "4. EVERY SINGLE NUMBER cited in 'executive_summary' or 'key_findings' MUST belong to a declared claim in 'claims' matching exact source_id and metric_key. If a number is not in 'claims', do NOT write it in the narrative."
+                "1. Synthesis may use ONLY insights[] (surviving analytical insights plus data-quality caveats) as claim sources, never raw tool results.\n"
+                "2. Suppressed analyses may appear ONLY as 'insufficient data for X (n_used=..., exclusion_rate=...)'. NEVER cite trend percentages, correlation coefficients, or segment comparisons for suppressed analyses.\n"
+                "3. If p >= 0.05, the narrative MUST say 'no significant difference' and must NOT present the top segment as a finding.\n"
+                "4. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
+                "5. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
+                "6. EVERY SINGLE NUMBER cited in 'executive_summary' or 'key_findings' MUST belong to a declared claim in 'claims' matching exact source_id and metric_key. If a number is not in 'claims', do NOT write it in the narrative."
             )
             config = self._build_generate_config(types, response_mime_type="application/json")
             response = self._execute_with_retry(client, contents=prompt, config=config)
