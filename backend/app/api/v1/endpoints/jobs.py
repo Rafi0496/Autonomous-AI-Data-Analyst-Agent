@@ -113,6 +113,38 @@ def submit_analysis_job(
         "message": f"Autonomous analysis job {job.id} dispatched successfully."
     }
 
+@router.get("", response_model=List[JobStatusResponse])
+def list_analysis_jobs(
+    limit: int = 10,
+    dataset_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Retrieve list of recent analysis jobs."""
+    query = db.query(AnalysisJob)
+    if dataset_id:
+        query = query.filter(AnalysisJob.dataset_id == dataset_id)
+    jobs = query.order_by(AnalysisJob.created_at.desc()).limit(limit).all()
+    return [
+        JobStatusResponse(
+            job_id=j.id,
+            dataset_id=j.dataset_id,
+            status=j.status,
+            phase=j.phase or "queued",
+            current_step=j.current_step or 0,
+            current_step_name=j.current_step_name,
+            total_steps=j.total_steps or 0,
+            step_limit=j.step_limit or 5,
+            tokens_used=j.tokens_used or 0,
+            token_budget=j.token_budget or 15000,
+            execution_time_seconds=j.execution_time_seconds or 0,
+            results=j.get_results(),
+            verification=j.get_verification(),
+            created_at=j.created_at.isoformat(),
+            updated_at=j.updated_at.isoformat()
+        )
+        for j in jobs
+    ]
+
 @router.get("/{job_id}", response_model=JobStatusResponse)
 def get_job_status(job_id: str, db: Session = Depends(get_db)):
     """Retrieve current execution status and live progress for an analysis job."""

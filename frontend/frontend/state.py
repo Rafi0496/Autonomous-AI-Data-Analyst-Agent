@@ -118,8 +118,8 @@ class AppState(rx.State):
     job_current_step: int = 0
     job_current_step_name: str = "Ready"
     job_total_steps: int = 0
-    job_elapsed_seconds: int = 0
-    job_tokens_used: int = 0
+    job_elapsed_seconds: float = 0.0
+    job_tokens_used: Any = 0
     job_step_limit: int = 5
     job_token_budget: int = 15000
     job_run_log: List[RunLogStepModel] = []
@@ -589,6 +589,80 @@ class AppState(rx.State):
                             return
             except Exception:
                 pass
+
+    async def ensure_dashboard_data(self):
+        """Ensure dashboard has populated data by loading latest completed job or insights if empty."""
+        if self.job_insights:
+            return
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.get(f"{API_BASE_URL}/jobs?limit=5")
+                if res.status_code == 200:
+                    jobs = res.json()
+                    completed_jobs = [j for j in jobs if j.get("status") in ("completed", "budget_tripped") and j.get("results")]
+                    if completed_jobs:
+                        latest = completed_jobs[0]
+                        self.active_job_id = latest["job_id"]
+                        self.selected_dataset_id = latest["dataset_id"]
+                        res_obj = latest.get("results") or {}
+                        raw_insights = res_obj.get("insights") or []
+                        parsed_insights = []
+                        for ins in raw_insights:
+                            cs = ins.get("chart_spec")
+                            cs_obj = None
+                            if cs and isinstance(cs, dict):
+                                cs_obj = ChartSpecModel(
+                                    chart_type=str(cs.get("chart_type", "bar")),
+                                    title=str(cs.get("title", "")),
+                                    x_label=str(cs.get("x_label", "")),
+                                    y_label=str(cs.get("y_label", "")),
+                                    x_key=str(cs.get("x_key", "category")),
+                                    y_key=str(cs.get("y_key", "value")),
+                                    data=cs.get("data", [])
+                                )
+                            parsed_insights.append(InsightModel(
+                                id=str(ins.get("id", "")),
+                                type=str(ins.get("type", "insight")),
+                                title=str(ins.get("title", "")),
+                                summary=str(ins.get("summary", "")),
+                                significance=ins.get("significance"),
+                                effect_size=ins.get("effect_size"),
+                                n_used=int(ins.get("n_used", 0)),
+                                n_excluded=int(ins.get("n_excluded", 0)),
+                                exclusion_rate=float(ins.get("exclusion_rate", 0.0)),
+                                confidence=str(ins.get("confidence", "high")),
+                                caveats=ins.get("caveats", []) or [],
+                                impact_score=float(ins.get("impact_score", 0.0)),
+                                chart_spec=cs_obj
+                            ))
+                        self.job_insights = parsed_insights
+                        self.job_analytical_insights = [i for i in parsed_insights if i.type != "data_quality"][:6]
+                        self.job_data_quality_insights = [i for i in parsed_insights if i.type == "data_quality"][:4]
+                        self.job_chart_specs = res_obj.get("chart_specifications") or []
+                        synth = res_obj.get("synthesis") or {}
+                        self.job_synthesis = synth
+                        self.job_executive_summary = synth.get("executive_summary", "")
+                        self.job_key_findings = synth.get("key_findings", [])
+                        self.job_recommendations = synth.get("recommendations", [])
+                        ver = latest.get("verification") or {}
+                        self.job_verification = ver
+                        self.verification_verified_count = ver.get("verified_claims_count", 0)
+                        self.verification_total_count = ver.get("total_claims_checked", 0)
+                        self.verification_rate = ver.get("verification_rate_percent", 100.0)
+                        self.verification_is_valid = ver.get("is_valid", True)
+                        self.job_status = "completed"
+        except Exception as e:
+            print("ensure_dashboard_data error:", e)
+
+    async def on_load_dashboard(self):
+        """Unified on_load event for dashboard and chat."""
+        await self.fetch_datasets()
+        await self.ensure_dashboard_data()
+
+    async def on_load_reports(self):
+        """Unified on_load event for reports."""
+        await self.fetch_datasets()
+        await self.fetch_reports()
 
     def clear_chat(self):
         """Reset conversation message history."""
