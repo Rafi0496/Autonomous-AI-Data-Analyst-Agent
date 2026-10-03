@@ -119,7 +119,7 @@ class AppState(rx.State):
     job_current_step_name: str = "Ready"
     job_total_steps: int = 0
     job_elapsed_seconds: float = 0.0
-    job_tokens_used: Any = 0
+    job_tokens_used: str = "0"
     job_step_limit: int = 5
     job_token_budget: int = 15000
     job_run_log: List[RunLogStepModel] = []
@@ -509,7 +509,7 @@ class AppState(rx.State):
                             self.job_current_step_name = step_name
                             self.job_total_steps = tot
                             self.job_elapsed_seconds = elapsed
-                            self.job_tokens_used = tokens
+                            self.job_tokens_used = str(tokens)
 
                         if st in ("completed", "budget_tripped", "failed"):
                             async with self:
