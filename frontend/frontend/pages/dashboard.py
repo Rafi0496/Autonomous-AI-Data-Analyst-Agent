@@ -129,6 +129,38 @@ def render_insight_card(ins: InsightModel) -> rx.Component:
             # Embedded visualization
             render_insight_chart(ins),
 
+            # Feedback Row (Plan §8.6 Human-in-the-loop)
+            rx.hstack(
+                rx.text("Was this insight helpful?", font_size="0.75rem", color="#94a3b8"),
+                rx.button(
+                    rx.hstack(
+                        rx.icon(tag="thumbs-up", size=12),
+                        rx.text("Helpful", font_size="0.75rem"),
+                        spacing="1",
+                        align_items="center"
+                    ),
+                    size="1",
+                    variant="soft",
+                    color_scheme="green",
+                    on_click=AppState.submit_insight_feedback(ins.id, "helpful")
+                ),
+                rx.button(
+                    rx.hstack(
+                        rx.icon(tag="thumbs-down", size=12),
+                        rx.text("Not Relevant", font_size="0.75rem"),
+                        spacing="1",
+                        align_items="center"
+                    ),
+                    size="1",
+                    variant="soft",
+                    color_scheme="gray",
+                    on_click=AppState.submit_insight_feedback(ins.id, "not_relevant")
+                ),
+                spacing="2",
+                align_items="center",
+                margin_top="0.5rem"
+            ),
+
             spacing="3",
             align_items="flex-start",
             width="100%"

@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = 50 * 1024 * 1024  # 50 MB
     ALLOWED_EXTENSIONS: List[str] = [".csv", ".xlsx", ".xls", ".json"]
     
+    # Security & Auth
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "autonomous-data-analyst-super-secret-key-2026")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    
+    # Scale Handling & Sampling (Plan §8.7)
+    MAX_ROW_COUNT_LIMIT: int = 100_000
+    SAMPLE_THRESHOLD_ROWS: int = int(os.getenv("SAMPLE_THRESHOLD_ROWS", "25000"))
+    SAMPLE_SIZE_ROWS: int = int(os.getenv("SAMPLE_SIZE_ROWS", "10000"))
+    
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["*"]
 

@@ -33,6 +33,9 @@ class DatasetCleaningResult(BaseModel):
     suspected_repeated_extremes: List[Dict[str, Any]] = Field(default_factory=list)
     suspected_returns: List[Dict[str, Any]] = Field(default_factory=list)
     duplicates_removed: int = 0
+    is_sampled: bool = False
+    sampling_rate: Optional[float] = None
+    population_row_count: Optional[int] = None
     logs: List[CleaningStepLog] = Field(default_factory=list)
     cleaned_file_path: str
 

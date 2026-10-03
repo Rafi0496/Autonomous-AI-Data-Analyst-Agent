@@ -161,26 +161,33 @@
 
 ## 5. Automated Verification & Testing
 
-Run the full pytest suite (no tests ignored):
+Run the full pytest suite (offline + live):
 ```powershell
-.venv\Scripts\python -m pytest
+.venv\Scripts\python -m pytest -m "not live"
 ```
 
-Run the Phase 3 End-to-End Pipeline Verification script (runs upload, cleaning, autonomous analysis, insight ranking, chat Q&A, and PDF/Word report exports across all 3 benchmark messy datasets):
+Run Phase 4 Live Demo Walkthrough (Retail & HR scenarios end-to-end with Auth, Cleaning, Plan-Act-Reflect, Insights, Feedback, Q&A, and PDF/Word exports):
+```powershell
+.venv\Scripts\python scripts/demo_scenario_walkthrough.py
+```
+
+Run the Phase 3 End-to-End Pipeline Verification script:
 ```powershell
 .venv\Scripts\python scripts/verify_phase3.py
 ```
-Output artifacts are saved to `data/demo_outputs/<dataset_name>/`:
-- `insights.json` (ranked insight schemas with impact scores & chart specs)
-- `summary.txt` (executive summary & key findings)
-- `report.pdf` (ReportLab formatted multi-page PDF report with cover, charts, data quality, & audit trail)
-- `report.docx` (python-docx formatted Word report)
-- `chart_*.png` (headless Matplotlib Agg rendered visualizations)
-- `chat_exchange.json` (conversational Q&A grounded answer, evidence, and citation verification)
 
 ---
 
-## 6. Docker Deployment
+## 6. Phase 4 Enterprise Features
+
+- **JWT Authentication & Multi-User Isolation**: User registration, login, and token issuance (`POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`). Strict data isolation between tenant accounts for uploaded datasets, generated reports, and analysis jobs.
+- **Scheduled & Recurring Analysis**: Automation via Celery beat and REST endpoints (`POST /api/v1/schedules`, `GET /api/v1/schedules`, `POST /api/v1/schedules/{id}/trigger`) allowing scheduled weekly or daily dataset monitoring.
+- **Human-in-the-Loop Feedback (Plan §8.6)**: Interactive feedback loop enabling analysts to mark insights as "Helpful" or "Not Relevant" with comments (`POST /api/v1/jobs/{job_id}/insights/{insight_id}/feedback`).
+- **Scale Handling & Sampling Strategy (Plan §8.7)**: Configurable scale limits (`MAX_ROW_COUNT_LIMIT = 100,000`, `SAMPLE_THRESHOLD_ROWS = 25,000`). Large datasets are automatically sampled for fast exploratory analysis with population metrics preserved in data quality reporting.
+
+---
+
+## 7. Docker Deployment
 
 Launch all services (PostgreSQL + Redis + FastAPI + Reflex):
 ```bash

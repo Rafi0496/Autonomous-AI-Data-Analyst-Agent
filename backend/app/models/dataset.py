@@ -2,13 +2,14 @@
 import json
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text
 from backend.app.core.database import Base
 
 class Dataset(Base):
     __tablename__ = "datasets"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    user_id = Column(String(36), nullable=True, index=True)
     filename = Column(String(255), nullable=False)
     file_type = Column(String(10), nullable=False)
     file_path = Column(String(500), nullable=False)
@@ -17,6 +18,11 @@ class Dataset(Base):
     row_count = Column(Integer, nullable=True)
     column_count = Column(Integer, nullable=True)
     status = Column(String(50), nullable=False, default="uploaded")
+    
+    # Scale handling & sampling metadata (Plan §8.7)
+    is_sampled = Column(Boolean, default=False)
+    original_row_count = Column(Integer, nullable=True)
+    sampling_rate = Column(Float, nullable=True)
     
     # Paths and JSON metadata for pipeline results
     cleaned_file_path = Column(String(500), nullable=True)

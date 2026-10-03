@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
+from backend.app.core.config import settings
 from shared.constants import MissingValueStrategy
 from shared.schemas.dataset import CleaningStepLog, DatasetCleaningOptions, DatasetCleaningResult
 
@@ -125,7 +126,33 @@ class DataCleaningService:
             
         logs: List[CleaningStepLog] = []
         original_row_count, original_col_count = df.shape
+
+        # Scale handling: Enforce maximum row count limit (Plan §8.7)
+        if original_row_count > settings.MAX_ROW_COUNT_LIMIT:
+            raise ValueError(
+                f"Dataset exceeds maximum supported row count for v1 ({settings.MAX_ROW_COUNT_LIMIT:,} rows). "
+                f"Provided dataset has {original_row_count:,} rows. Please filter or aggregate prior to analysis."
+            )
+
         cleaned_df = df.copy()
+
+        # Scale handling: Representative sampling for large datasets (Plan §8.7)
+        is_sampled = False
+        sampling_rate = 1.0
+        if original_row_count > settings.SAMPLE_THRESHOLD_ROWS:
+            is_sampled = True
+            sample_size = min(settings.SAMPLE_SIZE_ROWS, original_row_count)
+            cleaned_df = cleaned_df.sample(n=sample_size, random_state=42).reset_index(drop=True)
+            sampling_rate = round(sample_size / original_row_count, 4)
+            logs.append(CleaningStepLog(
+                step="scale_sampling",
+                description=(
+                    f"Dataset exceeds scale threshold ({settings.SAMPLE_THRESHOLD_ROWS:,} rows). "
+                    f"Extracted a representative random sample of {sample_size:,} rows ({sampling_rate*100:.1f}% sampling rate) "
+                    f"for exploratory analysis."
+                ),
+                rows_affected=original_row_count - sample_size
+            ))
 
         # Step 1: Strip whitespace from column headers
         cleaned_df.columns = [str(c).strip() for c in cleaned_df.columns]
@@ -503,6 +530,9 @@ class DataCleaningService:
             suspected_repeated_extremes=suspected_repeated_extremes,
             suspected_returns=suspected_returns,
             duplicates_removed=duplicates_removed,
+            is_sampled=is_sampled,
+            sampling_rate=sampling_rate,
+            population_row_count=original_row_count,
             logs=logs,
             cleaned_file_path=saved_path_str
         )

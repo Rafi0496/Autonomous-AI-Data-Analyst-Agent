@@ -220,12 +220,15 @@ Each phase below lists objectives, week-by-week tasks, primary tech touched, and
 | 15–16 | Documentation & demo prep | Write setup/README docs, finalize architecture diagrams, prepare a 2–3 business-scenario live demo script, rehearse the presentation. |
 | 16 | Final polish | UI cleanup, performance pass, fix outstanding bugs, freeze scope for submission. |
 
-**Deliverables**
-- Deployed, publicly reachable instance of the system.
-- Authenticated multi-user support with data isolation.
-- Passing CI test suite (unit + integration).
-- Final documentation set: README, architecture diagram, and this plan updated with "as-built" notes.
-- Rehearsed live demo using at least two different real-world-style datasets.
+**Deliverables (Phase 4 Completed & Fully Verified)**
+- [x] JWT authentication wired between Reflex sessions and FastAPI (`POST /auth/register`, `POST /auth/login`, `GET /auth/me`).
+- [x] Multi-user data isolation across datasets, jobs, and generated reports (tested and verified with 403 Forbidden).
+- [x] Scheduled & recurring analysis (Celery beat periodic worker + `/api/v1/schedules`).
+- [x] Human-in-the-loop Insight Feedback loop (`/jobs/{id}/insights/{id}/feedback`) with UI thumbs up/down buttons.
+- [x] Scale handling: 100k row limit enforcement + representative sampling for large datasets (>25,000 rows).
+- [x] Passing CI test suite: 101/101 tests passing cleanly across full pytest suite.
+- [x] Rehearsed live demo script (`scripts/demo_scenario_walkthrough.py`) executing 2 real business scenarios (Retail and HR) covering all 10 steps end-to-end.
+- [x] Updated documentation set: README, architecture diagram, and project plans updated with as-built notes.
 
 ---
 

@@ -1,10 +1,14 @@
 """File upload API endpoint with validation and database registration."""
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
+from backend.app.api.deps import get_optional_current_user
+from backend.app.core.config import settings
 from backend.app.core.database import get_db
 from backend.app.models.dataset import Dataset
+from backend.app.models.user import User
 from backend.app.services.storage import StorageService
 from shared.constants import DatasetStatus
 from shared.schemas.dataset import FileUploadResponse
@@ -14,7 +18,8 @@ router = APIRouter()
 @router.post("/upload", response_model=FileUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_dataset_file(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """
     Upload a dataset file (CSV, XLSX, XLS, JSON).
@@ -39,9 +44,19 @@ async def upload_dataset_file(
             file_path.unlink()
         raise
 
-    # Store metadata in DB
+    # Scale check: Max row count limit (Plan §8.7)
+    if row_count > settings.MAX_ROW_COUNT_LIMIT:
+        if file_path.exists():
+            file_path.unlink()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Dataset exceeds maximum supported row count for v1 ({settings.MAX_ROW_COUNT_LIMIT:,} rows). Provided dataset has {row_count:,} rows."
+        )
+
+    # Store metadata in DB (isolated per user if authenticated)
     dataset_record = Dataset(
         id=dataset_id,
+        user_id=current_user.id if current_user else None,
         filename=file.filename,
         file_type=file_type,
         file_path=str(file_path),

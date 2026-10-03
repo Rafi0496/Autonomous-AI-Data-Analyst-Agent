@@ -10,6 +10,7 @@ class AnalysisJob(Base):
     __tablename__ = "analysis_jobs"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    user_id = Column(String(36), nullable=True, index=True)
     dataset_id = Column(String(36), nullable=False, index=True)
     status = Column(String(50), nullable=False, default="pending")  # pending, running, completed, budget_tripped, failed
     current_step_name = Column(String(100), nullable=False, default="queued")

@@ -3,13 +3,26 @@ import asyncio
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 import httpx
 import reflex as rx
 
 API_BASE_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api/v1")
 
 from pydantic import BaseModel
+
+def normalize_chart_data(data: Any) -> List[Dict[str, Any]]:
+    if isinstance(data, list):
+        return [item if isinstance(item, dict) else {"value": item} for item in data]
+    if isinstance(data, dict):
+        matrix = data.get("matrix", [])
+        cols = data.get("columns", [])
+        if matrix and cols:
+            return [
+                {"feature": cols[i] if i < len(cols) else f"row_{i}", **{cols[j]: matrix[i][j] for j in range(min(len(cols), len(matrix[i])))}}
+                for i in range(len(matrix))
+            ]
+    return []
 
 class ChartSpecModel(BaseModel):
     chart_type: str = "bar"
@@ -160,11 +173,125 @@ class AppState(rx.State):
     report_download_url: str = ""
     past_reports: List[ReportItemModel] = []
 
+    # Phase 4: Authentication State & Multi-User Isolation
+    auth_token: str = ""
+    current_user_email: str = ""
+    current_user_name: str = ""
+    is_authenticated: bool = False
+    auth_error: str = ""
+    auth_email_input: str = ""
+    auth_password_input: str = ""
+    auth_name_input: str = ""
+    show_auth_dialog: bool = False
+    auth_mode: str = "login"  # "login" | "register"
+
+    # Phase 4: Insight Feedback (Plan §8.6)
+    insight_feedback_map: Dict[str, str] = {}  # insight_id -> "helpful" | "not_relevant"
+
+    @property
+    def auth_headers(self) -> Dict[str, str]:
+        if self.auth_token:
+            return {"Authorization": f"Bearer {self.auth_token}"}
+        return {}
+
+    def toggle_auth_dialog(self):
+        self.show_auth_dialog = not self.show_auth_dialog
+        self.auth_error = ""
+
+    def set_auth_mode(self, mode: str):
+        self.auth_mode = mode
+        self.auth_error = ""
+
+    def set_auth_email(self, val: str):
+        self.auth_email_input = val
+
+    def set_auth_password(self, val: str):
+        self.auth_password_input = val
+
+    def set_auth_name(self, val: str):
+        self.auth_name_input = val
+
+    async def login(self):
+        self.auth_error = ""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.post(
+                    f"{API_BASE_URL}/auth/login",
+                    json={"email": self.auth_email_input, "password": self.auth_password_input}
+                )
+                if res.status_code == 200:
+                    data = res.json()
+                    self.auth_token = data.get("access_token", "")
+                    u = data.get("user", {})
+                    self.current_user_email = u.get("email", "")
+                    self.current_user_name = u.get("full_name") or u.get("email", "")
+                    self.is_authenticated = True
+                    self.show_auth_dialog = False
+                    self.auth_password_input = ""
+                    await self.fetch_datasets()
+                else:
+                    err = res.json()
+                    self.auth_error = err.get("detail", "Login failed.")
+        except Exception as e:
+            self.auth_error = f"Login error: {str(e)}"
+
+    async def register(self):
+        self.auth_error = ""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.post(
+                    f"{API_BASE_URL}/auth/register",
+                    json={
+                        "email": self.auth_email_input,
+                        "password": self.auth_password_input,
+                        "full_name": self.auth_name_input or None
+                    }
+                )
+                if res.status_code == 201:
+                    data = res.json()
+                    self.auth_token = data.get("access_token", "")
+                    u = data.get("user", {})
+                    self.current_user_email = u.get("email", "")
+                    self.current_user_name = u.get("full_name") or u.get("email", "")
+                    self.is_authenticated = True
+                    self.show_auth_dialog = False
+                    self.auth_password_input = ""
+                    await self.fetch_datasets()
+                else:
+                    err = res.json()
+                    self.auth_error = err.get("detail", "Registration failed.")
+        except Exception as e:
+            self.auth_error = f"Registration error: {str(e)}"
+
+    def logout(self):
+        self.auth_token = ""
+        self.current_user_email = ""
+        self.current_user_name = ""
+        self.is_authenticated = False
+        self.auth_email_input = ""
+        self.auth_password_input = ""
+        self.auth_name_input = ""
+
+    async def submit_insight_feedback(self, insight_id: str, rating: str):
+        """Submit helpful / not_relevant rating for an insight (Plan §8.6)."""
+        if not self.active_job_id or not insight_id:
+            return
+        self.insight_feedback_map[insight_id] = rating
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.post(
+                    f"{API_BASE_URL}/jobs/{self.active_job_id}/insights/{insight_id}/feedback",
+                    json={"rating": rating},
+                    headers=self.auth_headers
+                )
+        except Exception:
+            pass
+
     async def fetch_reports(self):
         """Fetch list of past generated reports from backend."""
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.get(f"{API_BASE_URL}/reports")
+                res = await client.get(f"{API_BASE_URL}/reports", headers=self.auth_headers)
                 if res.status_code == 200:
                     raw = res.json()
                     self.past_reports = [ReportItemModel(**r) for r in raw]
@@ -533,7 +660,7 @@ class AppState(rx.State):
                                             y_label=str(cs.get("y_label", "")),
                                             x_key=str(cs.get("x_key", "category")),
                                             y_key=str(cs.get("y_key", "value")),
-                                            data=cs.get("data", [])
+                                            data=normalize_chart_data(cs.get("data", []))
                                         )
                                     parsed_insights.append(InsightModel(
                                         id=str(ins.get("id", "")),
@@ -618,7 +745,7 @@ class AppState(rx.State):
                                     y_label=str(cs.get("y_label", "")),
                                     x_key=str(cs.get("x_key", "category")),
                                     y_key=str(cs.get("y_key", "value")),
-                                    data=cs.get("data", [])
+                                    data=normalize_chart_data(cs.get("data", []))
                                 )
                             parsed_insights.append(InsightModel(
                                 id=str(ins.get("id", "")),

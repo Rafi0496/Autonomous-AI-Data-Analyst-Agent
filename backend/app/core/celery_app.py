@@ -8,7 +8,10 @@ celery_app = Celery(
     "analyst_tasks",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["backend.app.tasks.analysis_tasks"]
+    include=[
+        "backend.app.tasks.analysis_tasks",
+        "backend.app.tasks.schedule_tasks"
+    ]
 )
 
 celery_app.conf.update(
@@ -19,4 +22,10 @@ celery_app.conf.update(
     enable_utc=True,
     task_track_started=True,
     task_time_limit=300,  # 5 min hard limit
+    beat_schedule={
+        "check_schedules_every_minute": {
+            "task": "check_and_run_schedules",
+            "schedule": 60.0  # every 60 seconds
+        }
+    }
 )

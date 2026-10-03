@@ -106,6 +106,117 @@ def sidebar() -> rx.Component:
         align_items="flex-start"
     )
 
+def auth_dialog() -> rx.Component:
+    """Authentication modal dialog for user login and registration."""
+    return rx.dialog.root(
+        rx.dialog.content(
+            rx.vstack(
+                rx.hstack(
+                    rx.dialog.title(
+                        rx.cond(AppState.auth_mode == "login", "Sign In to AutoAnalyst", "Create AutoAnalyst Account"),
+                        font_size="1.2rem",
+                        color="#ffffff"
+                    ),
+                    rx.spacer(),
+                    rx.dialog.close(
+                        rx.icon(tag="x", size=18, color="#94a3b8", cursor="pointer"),
+                        on_click=AppState.toggle_auth_dialog
+                    ),
+                    width="100%",
+                    align_items="center"
+                ),
+                rx.dialog.description(
+                    rx.cond(
+                        AppState.auth_mode == "login",
+                        "Access your private datasets and saved analytical runs.",
+                        "Register for multi-user isolated datasets and analysis."
+                    ),
+                    font_size="0.85rem",
+                    color="#94a3b8"
+                ),
+                rx.cond(
+                    AppState.auth_error != "",
+                    rx.callout(
+                        AppState.auth_error,
+                        icon="triangle-alert",
+                        color_scheme="red",
+                        size="1",
+                        width="100%"
+                    )
+                ),
+                rx.cond(
+                    AppState.auth_mode == "register",
+                    rx.vstack(
+                        rx.text("Full Name", font_size="0.8rem", color="#cbd5e1"),
+                        rx.input(
+                            placeholder="Alex Morgan",
+                            value=AppState.auth_name_input,
+                            on_change=AppState.set_auth_name,
+                            width="100%"
+                        ),
+                        spacing="1",
+                        width="100%"
+                    )
+                ),
+                rx.vstack(
+                    rx.text("Email Address", font_size="0.8rem", color="#cbd5e1"),
+                    rx.input(
+                        placeholder="analyst@example.com",
+                        value=AppState.auth_email_input,
+                        on_change=AppState.set_auth_email,
+                        width="100%"
+                    ),
+                    spacing="1",
+                    width="100%"
+                ),
+                rx.vstack(
+                    rx.text("Password", font_size="0.8rem", color="#cbd5e1"),
+                    rx.input(
+                        type="password",
+                        placeholder="••••••••",
+                        value=AppState.auth_password_input,
+                        on_change=AppState.set_auth_password,
+                        width="100%"
+                    ),
+                    spacing="1",
+                    width="100%"
+                ),
+                rx.cond(
+                    AppState.auth_mode == "login",
+                    rx.button("Sign In", size="3", width="100%", color_scheme="indigo", on_click=AppState.login),
+                    rx.button("Create Account", size="3", width="100%", color_scheme="indigo", on_click=AppState.register)
+                ),
+                rx.hstack(
+                    rx.cond(
+                        AppState.auth_mode == "login",
+                        rx.hstack(
+                            rx.text("Don't have an account?", font_size="0.8rem", color="#94a3b8"),
+                            rx.button("Register", variant="ghost", size="1", color_scheme="indigo", on_click=lambda: AppState.set_auth_mode("register")),
+                            spacing="1",
+                            align_items="center"
+                        ),
+                        rx.hstack(
+                            rx.text("Already have an account?", font_size="0.8rem", color="#94a3b8"),
+                            rx.button("Sign In", variant="ghost", size="1", color_scheme="indigo", on_click=lambda: AppState.set_auth_mode("login")),
+                            spacing="1",
+                            align_items="center"
+                        )
+                    ),
+                    justify="center",
+                    width="100%"
+                ),
+                spacing="4",
+                width="100%"
+            ),
+            background_color="#0f172a",
+            border="1px solid rgba(255, 255, 255, 0.1)",
+            border_radius="0.75rem",
+            padding="1.75rem",
+            max_width="420px"
+        ),
+        open=AppState.show_auth_dialog
+    )
+
 def top_header(page_title: str) -> rx.Component:
     return rx.hstack(
         rx.vstack(
@@ -116,7 +227,34 @@ def top_header(page_title: str) -> rx.Component:
         ),
         rx.spacer(),
         rx.hstack(
-            rx.badge("Phase 1 Active", color_scheme="indigo", variant="surface"),
+            rx.badge("Phase 4 Ready", color_scheme="indigo", variant="surface"),
+            rx.cond(
+                AppState.is_authenticated,
+                rx.hstack(
+                    rx.badge(AppState.current_user_email, color_scheme="green", variant="surface"),
+                    rx.button(
+                        "Sign Out",
+                        size="2",
+                        variant="soft",
+                        color_scheme="gray",
+                        on_click=AppState.logout
+                    ),
+                    spacing="2",
+                    align_items="center"
+                ),
+                rx.button(
+                    rx.hstack(
+                        rx.icon(tag="user", size=14),
+                        rx.text("Sign In"),
+                        spacing="2",
+                        align_items="center"
+                    ),
+                    size="2",
+                    variant="solid",
+                    color_scheme="indigo",
+                    on_click=AppState.toggle_auth_dialog
+                )
+            ),
             rx.button(
                 rx.hstack(
                     rx.icon(tag="refresh-cw", size=14),
@@ -156,6 +294,7 @@ def app_layout(page_title: str, content: rx.Component) -> rx.Component:
                 max_width="1400px",
                 margin="0 auto"
             ),
+            auth_dialog(),
             width="calc(100vw - 260px)",
             min_height="100vh",
             background_color="#070a11",

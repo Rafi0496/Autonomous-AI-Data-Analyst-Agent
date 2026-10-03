@@ -364,7 +364,7 @@ def generate_insights(
 
         # Segment Difference
         if t_name == "segment_compare":
-            seg_col = res.get("segment_column")
+            seg_col = res.get("segment_column") or res.get("category_column")
             met_col = res.get("metric_column")
             if not seg_col or not met_col or seg_col == "Segment" or met_col == "Metric":
                 raise ValueError(f"segment_compare result missing valid segment_column or metric_column: {res}")
