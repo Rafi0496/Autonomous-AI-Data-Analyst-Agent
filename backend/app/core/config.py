@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Autonomous AI Data Analyst Agent"
     
     # LLM Provider settings
-    LLM_PROVIDER: str = "claude"
+    LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "claude")
     ANTHROPIC_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     ANTHROPIC_MODEL: str = "claude-sonnet-5-5"
@@ -44,7 +44,8 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: List[str] = [".csv", ".xlsx", ".xls", ".json"]
     
     # Security & Auth
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "autonomous-data-analyst-super-secret-key-2026")
+    JWT_SECRET: str = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY", "autonomous-data-analyst-super-secret-key-2026"))
+    SECRET_KEY: str = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY", "autonomous-data-analyst-super-secret-key-2026"))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
     # Scale Handling & Sampling (Plan §8.7)

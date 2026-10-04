@@ -23,7 +23,7 @@ COPY backend /app/backend
 COPY shared /app/shared
 
 # Create storage directories
-RUN mkdir -p /app/data/uploads /app/data/processed /app/data/samples
+RUN mkdir -p /app/data/uploads /app/data/processed /app/data/samples /app/data/reports
 
 EXPOSE 8000
 

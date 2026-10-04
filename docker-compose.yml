@@ -47,8 +47,10 @@ services:
       redis:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/analyst_db
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/analyst_db
       - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=autonomous-data-analyst-super-secret-key-2026
+      - LLM_PROVIDER=heuristic
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
