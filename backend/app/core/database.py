@@ -34,31 +34,32 @@ def init_db():
     import backend.app.models.schedule
     Base.metadata.create_all(bind=engine)
     
-    with engine.connect() as conn:
-        try:
-            # Check analysis_jobs columns
-            res = conn.execute(text("PRAGMA table_info(analysis_jobs)")).fetchall()
-            existing_cols = {row[1] for row in res}
-            if existing_cols:
-                if "current_step" not in existing_cols:
-                    conn.execute(text("ALTER TABLE analysis_jobs ADD COLUMN current_step INTEGER DEFAULT 0"))
-                if "phase" not in existing_cols:
-                    conn.execute(text("ALTER TABLE analysis_jobs ADD COLUMN phase VARCHAR DEFAULT 'queued'"))
-                if "user_id" not in existing_cols:
-                    conn.execute(text("ALTER TABLE analysis_jobs ADD COLUMN user_id VARCHAR(36)"))
-            
-            # Check datasets columns
-            res_ds = conn.execute(text("PRAGMA table_info(datasets)")).fetchall()
-            existing_ds_cols = {row[1] for row in res_ds}
-            if existing_ds_cols:
-                if "user_id" not in existing_ds_cols:
-                    conn.execute(text("ALTER TABLE datasets ADD COLUMN user_id VARCHAR(36)"))
-                if "is_sampled" not in existing_ds_cols:
-                    conn.execute(text("ALTER TABLE datasets ADD COLUMN is_sampled BOOLEAN DEFAULT 0"))
-                if "original_row_count" not in existing_ds_cols:
-                    conn.execute(text("ALTER TABLE datasets ADD COLUMN original_row_count INTEGER"))
-                if "sampling_rate" not in existing_ds_cols:
-                    conn.execute(text("ALTER TABLE datasets ADD COLUMN sampling_rate FLOAT"))
-            conn.commit()
-        except Exception:
-            pass
+    if engine.dialect.name == "sqlite":
+        with engine.connect() as conn:
+            try:
+                # Check analysis_jobs columns
+                res = conn.execute(text("PRAGMA table_info(analysis_jobs)")).fetchall()
+                existing_cols = {row[1] for row in res}
+                if existing_cols:
+                    if "current_step" not in existing_cols:
+                        conn.execute(text("ALTER TABLE analysis_jobs ADD COLUMN current_step INTEGER DEFAULT 0"))
+                    if "phase" not in existing_cols:
+                        conn.execute(text("ALTER TABLE analysis_jobs ADD COLUMN phase VARCHAR DEFAULT 'queued'"))
+                    if "user_id" not in existing_cols:
+                        conn.execute(text("ALTER TABLE analysis_jobs ADD COLUMN user_id VARCHAR(36)"))
+                
+                # Check datasets columns
+                res_ds = conn.execute(text("PRAGMA table_info(datasets)")).fetchall()
+                existing_ds_cols = {row[1] for row in res_ds}
+                if existing_ds_cols:
+                    if "user_id" not in existing_ds_cols:
+                        conn.execute(text("ALTER TABLE datasets ADD COLUMN user_id VARCHAR(36)"))
+                    if "is_sampled" not in existing_ds_cols:
+                        conn.execute(text("ALTER TABLE datasets ADD COLUMN is_sampled BOOLEAN DEFAULT 0"))
+                    if "original_row_count" not in existing_ds_cols:
+                        conn.execute(text("ALTER TABLE datasets ADD COLUMN original_row_count INTEGER"))
+                    if "sampling_rate" not in existing_ds_cols:
+                        conn.execute(text("ALTER TABLE datasets ADD COLUMN sampling_rate FLOAT"))
+                conn.commit()
+            except Exception:
+                pass
