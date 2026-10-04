@@ -12,12 +12,13 @@ from sqlalchemy.orm import Session
 
 from backend.app.core.database import get_db
 from backend.app.models.dataset import Dataset
+from backend.app.core.config import settings
 from backend.app.models.job import AnalysisJob
 from backend.app.services.report_docx import generate_docx_report
 from backend.app.services.report_pdf import generate_pdf_report
 
 router = APIRouter()
-REPORTS_DIR = Path("data/reports")
+REPORTS_DIR = settings.REPORTS_DIR
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
 class ReportMetadata(BaseModel):

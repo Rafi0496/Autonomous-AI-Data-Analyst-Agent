@@ -43,6 +43,7 @@ data/processed/*
 !data/processed/.gitkeep
 data/samples/*
 !data/samples/.gitkeep
+!data/samples/*.csv
 data/exports/*
 !data/exports/.gitkeep
 

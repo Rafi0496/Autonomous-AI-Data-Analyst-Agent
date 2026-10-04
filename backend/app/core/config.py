@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     UPLOAD_DIR: Path = BASE_DIR / "data" / "uploads"
     PROCESSED_DIR: Path = BASE_DIR / "data" / "processed"
     SAMPLES_DIR: Path = BASE_DIR / "data" / "samples"
+    REPORTS_DIR: Path = BASE_DIR / "data" / "reports"
     
     # Upload limits
     MAX_UPLOAD_SIZE_BYTES: int = 50 * 1024 * 1024  # 50 MB
@@ -60,3 +61,4 @@ settings = Settings()
 settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 settings.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 settings.SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+settings.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
