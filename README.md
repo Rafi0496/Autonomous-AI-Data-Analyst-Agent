@@ -1,6 +1,12 @@
 # Autonomous AI Data Analyst Agent
 
-> **An autonomous, agentic system that ingests raw, messy business data, plans and executes statistical workflows, detects anomalies, generates visualizations, and synthesizes executive-ready business reports without manual step-by-step guidance.**
+![CI](https://github.com/Rafi0496/Autonomous-AI-Data-Analyst-Agent/actions/workflows/ci.yml/badge.svg?branch=master)
+
+An LLM-driven agent that turns raw, messy tabular data into verified insights.
+It cleans the data, plans and runs statistical analyses in a sandboxed tool
+catalogue, reflects on the results, and explains its findings in plain language.
+Every numeric claim in the summary is bound to a computed result and checked
+before it is shown.
 
 ---
 
