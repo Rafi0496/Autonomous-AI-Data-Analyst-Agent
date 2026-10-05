@@ -22,6 +22,8 @@ from backend.app.services.tool_catalogue import (
     get_tools_for_claude,
     get_tools_for_gemini,
 )
+from backend.app.services.summary import write_summary
+from backend.app.services.synthesis_guardrails import post_check_synthesis_narrative
 
 logger = logging.getLogger(__name__)
 
@@ -669,10 +671,13 @@ class ClaudeClient(LLMClient):
                 "CRITICAL INSTRUCTIONS:\n"
                 "1. Synthesis may use ONLY insights[] (surviving analytical insights plus data-quality caveats) as claim sources, never raw tool results.\n"
                 "2. Suppressed analyses may appear ONLY as 'insufficient data for X (n_used=..., exclusion_rate=...)'. NEVER cite trend percentages, correlation coefficients, or segment comparisons for suppressed analyses.\n"
-                "3. If p >= 0.05, the narrative MUST say 'no significant difference' and must NOT present the top segment as a finding.\n"
-                "4. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
-                "5. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
-                "6. EVERY SINGLE NUMBER cited in 'executive_summary' or 'key_findings' MUST belong to a declared claim in 'claims' matching exact source_id and metric_key. If a number is not in 'claims', do NOT write it in the narrative."
+                "3. FORBIDDEN WORDS: NEVER use the words 'stable', 'not concentrated', 'no effect', or 'organic' anywhere. Use 'consistent' or 'flat' instead of 'stable'; 'distributed across categories' instead of 'not concentrated'; 'unadjusted' instead of 'organic'.\n"
+                "4. FORBID CAUSAL SPECULATION: Never use causal phrases like 'leads to', 'causes', 'caused by', 'drives', 'driven by', 'resulting in', or 'because of'. Use associative terms like 'is correlated with' or 'is associated with'.\n"
+                "5. NON-SIGNIFICANT RESULTS: For non-significant results (p >= 0.05), you MUST write 'no statistically significant difference detected (n per group: ...)' and you MUST explicitly mention 'limited statistical power due to small sample size in some groups, n < 30' whenever any group sample size n < 30. Never present the top segment as a finding.\n"
+                "6. RECOMMENDATIONS: Recommendations may concern DATA QUALITY ONLY (e.g. schema validation, sentinel prevention, missingness monitoring, increasing sample sizes). Never provide business strategy or operational recommendations.\n"
+                "7. P-VALUE CLAIMS: All claims citing p-values must have unit 'p_value'.\n"
+                "8. CLAIM PRESENCE: EVERY declared claim in 'claims' MUST appear in the delivered narrative, and EVERY number cited in the narrative MUST belong to a declared claim matching exact source_id and metric_key.\n"
+                "9. NO PLACEHOLDERS: Never output 'None', 'nan', 'null', or generic placeholder text."
             )
             response = client.messages.create(
                 model=self.model,
@@ -696,8 +701,12 @@ class ClaudeClient(LLMClient):
                 clean_json = clean_json.split("```")[1].split("```")[0].strip()
 
             parsed = json.loads(clean_json)
+            checked_exec = post_check_synthesis_narrative(
+                parsed.get("executive_summary") or base_summary.get("executive_summary", ""),
+                "claude executive summary"
+            )
             return SynthesisResult(
-                executive_summary=parsed.get("executive_summary") or base_summary.get("executive_summary", ""),
+                executive_summary=checked_exec,
                 key_findings=parsed.get("key_findings") or base_summary.get("key_findings", []),
                 recommendations=parsed.get("recommendations") or base_summary.get("recommendations", []),
                 citations_index=base_summary.get("citations_index", {}),
@@ -1088,10 +1097,13 @@ class GeminiClient(LLMClient):
                 "CRITICAL INSTRUCTIONS:\n"
                 "1. Synthesis may use ONLY insights[] (surviving analytical insights plus data-quality caveats) as claim sources, never raw tool results.\n"
                 "2. Suppressed analyses may appear ONLY as 'insufficient data for X (n_used=..., exclusion_rate=...)'. NEVER cite trend percentages, correlation coefficients, or segment comparisons for suppressed analyses.\n"
-                "3. If p >= 0.05, the narrative MUST say 'no significant difference' and must NOT present the top segment as a finding.\n"
-                "4. FORBID causal or market-preference claims (e.g., never claim 'X demonstrates market preference' or 'X caused Y').\n"
-                "5. Use precise wording like 'count share' when a share or proportion is calculated by row count.\n"
-                "6. EVERY SINGLE NUMBER cited in 'executive_summary' or 'key_findings' MUST belong to a declared claim in 'claims' matching exact source_id and metric_key. If a number is not in 'claims', do NOT write it in the narrative."
+                "3. FORBIDDEN WORDS: NEVER use the words 'stable', 'not concentrated', 'no effect', or 'organic' anywhere. Use 'consistent' or 'flat' instead of 'stable'; 'distributed across categories' instead of 'not concentrated'; 'unadjusted' instead of 'organic'.\n"
+                "4. FORBID CAUSAL SPECULATION: Never use causal phrases like 'leads to', 'causes', 'caused by', 'drives', 'driven by', 'resulting in', or 'because of'. Use associative terms like 'is correlated with' or 'is associated with'.\n"
+                "5. NON-SIGNIFICANT RESULTS: For non-significant results (p >= 0.05), you MUST write 'no statistically significant difference detected (n per group: ...)' and you MUST explicitly mention 'limited statistical power due to small sample size in some groups, n < 30' whenever any group sample size n < 30. Never present the top segment as a finding.\n"
+                "6. RECOMMENDATIONS: Recommendations may concern DATA QUALITY ONLY (e.g. schema validation, sentinel prevention, missingness monitoring, increasing sample sizes). Never provide business strategy or operational recommendations.\n"
+                "7. P-VALUE CLAIMS: All claims citing p-values must have unit 'p_value'.\n"
+                "8. CLAIM PRESENCE: EVERY declared claim in 'claims' MUST appear in the delivered narrative, and EVERY number cited in the narrative MUST belong to a declared claim matching exact source_id and metric_key.\n"
+                "9. NO PLACEHOLDERS: Never output 'None', 'nan', 'null', or generic placeholder text."
             )
             config = self._build_generate_config(types, response_mime_type="application/json")
             response = self._execute_with_retry(client, contents=prompt, config=config)
@@ -1100,8 +1112,12 @@ class GeminiClient(LLMClient):
 
             raw_text = getattr(response, "text", "") or ""
             parsed = json.loads(raw_text.strip())
+            checked_exec = post_check_synthesis_narrative(
+                parsed.get("executive_summary") or base_summary.get("executive_summary", ""),
+                "gemini executive summary"
+            )
             return SynthesisResult(
-                executive_summary=parsed.get("executive_summary") or base_summary.get("executive_summary", ""),
+                executive_summary=checked_exec,
                 key_findings=parsed.get("key_findings") or base_summary.get("key_findings", []),
                 recommendations=parsed.get("recommendations") or base_summary.get("recommendations", []),
                 citations_index=base_summary.get("citations_index", {}),

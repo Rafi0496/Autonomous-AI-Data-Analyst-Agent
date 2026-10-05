@@ -360,8 +360,9 @@ def process_chat_question(
         append_job_chat_history(job_id, "user", question)
         append_job_chat_history(job_id, "assistant", chat_result.answer)
 
-    # 10. Ensure no placeholder text leaks into chat answer
-    chat_result.answer = validate_no_placeholders(chat_result.answer, "chat answer")
+    # 10. Ensure no placeholder text or forbidden phrases leak into chat answer
+    from backend.app.services.synthesis_guardrails import post_check_synthesis_narrative
+    chat_result.answer = post_check_synthesis_narrative(chat_result.answer, "chat answer")
 
     return {
         "answer": chat_result.answer,

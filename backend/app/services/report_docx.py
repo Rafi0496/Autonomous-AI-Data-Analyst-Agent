@@ -154,7 +154,7 @@ def generate_docx_report(
     recs = synthesis.get("recommendations", [])
     if recs:
         h2 = doc.add_heading(level=2)
-        r2 = h2.add_run("Strategic Recommendations")
+        r2 = h2.add_run("Data Quality Recommendations")
         r2.font.color.rgb = COLOR_PRIMARY
         for rec in recs:
             p = doc.add_paragraph(style='List Bullet')

@@ -226,7 +226,7 @@ def generate_pdf_report(
     # Recommendations
     recs = synthesis.get("recommendations", [])
     if recs:
-        story.append(Paragraph("Strategic Recommendations:", styles["ReportH2"]))
+        story.append(Paragraph("Data Quality Recommendations:", styles["ReportH2"]))
         for r in recs:
             story.append(Paragraph(f"• {r}", styles["ReportBody"]))
     story.append(Spacer(1, 15))

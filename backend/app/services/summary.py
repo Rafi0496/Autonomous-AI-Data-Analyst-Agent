@@ -91,9 +91,13 @@ def write_summary(
                 is_sig = (p_val is not None and p_val < 0.05)
 
                 if p_val is not None and not is_sig:
-                    # Item 2: If p >= 0.05, narrative says "no significant difference" and does NOT present top segment as finding
-                    headline = f"No significant difference in {met_col} across {seg_col}"
-                    narrative = f"Statistical testing demonstrates no significant difference in {met_col} across {seg_col} categories (p={p_val:.4f}, n_used={n_used})."
+                    headline = f"No statistically significant difference in {met_col} across {seg_col}"
+                    seg_list = mv.get("segments", []) or []
+                    n_groups = [f"{s.get('segment')}: n={s.get('n_used', s.get('count', n_used))}" for s in seg_list]
+                    n_group_str = ", ".join(n_groups) if n_groups else f"total n={n_used}"
+                    has_low_power = any(int(s.get("n_used", s.get("count", n_used))) < 30 for s in seg_list) if seg_list else (n_used < 60)
+                    power_str = " (limited statistical power due to small sample size in some groups, n < 30)" if has_low_power else ""
+                    narrative = f"no statistically significant difference detected (n per group: {n_group_str}, p={p_val:.4f}){power_str}."
                     headline = validate_no_placeholders(headline, f"{ins_id}-headline")
                     narrative = validate_no_placeholders(narrative, f"{ins_id}-narrative")
                     findings.append({
@@ -196,14 +200,18 @@ def write_summary(
                 latest_f = findings[-1]
                 for fnum in extract_numeric_tokens(f"{latest_f['headline']} {latest_f['narrative']}"):
                     mkey = latest_f.get("metric", str(fnum))
+                    unit = None
                     if n_used is not None and abs(fnum - float(n_used)) < 1e-4:
                         mkey = "n_used"
                     elif n_excluded is not None and abs(fnum - float(n_excluded)) < 1e-4:
                         mkey = "n_excluded"
                     elif p_val is not None and abs(fnum - float(p_val)) < 1e-4:
                         mkey = "p_value"
+                        unit = "p_value"
                     elif abs(fnum - float(latest_f.get("value", 0.0))) < 1e-4:
                         mkey = latest_f.get("metric", "value")
+                        if mkey == "p_value":
+                            unit = "p_value"
                     else:
                         mkey = str(fnum)
                     claims.append({
@@ -211,7 +219,7 @@ def write_summary(
                         "source_id": ins_id,
                         "metric_key": mkey,
                         "value": float(fnum),
-                        "unit": None
+                        "unit": unit
                     })
 
         analytical = [f for f in findings if f["category"] not in ("Data Quality", "Data Quality Suppression")]
@@ -245,12 +253,15 @@ def write_summary(
         if dq:
             dq_text = " ".join(d["narrative"] for d in dq[:2])
             parts.append(f"Data quality caveats: {dq_text}")
-        executive_summary = validate_no_placeholders(" ".join(parts), "executive summary")
+        raw_exec_summary = " ".join(parts)
+        from backend.app.services.synthesis_guardrails import post_check_synthesis_narrative
+        executive_summary = post_check_synthesis_narrative(raw_exec_summary, "executive summary")
 
+        # Recommendations concern DATA QUALITY ONLY per M3 (a)
         recommendations = [
-            "Focus operational optimization on segments demonstrating verified efficiency differentials.",
-            "Account for data quality caveats and suppressed dimensions in subsequent strategic modeling.",
-            "Establish recurring automated monitoring on high-confidence analytical indicators."
+            "Implement automated schema validation at ingestion to prevent sentinel values and impossible values.",
+            "Increase sample sizes for underrepresented segments where group n < 30 to improve statistical power.",
+            "Establish automated data quality monitoring on missingness and imputation rates for core operational fields."
         ]
 
         return {
@@ -287,8 +298,8 @@ def write_summary(
             citations[str(val)] = {"tool": "data_cleaning", "metric": f"{col}_sentinel_value", "value": val}
             findings.append({
                 "category": "Data Quality",
-                "headline": f"{cnt} placeholder sentinels in {col}",
-                "narrative": f"Sanitized {cnt} placeholder values of {val} in column '{col}' prior to imputation.",
+                "headline": f"{cnt} sentinel values in {col}",
+                "narrative": f"Sanitized {cnt} sentinel values of {val} in column '{col}' prior to imputation.",
                 "primary_metric": cnt,
                 "source_tool": "data_cleaning"
             })

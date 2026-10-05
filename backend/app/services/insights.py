@@ -401,11 +401,13 @@ def generate_insights(
                     is_significant = (p_val is not None and p_val <= 0.05)
                     if not is_significant:
                         title = f"No significant difference in {met_col} across {seg_col}"
-                        p_str = f"p={p_val:.4f}" if p_val is not None else "p not available"
+                        segments = res.get("segments", [])
+                        n_groups = [f"{s.get('segment')}: n={s.get('n_used', s.get('count', n_used))}" for s in segments]
+                        n_group_str = ", ".join(n_groups) if n_groups else f"n={n_used}"
+                        has_low_power = any(int(s.get("n_used", s.get("count", n_used))) < 30 for s in segments)
+                        power_str = " (limited statistical power due to small sample size in some groups, n < 30)" if has_low_power else ""
                         summary = (
-                            f"Chi-square test shows no significant difference in {met_col} across {seg_col} "
-                            f"({p_str}, overall rate: {overall_pct:.2f}% across {n_used} non-imputed rows). "
-                            f"{top_name} recorded {top_rate:.2f}% vs {bot_rate:.2f}% for {bot_name}."
+                            f"no statistically significant difference detected (n per group: {n_group_str}, p={p_val:.4f}){power_str}."
                         )
                     else:
                         title = f"{met_col} rate varies significantly across {seg_col}"
@@ -500,10 +502,13 @@ def generate_insights(
                     is_significant = (p_val is not None and p_val <= 0.05)
                     if p_val is not None and not is_significant:
                         title = f"No significant difference in {met_col} across {seg_col}"
+                        segments = res.get("segments", [])
+                        n_groups = [f"{s.get('segment')}: n={s.get('n_used', s.get('count', n_used))}" for s in segments]
+                        n_group_str = ", ".join(n_groups) if n_groups else f"n={n_used}"
+                        has_low_power = any(int(s.get("n_used", s.get("count", n_used))) < 30 for s in segments)
+                        power_str = " (limited statistical power due to small sample size in some groups, n < 30)" if has_low_power else ""
                         summary = (
-                            f"ANOVA test shows no statistically significant variance in {met_col} "
-                            f"across {seg_col} categories (p={p_val:.4f}, n_used={n_used}). "
-                            f"{top_name} recorded median {top_med:.2f} vs median {bot_med:.2f} for {bot_name}."
+                            f"no statistically significant difference detected (n per group: {n_group_str}, p={p_val:.4f}){power_str}."
                         )
                     else:
                         title = f"Variance in {met_col} across {seg_col}"
@@ -621,7 +626,9 @@ def generate_insights(
                 candidates.append(suppressed)
             else:
                 conf = determine_confidence(n_used, ex_rate)
-                direction = res.get("overall_trend", "stable")
+                direction = res.get("overall_trend", "consistent")
+                if direction == "stable":
+                    direction = "consistent"
                 pct = res.get("percentage_change", 0.0)
                 n_periods = res.get("n_periods", res.get("aggregated_periods", len(res.get("timeline", []))))
                 p_val = res.get("p_value")
@@ -764,8 +771,8 @@ def generate_insights(
         conf = determine_confidence(n_used_dq, ex_rate)
         score = compute_impact_score("data_quality", None, None, n_used_dq, cnt, conf)
         c_spec = build_chart_spec_for_data_quality(cl_report, highlight_col=col)
-        title = validate_no_placeholders(f"Placeholder sentinel values sanitized in {col}", f"insight-dq-sentinel-{col} title")
-        summary = validate_no_placeholders(f"Detected and sanitized {cnt} placeholder sentinel values ({val}) in column '{col}' prior to imputation.", f"insight-dq-sentinel-{col} summary")
+        title = validate_no_placeholders(f"Sentinel values sanitized in {col}", f"insight-dq-sentinel-{col} title")
+        summary = validate_no_placeholders(f"Detected and sanitized {cnt} sentinel values ({val}) in column '{col}' prior to imputation.", f"insight-dq-sentinel-{col} summary")
         candidates.append(Insight(
             id=f"insight-dq-sentinel-{col}",
             type="data_quality",

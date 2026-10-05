@@ -216,6 +216,12 @@ def verify_bound_claim(
     if raw_val is None:
         return False, "Missing value in claim"
 
+    norm_metric = normalize_key(metric_key)
+    # M3 (b): p-value claims use unit 'p_value'
+    if "p_val" in norm_metric or norm_metric in ("p", "pvalue", "p_value", "significance") or claim.get("unit") == "p_value":
+        if claim.get("unit") != "p_value":
+            claim["unit"] = "p_value"
+
     try:
         val = float(raw_val)
     except (ValueError, TypeError):
@@ -406,7 +412,37 @@ def validate_citations(
     unverified_claims_count = len(unverified_claims) if claims else len(unverified_numbers)
 
     total_prose_nums = len(extracted_numbers)
-    pre_strip_rate = round((len(verified_numbers) / total_prose_nums) * 100, 2) if total_prose_nums > 0 else 100.0
+    number_verification_rate = round((len(verified_numbers) / total_prose_nums) * 100, 2) if total_prose_nums > 0 else 100.0
+    pre_strip_rate = number_verification_rate
+
+    # Claim presence check: require every claim to appear in the text per M3 (b)
+    present_claims = []
+    missing_claims = []
+    text_corpus_lower = text_corpus.lower()
+    for c in claims:
+        c_val = c.get("value")
+        c_text = str(c.get("text", "")).strip().lower()
+        is_present = False
+        if c_val is not None:
+            try:
+                val_flt = float(c_val)
+                if any(abs(n - val_flt) < 1e-4 or (abs(val_flt) > 0 and abs(n - val_flt) / abs(val_flt) <= tolerance) for n in extracted_numbers):
+                    is_present = True
+            except (ValueError, TypeError):
+                pass
+        if not is_present and c_text:
+            if c_text in text_corpus_lower:
+                is_present = True
+            else:
+                words = [w for w in re.findall(r"\b\w+\b", c_text) if len(w) > 3]
+                if len(words) >= 2 and all(w in text_corpus_lower for w in words[:3]):
+                    is_present = True
+        if is_present:
+            present_claims.append(c)
+        else:
+            missing_claims.append(c)
+
+    claim_presence_rate = round((len(present_claims) / len(claims)) * 100, 2) if claims else 100.0
 
     # 3. Strip unverified sentences if needed
     cleaned_summary, stripped_sentences = strip_unverified_sentences(
@@ -415,11 +451,14 @@ def validate_citations(
         [uc["claim"] for uc in unverified_claims]
     )
 
+    from backend.app.services.synthesis_guardrails import post_check_synthesis_narrative
+    cleaned_summary = post_check_synthesis_narrative(cleaned_summary, "cleaned executive summary")
+
     post_strip_numbers = extract_numeric_tokens(cleaned_summary)
     post_strip_verified = [n for n in post_strip_numbers if round(n, 2) not in set(round(x, 2) for x in unverified_numbers)]
     post_strip_rate = 100.0 if not post_strip_numbers or len(post_strip_numbers) == len(post_strip_verified) else round((len(post_strip_verified) / len(post_strip_numbers)) * 100, 2)
 
-    is_valid = (len(unverified_claims) == 0 and len(unverified_numbers) == 0)
+    is_valid = (len(unverified_claims) == 0 and len(unverified_numbers) == 0 and len(missing_claims) == 0)
 
     return {
         "is_valid": is_valid,
@@ -427,6 +466,10 @@ def validate_citations(
         "verified_claims_count": verified_claims_count,
         "unverified_claims_count": unverified_claims_count,
         "verification_rate_percent": pre_strip_rate,
+        "number_verification_rate": number_verification_rate,
+        "claim_presence_rate": claim_presence_rate,
+        "present_claims": present_claims,
+        "missing_claims": missing_claims,
         "pre_strip_verification_rate": pre_strip_rate,
         "post_strip_verification_rate": post_strip_rate,
         "verified_numbers": verified_numbers,

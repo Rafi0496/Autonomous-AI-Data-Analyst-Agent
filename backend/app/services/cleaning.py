@@ -503,7 +503,7 @@ class DataCleaningService:
                         logs.append(CleaningStepLog(
                             step="replace_sentinel_values",
                             description=(
-                                f"Replaced {count} occurrences of known placeholder sentinel value {cand} in column '{col}' "
+                                f"Replaced {count} occurrences of known sentinel value {cand} in column '{col}' "
                                 f"with NaN prior to imputation (outside 3x IQR fence [{lower_fence:.2f}, {upper_fence:.2f}])."
                             ),
                             affected_columns=[col],

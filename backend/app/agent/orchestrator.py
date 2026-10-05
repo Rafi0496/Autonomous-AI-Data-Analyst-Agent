@@ -321,7 +321,7 @@ class PlanActReflectOrchestrator:
             f"{goal or 'Comprehensive exploratory analysis'}. "
             "When citing percentages, use the n_rows_used reported by each tool as the denominator. "
             "Do not calculate rates against original raw row counts. "
-            "Surface relevant data quality findings (such as placeholder sentinels like Quantity=999, invalid domain values, and imputation) in the findings and narrative."
+            "Surface relevant data quality findings (such as sentinel values like Quantity=999, invalid domain values, and imputation) in the findings and narrative."
         )
         synth_start = time.perf_counter()
         synth_res = self.llm_client.synthesize(
