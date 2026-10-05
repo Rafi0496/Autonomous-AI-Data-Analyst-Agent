@@ -104,6 +104,23 @@ def generate_docx_report(
         crun.font.bold = True
         crun.font.color.rgb = COLOR_DARK
         cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+    # Sampling disclosure (M1.c)
+    sampling_disclosure = (profile_data or {}).get("sampling_disclosure") or (profile_data or {}).get("quality_summary", {}).get("sampling_disclosure")
+    if not sampling_disclosure and (profile_data or {}).get("is_sampled"):
+        n_sample = (profile_data or {}).get("row_count", 0)
+        n_pop = (profile_data or {}).get("population_row_count", n_sample)
+        seed = (profile_data or {}).get("sampling_seed", 42)
+        sampling_disclosure = f"random sample of {n_sample:,} of {n_pop:,} rows (seed {seed})"
+    if sampling_disclosure:
+        disc_p = doc.add_paragraph()
+        disc_run = disc_p.add_run(f"Scale Sampling Disclosure: Analysis is conducted on a {sampling_disclosure}.")
+        disc_run.font.name = "Arial"
+        disc_run.font.size = Pt(9.5)
+        disc_run.font.italic = True
+        disc_run.font.color.rgb = COLOR_MUTED
+        disc_p.paragraph_format.space_after = Pt(4)
+        
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
     
     # ---------------------------------------------------------

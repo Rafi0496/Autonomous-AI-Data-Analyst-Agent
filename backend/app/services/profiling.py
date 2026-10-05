@@ -141,9 +141,27 @@ class DataProfilingService:
         duplicate_rows = int(df.duplicated().sum())
         dup_pct = round((duplicate_rows / row_count) * 100, 2) if row_count > 0 else 0.0
         
-        # Calculate Quality Score (100 base, penalize for missing values, duplicates, and column warnings)
-        penalty = (missing_pct * 0.5) + (dup_pct * 0.8) + (len(overall_warnings) * 1.5)
-        quality_score = max(0.0, round(100.0 - penalty, 1))
+        # Retrieve raw and cleaned quality scores and sampling disclosure if available
+        raw_score = df.attrs.get("raw_quality_score")
+        clean_score = df.attrs.get("cleaned_quality_score")
+        sampling_disclosure = df.attrs.get("sampling_disclosure")
+
+        cl_report = df.attrs.get("cleaning_report")
+        if isinstance(cl_report, dict):
+            if raw_score is None:
+                raw_score = cl_report.get("raw_quality_score")
+            if clean_score is None:
+                clean_score = cl_report.get("cleaned_quality_score")
+            if sampling_disclosure is None:
+                sampling_disclosure = cl_report.get("sampling_disclosure")
+
+        # Fallback raw quality score computation if uncleaned/standalone df
+        if raw_score is None:
+            penalty = (missing_pct * 0.7) + (dup_pct * 1.0) + (len(overall_warnings) * 1.5)
+            raw_score = max(0.0, round(100.0 - penalty, 1))
+            clean_score = raw_score
+
+        quality_score = raw_score
 
         if duplicate_rows > 0:
             overall_warnings.insert(0, f"Detected {duplicate_rows} duplicate rows ({dup_pct}%).")
@@ -157,6 +175,9 @@ class DataProfilingService:
             duplicate_rows=duplicate_rows,
             duplicate_percentage=dup_pct,
             quality_score=quality_score,
+            raw_quality_score=raw_score,
+            cleaned_quality_score=clean_score,
+            sampling_disclosure=sampling_disclosure,
             warnings=overall_warnings
         )
 

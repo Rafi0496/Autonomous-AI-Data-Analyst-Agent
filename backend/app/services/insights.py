@@ -894,10 +894,19 @@ def generate_insights(
                 impact_score=score
             ))
 
-    # 3. Enforce strictly: n_used + n_excluded == total_rows for every single insight
+    # 3. Enforce strictly: n_used + n_excluded == total_rows for every single insight and attach sampling disclosure
+    sampling_disclosure = (dataset_profile or {}).get("sampling_disclosure") or (dataset_profile or {}).get("quality_summary", {}).get("sampling_disclosure")
+    if not sampling_disclosure and (dataset_profile or {}).get("is_sampled"):
+        n_sample = dataset_profile.get("row_count", 0)
+        n_pop = dataset_profile.get("population_row_count", n_sample)
+        seed = dataset_profile.get("sampling_seed", 42)
+        sampling_disclosure = f"random sample of {n_sample:,} of {n_pop:,} rows (seed {seed})"
+
     for ins in candidates:
         ins.n_excluded = total_rows - ins.n_used
         ins.exclusion_rate = round(ins.n_excluded / max(1, total_rows), 4)
+        if sampling_disclosure and not any("random sample" in c for c in ins.caveats):
+            ins.caveats.append(f"Derived from a {sampling_disclosure}")
 
     # 4. Deduplicate near-identical insights
     seen_keys = set()

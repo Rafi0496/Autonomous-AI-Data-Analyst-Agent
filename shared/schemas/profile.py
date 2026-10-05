@@ -20,7 +20,10 @@ class DataQualitySummary(BaseModel):
     missing_percentage: float
     duplicate_rows: int
     duplicate_percentage: float
-    quality_score: float  # 0 to 100
+    quality_score: float  # 0 to 100 (computed on RAW data)
+    raw_quality_score: Optional[float] = None
+    cleaned_quality_score: Optional[float] = None
+    sampling_disclosure: Optional[str] = None
     warnings: List[str] = Field(default_factory=list)
 
 class DatasetProfile(BaseModel):

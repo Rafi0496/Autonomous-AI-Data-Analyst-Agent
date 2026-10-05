@@ -21,10 +21,12 @@ def write_summary(
     If p >= 0.05, the narrative states 'no significant difference' and does not present top segment as a finding.
     """
     if not structured_results and not insights:
+        disc = (dataset_profile or {}).get("sampling_disclosure") or (dataset_profile or {}).get("quality_summary", {}).get("sampling_disclosure")
+        disc_text = f" on a {disc}" if disc else ""
         return {
             "status": "empty",
             "message": "No analysis tool results or insights provided for synthesis.",
-            "executive_summary": "Analysis was concluded without tool executions.",
+            "executive_summary": f"Analysis was concluded without tool executions{disc_text}.",
             "key_findings": [],
             "citations_index": {},
             "claims": []
@@ -224,6 +226,17 @@ def write_summary(
                 user_clean_goal = cleaned
         goal_str = f" targeting '{user_clean_goal}'" if user_clean_goal else ""
         parts.append(f"Autonomous analysis{goal_str} concluded with validated analytical findings.")
+        
+        # Sampling disclosure (M1.c)
+        sampling_disclosure = (dataset_profile or {}).get("sampling_disclosure") or (dataset_profile or {}).get("quality_summary", {}).get("sampling_disclosure")
+        if not sampling_disclosure and (dataset_profile or {}).get("is_sampled"):
+            n_sample = dataset_profile.get("row_count", 0)
+            n_pop = dataset_profile.get("population_row_count", n_sample)
+            seed = dataset_profile.get("sampling_seed", 42)
+            sampling_disclosure = f"random sample of {n_sample:,} of {n_pop:,} rows (seed {seed})"
+        if sampling_disclosure:
+            parts.append(f"Analysis is based on a {sampling_disclosure}.")
+
         for a in analytical:
             parts.append(a["narrative"])
         if suppressed:

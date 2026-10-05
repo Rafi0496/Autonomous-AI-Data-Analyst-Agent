@@ -184,6 +184,18 @@ def generate_pdf_report(
         ('BOTTOMPADDING', (0,0), (-1,-1), 6),
     ]))
     story.append(t_meta)
+    
+    # Sampling disclosure (M1.c)
+    sampling_disclosure = (profile_data or {}).get("sampling_disclosure") or (profile_data or {}).get("quality_summary", {}).get("sampling_disclosure")
+    if not sampling_disclosure and (profile_data or {}).get("is_sampled"):
+        n_sample = (profile_data or {}).get("row_count", 0)
+        n_pop = (profile_data or {}).get("population_row_count", n_sample)
+        seed = (profile_data or {}).get("sampling_seed", 42)
+        sampling_disclosure = f"random sample of {n_sample:,} of {n_pop:,} rows (seed {seed})"
+    if sampling_disclosure:
+        story.append(Spacer(1, 6))
+        story.append(Paragraph(f"<b>Scale Sampling Disclosure:</b> Analysis is conducted on a {sampling_disclosure}.", styles["ReportSubtitle"]))
+    
     story.append(Spacer(1, 15))
     
     # ---------------------------------------------------------

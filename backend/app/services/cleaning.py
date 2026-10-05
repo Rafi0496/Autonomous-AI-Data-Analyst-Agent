@@ -11,7 +11,7 @@ Handles:
 import re
 import warnings
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from backend.app.core.config import settings
@@ -112,6 +112,109 @@ class DataCleaningService:
 
         return series.apply(_map_to_canonical)
 
+    @staticmethod
+    def _is_identifier_column(col: str, series: pd.Series) -> bool:
+        col_lower = str(col).strip().lower()
+        id_tokens = {"id", "uuid", "key", "code", "guid", "pk", "employee_id", "customer_id", "transaction_id", "campaign_id", "user_id", "order_id", "session_id"}
+        if col_lower in id_tokens:
+            return True
+        if any(col_lower.endswith(sfx) for sfx in ("_id", "_uuid", "_key", "_code", "_pk", "_guid")):
+            return True
+        if any(col_lower.startswith(pfx) for pfx in ("id_", "uuid_", "key_")):
+            return True
+        non_null = series.dropna()
+        if len(non_null) > 20 and (non_null.nunique() / len(non_null)) > 0.90:
+            sample_str = [str(x) for x in non_null.head(10)]
+            if any(re.search(r"[A-Za-z]+[-_]?\d+|\d+[-_]?[A-Za-z]+", s) for s in sample_str):
+                return True
+        return False
+
+    @staticmethod
+    def _is_date_column(col: str, series: pd.Series) -> bool:
+        col_lower = str(col).strip().lower()
+        if pd.api.types.is_datetime64_any_dtype(series):
+            return True
+        if any(exc in col_lower for exc in ["tenure", "duration", "count", "num", "experience"]):
+            return False
+        date_keywords = {"date", "time", "year", "month", "day", "period", "dob", "timestamp"}
+        parts = set(col_lower.split("_"))
+        if parts & date_keywords:
+            non_null = series.dropna()
+            if pd.api.types.is_numeric_dtype(series) and not non_null.empty:
+                if "year" in parts and float(non_null.max()) < 1000:
+                    return False
+            return True
+        if any(col_lower.endswith(sfx) for sfx in ("_date", "_timestamp", "_dob")):
+            return True
+        return False
+
+    @staticmethod
+    def _is_segment_or_categorical_column(col: str, series: pd.Series) -> bool:
+        if not pd.api.types.is_numeric_dtype(series):
+            return True
+        return False
+
+    @classmethod
+    def compute_quality_scores(
+        cls,
+        df_raw: pd.DataFrame,
+        cleaned_df: pd.DataFrame,
+        invalid_values_detected: List[Dict[str, Any]],
+        sentinels_detected: List[Dict[str, Any]],
+        missing_imputed: Dict[str, int]
+    ) -> Tuple[float, float, Dict[str, Any]]:
+        raw_rows, raw_cols = df_raw.shape
+        total_cells = raw_rows * raw_cols
+        raw_missing = int(df_raw.isnull().sum().sum())
+        missing_pct = (raw_missing / total_cells) * 100 if total_cells > 0 else 0.0
+        raw_dups = int(df_raw.duplicated().sum())
+        dup_pct = (raw_dups / raw_rows) * 100 if raw_rows > 0 else 0.0
+
+        invalid_count = sum(item.get("count", 0) for item in invalid_values_detected)
+        invalid_pct = (invalid_count / total_cells) * 100 if total_cells > 0 else 0.0
+
+        sentinel_count = sum(item.get("count", 0) for item in sentinels_detected)
+        sentinel_pct = (sentinel_count / total_cells) * 100 if total_cells > 0 else 0.0
+
+        # Check for severely defective columns (>30% missing or invalid in raw)
+        defective_cols = 0
+        for col in df_raw.columns:
+            col_missing = int(df_raw[col].isnull().sum())
+            col_inv = sum(it.get("count", 0) for it in invalid_values_detected if it.get("column") == col)
+            col_sen = sum(it.get("count", 0) for it in sentinels_detected if it.get("column") == col)
+            if raw_rows > 0 and ((col_missing + col_inv + col_sen) / raw_rows) > 0.30:
+                defective_cols += 1
+
+        raw_penalty = (
+            (missing_pct * 0.7) +
+            (dup_pct * 1.0) +
+            (invalid_pct * 3.5) +
+            (sentinel_pct * 2.5) +
+            (defective_cols * 12.0)
+        )
+        raw_score = max(0.0, round(100.0 - raw_penalty, 1))
+
+        # Cleaned metrics
+        cleaned_rows, cleaned_cols = cleaned_df.shape
+        c_total_cells = cleaned_rows * cleaned_cols
+        cleaned_missing = int(cleaned_df.isnull().sum().sum())
+        c_missing_pct = (cleaned_missing / c_total_cells) * 100 if c_total_cells > 0 else 0.0
+        total_imputed = sum(missing_imputed.values())
+        impute_share = (total_imputed / total_cells) * 100 if total_cells > 0 else 0.0
+
+        cleaned_penalty = (c_missing_pct * 0.4) + (impute_share * 0.3)
+        cleaned_score = max(0.0, round(100.0 - cleaned_penalty, 1))
+
+        meta = {
+            "missing_pct": round(missing_pct, 2),
+            "dup_pct": round(dup_pct, 2),
+            "invalid_count": invalid_count,
+            "sentinel_count": sentinel_count,
+            "defective_cols": defective_cols,
+            "imputed_count": total_imputed
+        }
+        return raw_score, cleaned_score, meta
+
     @classmethod
     def clean_data(
         cls,
@@ -136,19 +239,24 @@ class DataCleaningService:
 
         cleaned_df = df.copy()
 
-        # Scale handling: Representative sampling for large datasets (Plan §8.7)
+        # Scale handling: Representative sampling for large datasets (Plan §8.7 & M1.c)
         is_sampled = False
         sampling_rate = 1.0
+        sample_row_count: Optional[int] = None
+        sampling_seed = 42
+        sampling_disclosure: Optional[str] = None
         if original_row_count > settings.SAMPLE_THRESHOLD_ROWS:
             is_sampled = True
             sample_size = min(settings.SAMPLE_SIZE_ROWS, original_row_count)
-            cleaned_df = cleaned_df.sample(n=sample_size, random_state=42).reset_index(drop=True)
+            cleaned_df = cleaned_df.sample(n=sample_size, random_state=sampling_seed).reset_index(drop=True)
+            sample_row_count = sample_size
             sampling_rate = round(sample_size / original_row_count, 4)
+            sampling_disclosure = f"random sample of {sample_size:,} of {original_row_count:,} rows (seed {sampling_seed})"
             logs.append(CleaningStepLog(
                 step="scale_sampling",
                 description=(
                     f"Dataset exceeds scale threshold ({settings.SAMPLE_THRESHOLD_ROWS:,} rows). "
-                    f"Extracted a representative random sample of {sample_size:,} rows ({sampling_rate*100:.1f}% sampling rate) "
+                    f"Extracted a representative {sampling_disclosure} ({sampling_rate*100:.1f}% sampling rate) "
                     f"for exploratory analysis."
                 ),
                 rows_affected=original_row_count - sample_size
@@ -419,92 +527,103 @@ class DataCleaningService:
                             rows_affected=count
                         ))
 
-        # Step 7: Missing Value Imputation & Transparency Tracking
+        # Step 7: Missing Value Imputation & Transparency Tracking (M1.b policy)
+        # Policy: Never impute identifier-like columns, date columns, or categorical columns used as segments.
+        # Leave them missing and record this in the cleaning report. Numeric non-ID/date columns keep their mask.
         missing_imputed: Dict[str, int] = {}
         column_imputation_stats: Dict[str, Dict[str, Any]] = {}
         imputed_mask = pd.DataFrame(False, index=cleaned_df.index, columns=cleaned_df.columns)
 
-        num_cols = cleaned_df.select_dtypes(include=[np.number]).columns
-        for col in num_cols:
-            null_series = cleaned_df[col].isnull()
-            null_count = int(null_series.sum())
-            if null_count > 0:
-                imputed_mask[col] = null_series
-                strategy = options.missing_num_strategy
-                valid_vals = cleaned_df[col].dropna()
-                if valid_vals.empty:
-                    fill_val = 0.0
-                elif strategy == MissingValueStrategy.AUTO:
-                    skewness = valid_vals.skew() if len(valid_vals) > 2 else 0
-                    fill_val = float(valid_vals.median()) if abs(skewness) > 1.0 else float(valid_vals.mean())
-                elif strategy == MissingValueStrategy.MEDIAN:
-                    fill_val = float(valid_vals.median())
-                elif strategy == MissingValueStrategy.MEAN:
-                    fill_val = float(valid_vals.mean())
-                elif strategy == MissingValueStrategy.CONSTANT:
-                    fill_val = 0.0
-                else:
-                    fill_val = float(valid_vals.median())
+        for col in cleaned_df.columns:
+            series = cleaned_df[col]
+            is_id = cls._is_identifier_column(col, series)
+            is_date = cls._is_date_column(col, series)
+            is_seg = cls._is_segment_or_categorical_column(col, series)
 
-                cleaned_df[col] = cleaned_df[col].fillna(fill_val)
-                missing_imputed[col] = null_count
+            null_series = series.isnull()
+            null_count = int(null_series.sum())
+
+            if is_id or is_date or is_seg:
+                # NEVER impute identifier-like columns, date columns, or categorical columns
+                if is_id:
+                    skip_reason = "identifier_column"
+                elif is_date:
+                    skip_reason = "date_column"
+                else:
+                    skip_reason = "categorical_segment"
+
                 column_imputation_stats[col] = {
                     "missing_count": null_count,
-                    "imputed_count": null_count,
-                    "imputation_rate": round(null_count / max(1, len(cleaned_df)), 4),
-                    "strategy": str(strategy),
-                    "fill_value": round(fill_val, 4)
-                }
-                logs.append(CleaningStepLog(
-                    step="impute_numeric_nulls",
-                    description=f"Imputed {null_count} nulls in numeric column '{col}' with value {fill_val:.2f}.",
-                    affected_columns=[col],
-                    rows_affected=null_count
-                ))
-            else:
-                column_imputation_stats[col] = {
-                    "missing_count": 0,
                     "imputed_count": 0,
-                    "imputation_rate": 0.0
+                    "imputation_rate": 0.0,
+                    "strategy": "none",
+                    "imputation_skipped": True,
+                    "skip_reason": skip_reason,
+                    "fill_value": None
                 }
+                if null_count > 0:
+                    logs.append(CleaningStepLog(
+                        step="imputation_policy_skipped",
+                        description=f"Preserved {null_count} missing values in '{col}' without imputation (policy: {skip_reason}).",
+                        affected_columns=[col],
+                        rows_affected=null_count
+                    ))
+            else:
+                # Numeric measurement/metric columns
+                if null_count > 0:
+                    imputed_mask[col] = null_series
+                    strategy = options.missing_num_strategy
+                    valid_vals = series.dropna()
+                    if valid_vals.empty:
+                        fill_val = 0.0
+                    elif strategy == MissingValueStrategy.AUTO:
+                        skewness = valid_vals.skew() if len(valid_vals) > 2 else 0
+                        fill_val = float(valid_vals.median()) if abs(skewness) > 1.0 else float(valid_vals.mean())
+                    elif strategy == MissingValueStrategy.MEDIAN:
+                        fill_val = float(valid_vals.median())
+                    elif strategy == MissingValueStrategy.MEAN:
+                        fill_val = float(valid_vals.mean())
+                    elif strategy == MissingValueStrategy.CONSTANT:
+                        fill_val = 0.0
+                    else:
+                        fill_val = float(valid_vals.median())
 
-        cat_cols = [c for c in cleaned_df.columns if c not in num_cols and not pd.api.types.is_datetime64_any_dtype(cleaned_df[c])]
-        for col in cat_cols:
-            null_series = cleaned_df[col].isnull()
-            null_count = int(null_series.sum())
-            if null_count > 0:
-                imputed_mask[col] = null_series
-                strategy = options.missing_cat_strategy
-                if strategy in (MissingValueStrategy.AUTO, MissingValueStrategy.MODE):
-                    mode_val = cleaned_df[col].mode(dropna=True)
-                    fill_val = mode_val.iloc[0] if not mode_val.empty else "Unknown"
+                    cleaned_df[col] = cleaned_df[col].fillna(fill_val)
+                    missing_imputed[col] = null_count
+                    column_imputation_stats[col] = {
+                        "missing_count": null_count,
+                        "imputed_count": null_count,
+                        "imputation_rate": round(null_count / max(1, len(cleaned_df)), 4),
+                        "strategy": str(strategy),
+                        "imputation_skipped": False,
+                        "fill_value": round(fill_val, 4)
+                    }
+                    logs.append(CleaningStepLog(
+                        step="impute_numeric_nulls",
+                        description=f"Imputed {null_count} nulls in numeric column '{col}' with value {fill_val:.2f}.",
+                        affected_columns=[col],
+                        rows_affected=null_count
+                    ))
                 else:
-                    fill_val = "Unknown"
-
-                cleaned_df[col] = cleaned_df[col].fillna(fill_val)
-                missing_imputed[col] = null_count
-                column_imputation_stats[col] = {
-                    "missing_count": null_count,
-                    "imputed_count": null_count,
-                    "imputation_rate": round(null_count / max(1, len(cleaned_df)), 4),
-                    "strategy": str(strategy),
-                    "fill_value": str(fill_val)
-                }
-                logs.append(CleaningStepLog(
-                    step="impute_categorical_nulls",
-                    description=f"Imputed {null_count} nulls in categorical column '{col}' with '{fill_val}'.",
-                    affected_columns=[col],
-                    rows_affected=null_count
-                ))
-            else:
-                column_imputation_stats[col] = {
-                    "missing_count": 0,
-                    "imputed_count": 0,
-                    "imputation_rate": 0.0
-                }
+                    column_imputation_stats[col] = {
+                        "missing_count": 0,
+                        "imputed_count": 0,
+                        "imputation_rate": 0.0,
+                        "strategy": str(options.missing_num_strategy),
+                        "imputation_skipped": False
+                    }
 
         # Attach mask to cleaned_df
         cleaned_df.attrs["imputed_mask"] = imputed_mask
+
+        # Compute raw and cleaned data quality scores (M1.a)
+        raw_score, cleaned_score, score_meta = cls.compute_quality_scores(
+            df_raw=df,
+            cleaned_df=cleaned_df,
+            invalid_values_detected=invalid_values_detected,
+            sentinels_detected=sentinels_detected,
+            missing_imputed=missing_imputed
+        )
 
         # Save cleaned file and companion mask if output path provided
         saved_path_str = ""
@@ -530,13 +649,22 @@ class DataCleaningService:
             suspected_repeated_extremes=suspected_repeated_extremes,
             suspected_returns=suspected_returns,
             duplicates_removed=duplicates_removed,
+            raw_quality_score=raw_score,
+            cleaned_quality_score=cleaned_score,
             is_sampled=is_sampled,
             sampling_rate=sampling_rate,
             population_row_count=original_row_count,
+            sample_row_count=sample_row_count,
+            sampling_seed=sampling_seed if is_sampled else None,
+            sampling_disclosure=sampling_disclosure,
             logs=logs,
             cleaned_file_path=saved_path_str
         )
 
+        cleaned_df.attrs["raw_quality_score"] = raw_score
+        cleaned_df.attrs["cleaned_quality_score"] = cleaned_score
+        cleaned_df.attrs["is_sampled"] = is_sampled
+        cleaned_df.attrs["sampling_disclosure"] = sampling_disclosure
         cleaned_df.attrs["cleaning_report"] = result.model_dump()
         if output_path:
             try:
