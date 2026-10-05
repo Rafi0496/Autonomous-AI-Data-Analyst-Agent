@@ -199,7 +199,9 @@ class LLMClient(ABC):
         step_result: Dict[str, Any],
         history: List[Dict[str, Any]],
         dataset_id: str,
-        tools: Optional[List[Dict[str, Any]]] = None
+        tools: Optional[List[Dict[str, Any]]] = None,
+        candidates: Optional[List[ToolCall]] = None,
+        candidate_reasons: Optional[List[str]] = None
     ) -> ReflectResult:
         """Reflect on latest execution step and propose bounded dynamic follow-ups if needed."""
         pass
@@ -321,30 +323,24 @@ class HeuristicClient(LLMClient):
         step_result: Dict[str, Any],
         history: List[Dict[str, Any]],
         dataset_id: str,
-        tools: Optional[List[Dict[str, Any]]] = None
+        tools: Optional[List[Dict[str, Any]]] = None,
+        candidates: Optional[List[ToolCall]] = None,
+        candidate_reasons: Optional[List[str]] = None
     ) -> ReflectResult:
         t0 = time.perf_counter()
-        tool_name = step_result.get("tool")
         follow_ups: List[ToolCall] = []
 
-        if tool_name == "detect_outliers" and step_result.get("total_anomalous_rows", 0) > 0:
-            top_cols = step_result.get("top_outlier_columns", [])
-            if top_cols:
-                col_target = top_cols[0]["column"]
-                follow_ups.append(ToolCall(
-                    name="query_sql",
-                    arguments={
-                        "dataset_id": dataset_id,
-                        "sql": f"SELECT {col_target}, COUNT(*) as frequency FROM df GROUP BY {col_target} ORDER BY frequency DESC LIMIT 5"
-                    },
-                    rationale=f"[Heuristic Template] High anomaly rate in '{col_target}'; drill down to investigate value distribution."
-                ))
+        if candidates:
+            follow_ups = candidates[:3]
+            obs = f"Triggered follow-ups: {'; '.join(candidate_reasons[:3])}" if candidate_reasons else "Selected triggered follow-ups."
+        else:
+            obs = "No trigger fired (no segment p < 0.05, no outlier rate > 5%, no |r| > 0.5); reflection stopped."
 
         latency = time.perf_counter() - t0
         return ReflectResult(
             tool_calls=follow_ups,
-            should_continue=True,
-            observation="Heuristic reflection evaluated step outcome.",
+            should_continue=bool(follow_ups),
+            observation=obs,
             usage=TokenUsage(total_tokens="unknown"),
             provider=self.provider_name,
             latency_seconds=latency
@@ -563,17 +559,31 @@ class ClaudeClient(LLMClient):
         step_result: Dict[str, Any],
         history: List[Dict[str, Any]],
         dataset_id: str,
-        tools: Optional[List[Dict[str, Any]]] = None
+        tools: Optional[List[Dict[str, Any]]] = None,
+        candidates: Optional[List[ToolCall]] = None,
+        candidate_reasons: Optional[List[str]] = None
     ) -> ReflectResult:
+        if not candidates:
+            return ReflectResult(
+                tool_calls=[],
+                should_continue=False,
+                observation="No trigger fired (no segment p < 0.05, no outlier rate > 5%, no |r| > 0.5); reflection stopped.",
+                usage=TokenUsage(total_tokens=0),
+                provider=self.provider_name,
+                latency_seconds=0.0
+            )
+
         t0 = time.perf_counter()
         client = self._get_client()
         claude_tools = get_tools_for_claude()
 
+        candidate_desc = [f"- {c.name}({json.dumps(c.arguments)}): {c.rationale}" for c in candidates]
         prompt = (
-            "You are an autonomous data analyst reflecting on the most recent step outcome:\n"
+            "You are an autonomous data analyst reflecting on the round outcome.\n"
             f"Latest Result: {json.dumps(step_result, default=str)}\n"
-            "If an anomaly or critical pattern warrants a drill-down (such as query_sql), invoke that tool now.\n"
-            "If the current investigation is on track and no urgent drill-down is needed, return a brief text assessment without tool calls."
+            f"Deterministic triggers generated these candidate follow-up actions:\n"
+            + "\n".join(candidate_desc) + "\n\n"
+            "Pick up to 3 candidate follow-ups to execute by calling the corresponding tool, or choose to stop if current findings are sufficient."
         )
 
         try:
@@ -991,8 +1001,20 @@ class GeminiClient(LLMClient):
         step_result: Dict[str, Any],
         history: List[Dict[str, Any]],
         dataset_id: str,
-        tools: Optional[List[Dict[str, Any]]] = None
+        tools: Optional[List[Dict[str, Any]]] = None,
+        candidates: Optional[List[ToolCall]] = None,
+        candidate_reasons: Optional[List[str]] = None
     ) -> ReflectResult:
+        if not candidates:
+            return ReflectResult(
+                tool_calls=[],
+                should_continue=False,
+                observation="No trigger fired (no segment p < 0.05, no outlier rate > 5%, no |r| > 0.5); reflection stopped.",
+                usage=TokenUsage(total_tokens=0),
+                provider=self.provider_name,
+                latency_seconds=0.0
+            )
+
         from google.genai import types
         t0 = time.perf_counter()
         client = self._get_client()
@@ -1000,11 +1022,13 @@ class GeminiClient(LLMClient):
 
         config = self._build_generate_config(types, tools=gemini_tools)
 
+        candidate_desc = [f"- {c.name}({json.dumps(c.arguments)}): {c.rationale}" for c in candidates]
         prompt = (
-            "You are an autonomous data analyst reflecting on the most recent step outcome:\n"
+            "You are an autonomous data analyst reflecting on the round outcome.\n"
             f"Latest Result: {json.dumps(step_result, default=str)}\n"
-            "If an anomaly or critical pattern warrants a drill-down (such as query_sql), invoke that function now.\n"
-            "If the current investigation is on track and no urgent drill-down is needed, return a brief text assessment without tool calls."
+            f"Deterministic triggers generated these candidate follow-up actions:\n"
+            + "\n".join(candidate_desc) + "\n\n"
+            "Pick up to 3 candidate follow-ups to execute by invoking the function, or choose to stop if current findings are sufficient."
         )
 
         try:

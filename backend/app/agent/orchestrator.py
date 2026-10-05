@@ -23,6 +23,7 @@ from backend.app.services.data_loader import get_dataset_dataframe
 from backend.app.services.insights import generate_insights
 from backend.app.services.profiling import profile_dataset
 from backend.app.services.tool_catalogue import execute_tool
+from backend.app.agent.follow_up_triggers import compute_candidate_follow_ups
 
 class PlanActReflectOrchestrator:
     def __init__(
@@ -51,6 +52,9 @@ class PlanActReflectOrchestrator:
         """Accumulate token accounting from real provider usage metadata."""
         if usage.is_known and isinstance(usage.total_tokens, int):
             self.tokens_used += usage.total_tokens
+            if self.step_count > 0 and self.tokens_used >= self.token_budget:
+                self.budget_tripped = True
+                self.trip_reason = f"Token budget exceeded ({self.tokens_used} >= {self.token_budget} tokens limit)"
         else:
             self.tokens_unknown = True
 
@@ -165,6 +169,14 @@ class PlanActReflectOrchestrator:
             for idx, tc in enumerate(plan_result.tool_calls)
         ]
 
+        rounds_table = [
+            {
+                "round": 1,
+                "tools": [tc.name for tc in plan_result.tool_calls],
+                "reason": "Initial planned exploratory analysis"
+            }
+        ]
+
         # Loop: ACT & REFLECT (up to 3 rounds, <=3 follow-up tool calls per reflection)
         while pending_plan or current_round < max_rounds:
             # If current round's queue is empty, trigger reflection to decide on next round
@@ -184,24 +196,42 @@ class PlanActReflectOrchestrator:
                     self.trip_reason = f"Maximum step budget reached ({self.step_count} >= {self.max_steps} steps limit)"
                     break
 
-                if self.step_count > 0 and self.tokens_used >= self.token_budget:
+                if self.tokens_used >= self.token_budget:
                     self.budget_tripped = True
                     self.trip_reason = f"Token budget exceeded ({self.tokens_used} >= {self.token_budget} tokens limit)"
                     break
 
-                self._emit_progress(f"Round {current_round} complete. Reflecting and assessing follow-ups (calling LLM...)", self.step_count, phase="reflection")
+                # M4 (a): Deterministic candidate follow-up computation
+                candidates, reasons = compute_candidate_follow_ups(
+                    executed_results=executed_results,
+                    profile=profile_dict,
+                    dataset_id=dataset_id
+                )
+
+                self._emit_progress(f"Round {current_round} complete. Reflecting on {len(candidates)} candidate triggers...", self.step_count, phase="reflection")
                 if job:
                     job.phase = "reflection"
                     db.commit()
                 try:
                     last_output = executed_results[-1] if executed_results else {}
+                    import inspect
+                    sig = inspect.signature(self.llm_client.reflect)
+                    ref_kwargs = {}
+                    if "candidates" in sig.parameters or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+                        ref_kwargs["candidates"] = candidates
+                        ref_kwargs["candidate_reasons"] = reasons
+
                     reflect_res = self.llm_client.reflect(
                         step_result=last_output,
                         history=self.run_log,
-                        dataset_id=dataset_id
+                        dataset_id=dataset_id,
+                        **ref_kwargs
                     )
                     self._accumulate_tokens(reflect_res.usage)
                     reflect_latency_ms = round(reflect_res.latency_seconds * 1000, 3)
+
+                    if self.budget_tripped:
+                        break
 
                     # Reflection may request <= 3 follow-up tool calls or stop
                     follow_ups = reflect_res.tool_calls[:3]
@@ -214,10 +244,21 @@ class PlanActReflectOrchestrator:
                         self.run_log[-1]["round"] = current_round
 
                     if not follow_ups:
-                        # Reflection decided to stop
+                        rounds_table.append({
+                            "round": current_round + 1,
+                            "tools": [],
+                            "reason": "No trigger fired (no segment p < 0.05, no outlier rate > 5%, no |r| > 0.5); reflection stopped." if not candidates else "Reflector assessed candidate triggers and decided to stop."
+                        })
                         break
 
                     current_round += 1
+                    follow_up_reasons = reasons[:len(follow_ups)] if reasons else [f.rationale for f in follow_ups]
+                    rounds_table.append({
+                        "round": current_round,
+                        "tools": [f.name for f in follow_ups],
+                        "reason": "; ".join(follow_up_reasons)
+                    })
+
                     for f_idx, follow_up in enumerate(follow_ups):
                         pending_plan.append({
                             "step": self.step_count + len(pending_plan) + 1,
@@ -444,7 +485,9 @@ class PlanActReflectOrchestrator:
             "chart_specifications": chart_specs,
             "citation_audit": verification,
             "verification": verification,
-            "run_log": self.run_log
+            "run_log": self.run_log,
+            "rounds_table": rounds_table,
+            "rounds_summary": rounds_table
         }
 
         # Update DB Job
