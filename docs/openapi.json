@@ -1,0 +1,2748 @@
+{
+  "components": {
+    "schemas": {
+      "Body_upload_dataset_file_api_v1_upload_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_dataset_file_api_v1_upload_post",
+        "type": "object"
+      },
+      "ChatRequest": {
+        "properties": {
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional dataset ID fallback",
+            "title": "Dataset Id"
+          },
+          "history": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": [],
+            "description": "Prior conversation turns",
+            "title": "History"
+          },
+          "job_id": {
+            "description": "ID of the analysis job",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "question": {
+            "description": "User analytical question",
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "question"
+        ],
+        "title": "ChatRequest",
+        "type": "object"
+      },
+      "ChatResponse": {
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "evidence": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "post_strip_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 100.0,
+            "title": "Post Strip Rate"
+          },
+          "pre_strip_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 100.0,
+            "title": "Pre Strip Rate"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "heuristic",
+            "title": "Provider"
+          },
+          "tool_calls_used": {
+            "default": [],
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Tool Calls Used",
+            "type": "array"
+          },
+          "verification": {
+            "additionalProperties": true,
+            "default": {},
+            "title": "Verification",
+            "type": "object"
+          }
+        },
+        "required": [
+          "answer"
+        ],
+        "title": "ChatResponse",
+        "type": "object"
+      },
+      "CleaningStepLog": {
+        "properties": {
+          "affected_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Columns",
+            "type": "array"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "rows_affected": {
+            "default": 0,
+            "title": "Rows Affected",
+            "type": "integer"
+          },
+          "step": {
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "description"
+        ],
+        "title": "CleaningStepLog",
+        "type": "object"
+      },
+      "ColumnProfile": {
+        "properties": {
+          "inferred_type": {
+            "title": "Inferred Type",
+            "type": "string"
+          },
+          "is_unique": {
+            "title": "Is Unique",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "null_count": {
+            "title": "Null Count",
+            "type": "integer"
+          },
+          "null_percentage": {
+            "title": "Null Percentage",
+            "type": "number"
+          },
+          "original_dtype": {
+            "title": "Original Dtype",
+            "type": "string"
+          },
+          "sample_values": {
+            "items": {},
+            "title": "Sample Values",
+            "type": "array"
+          },
+          "stats": {
+            "additionalProperties": true,
+            "title": "Stats",
+            "type": "object"
+          },
+          "unique_count": {
+            "title": "Unique Count",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "original_dtype",
+          "inferred_type",
+          "null_count",
+          "null_percentage",
+          "unique_count",
+          "is_unique"
+        ],
+        "title": "ColumnProfile",
+        "type": "object"
+      },
+      "CreateJobRequest": {
+        "properties": {
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          },
+          "max_steps": {
+            "default": 5,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Max Steps",
+            "type": "integer"
+          },
+          "token_budget": {
+            "default": 15000,
+            "maximum": 100000.0,
+            "minimum": 1000.0,
+            "title": "Token Budget",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset_id"
+        ],
+        "title": "CreateJobRequest",
+        "type": "object"
+      },
+      "DataQualitySummary": {
+        "properties": {
+          "cleaned_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cleaned Quality Score"
+          },
+          "duplicate_percentage": {
+            "title": "Duplicate Percentage",
+            "type": "number"
+          },
+          "duplicate_rows": {
+            "title": "Duplicate Rows",
+            "type": "integer"
+          },
+          "missing_cells": {
+            "title": "Missing Cells",
+            "type": "integer"
+          },
+          "missing_percentage": {
+            "title": "Missing Percentage",
+            "type": "number"
+          },
+          "quality_score": {
+            "title": "Quality Score",
+            "type": "number"
+          },
+          "raw_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Quality Score"
+          },
+          "sampling_disclosure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampling Disclosure"
+          },
+          "total_cells": {
+            "title": "Total Cells",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "total_cells",
+          "missing_cells",
+          "missing_percentage",
+          "duplicate_rows",
+          "duplicate_percentage",
+          "quality_score"
+        ],
+        "title": "DataQualitySummary",
+        "type": "object"
+      },
+      "DatasetCleaningOptions": {
+        "properties": {
+          "coerce_dates": {
+            "default": true,
+            "title": "Coerce Dates",
+            "type": "boolean"
+          },
+          "drop_duplicates": {
+            "default": true,
+            "title": "Drop Duplicates",
+            "type": "boolean"
+          },
+          "missing_cat_strategy": {
+            "$ref": "#/components/schemas/MissingValueStrategy",
+            "default": "auto"
+          },
+          "missing_num_strategy": {
+            "$ref": "#/components/schemas/MissingValueStrategy",
+            "default": "auto"
+          },
+          "missing_threshold_drop_col": {
+            "default": 0.8,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Missing Threshold Drop Col",
+            "type": "number"
+          },
+          "remove_constant_columns": {
+            "default": true,
+            "title": "Remove Constant Columns",
+            "type": "boolean"
+          },
+          "strip_whitespace": {
+            "default": true,
+            "title": "Strip Whitespace",
+            "type": "boolean"
+          }
+        },
+        "title": "DatasetCleaningOptions",
+        "type": "object"
+      },
+      "DatasetCleaningResult": {
+        "properties": {
+          "cleaned_col_count": {
+            "title": "Cleaned Col Count",
+            "type": "integer"
+          },
+          "cleaned_file_path": {
+            "title": "Cleaned File Path",
+            "type": "string"
+          },
+          "cleaned_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cleaned Quality Score"
+          },
+          "cleaned_row_count": {
+            "title": "Cleaned Row Count",
+            "type": "integer"
+          },
+          "column_imputation_stats": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Column Imputation Stats",
+            "type": "object"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "dropped_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dropped Columns",
+            "type": "array"
+          },
+          "duplicates_removed": {
+            "default": 0,
+            "title": "Duplicates Removed",
+            "type": "integer"
+          },
+          "invalid_values_detected": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Invalid Values Detected",
+            "type": "array"
+          },
+          "is_sampled": {
+            "default": false,
+            "title": "Is Sampled",
+            "type": "boolean"
+          },
+          "logs": {
+            "items": {
+              "$ref": "#/components/schemas/CleaningStepLog"
+            },
+            "title": "Logs",
+            "type": "array"
+          },
+          "missing_values_imputed": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Missing Values Imputed",
+            "type": "object"
+          },
+          "original_col_count": {
+            "title": "Original Col Count",
+            "type": "integer"
+          },
+          "original_row_count": {
+            "title": "Original Row Count",
+            "type": "integer"
+          },
+          "population_row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Population Row Count"
+          },
+          "raw_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Quality Score"
+          },
+          "sample_row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Row Count"
+          },
+          "sampling_disclosure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampling Disclosure"
+          },
+          "sampling_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampling Rate"
+          },
+          "sampling_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": 42,
+            "title": "Sampling Seed"
+          },
+          "sentinels_detected": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sentinels Detected",
+            "type": "array"
+          },
+          "suspected_repeated_extremes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Suspected Repeated Extremes",
+            "type": "array"
+          },
+          "suspected_returns": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Suspected Returns",
+            "type": "array"
+          },
+          "type_conversions": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Type Conversions",
+            "type": "object"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "original_row_count",
+          "cleaned_row_count",
+          "original_col_count",
+          "cleaned_col_count",
+          "cleaned_file_path"
+        ],
+        "title": "DatasetCleaningResult",
+        "type": "object"
+      },
+      "DatasetListItem": {
+        "properties": {
+          "column_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Count"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "file_size_bytes": {
+            "title": "File Size Bytes",
+            "type": "integer"
+          },
+          "file_type": {
+            "title": "File Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "row_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Count"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DatasetStatus"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "file_type",
+          "file_size_bytes",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DatasetListItem",
+        "type": "object"
+      },
+      "DatasetProfile": {
+        "properties": {
+          "column_count": {
+            "title": "Column Count",
+            "type": "integer"
+          },
+          "columns": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ColumnProfile"
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "memory_usage_bytes": {
+            "title": "Memory Usage Bytes",
+            "type": "integer"
+          },
+          "quality_summary": {
+            "$ref": "#/components/schemas/DataQualitySummary"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "row_count",
+          "column_count",
+          "memory_usage_bytes",
+          "columns",
+          "quality_summary",
+          "created_at"
+        ],
+        "title": "DatasetProfile",
+        "type": "object"
+      },
+      "DatasetStatus": {
+        "enum": [
+          "uploaded",
+          "cleaned",
+          "profiled",
+          "analyzing",
+          "analyzed",
+          "error"
+        ],
+        "title": "DatasetStatus",
+        "type": "string"
+      },
+      "FeedbackCreateRequest": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating"
+        ],
+        "title": "FeedbackCreateRequest",
+        "type": "object"
+      },
+      "FeedbackResponse": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "insight_id": {
+            "title": "Insight Id",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "job_id",
+          "insight_id",
+          "user_id",
+          "rating",
+          "comment",
+          "created_at"
+        ],
+        "title": "FeedbackResponse",
+        "type": "object"
+      },
+      "FileUploadResponse": {
+        "properties": {
+          "column_count": {
+            "title": "Column Count",
+            "type": "integer"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "file_size_bytes": {
+            "title": "File Size Bytes",
+            "type": "integer"
+          },
+          "file_type": {
+            "title": "File Type",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "row_count": {
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DatasetStatus"
+          },
+          "upload_timestamp": {
+            "title": "Upload Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset_id",
+          "filename",
+          "file_type",
+          "file_size_bytes",
+          "row_count",
+          "column_count",
+          "status",
+          "message",
+          "upload_timestamp"
+        ],
+        "title": "FileUploadResponse",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "InsightFeedbackSummary": {
+        "properties": {
+          "feedbacks": {
+            "items": {
+              "$ref": "#/components/schemas/FeedbackResponse"
+            },
+            "title": "Feedbacks",
+            "type": "array"
+          },
+          "helpful_count": {
+            "title": "Helpful Count",
+            "type": "integer"
+          },
+          "insight_id": {
+            "title": "Insight Id",
+            "type": "string"
+          },
+          "not_relevant_count": {
+            "title": "Not Relevant Count",
+            "type": "integer"
+          },
+          "total_feedbacks": {
+            "title": "Total Feedbacks",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "insight_id",
+          "total_feedbacks",
+          "helpful_count",
+          "not_relevant_count",
+          "feedbacks"
+        ],
+        "title": "InsightFeedbackSummary",
+        "type": "object"
+      },
+      "JobStatusResponse": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_step": {
+            "default": 0,
+            "title": "Current Step",
+            "type": "integer"
+          },
+          "current_step_name": {
+            "title": "Current Step Name",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "execution_time_seconds": {
+            "default": 0.0,
+            "title": "Execution Time Seconds",
+            "type": "number"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "phase": {
+            "default": "queued",
+            "title": "Phase",
+            "type": "string"
+          },
+          "results": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Results"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "step_limit": {
+            "title": "Step Limit",
+            "type": "integer"
+          },
+          "token_budget": {
+            "title": "Token Budget",
+            "type": "integer"
+          },
+          "tokens_used": {
+            "title": "Tokens Used",
+            "type": "integer"
+          },
+          "total_steps": {
+            "title": "Total Steps",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification"
+          }
+        },
+        "required": [
+          "job_id",
+          "dataset_id",
+          "status",
+          "current_step_name",
+          "total_steps",
+          "step_limit",
+          "tokens_used",
+          "token_budget",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "JobStatusResponse",
+        "type": "object"
+      },
+      "MissingValueStrategy": {
+        "enum": [
+          "auto",
+          "drop",
+          "mean",
+          "median",
+          "mode",
+          "constant"
+        ],
+        "title": "MissingValueStrategy",
+        "type": "string"
+      },
+      "ReportMetadata": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_name": {
+            "title": "Dataset Name",
+            "type": "string"
+          },
+          "download_url": {
+            "title": "Download Url",
+            "type": "string"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "report_id": {
+            "title": "Report Id",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "report_id",
+          "job_id",
+          "dataset_name",
+          "format",
+          "filename",
+          "created_at",
+          "download_url"
+        ],
+        "title": "ReportMetadata",
+        "type": "object"
+      },
+      "ScheduleCreateRequest": {
+        "properties": {
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "frequency": {
+            "default": "daily",
+            "title": "Frequency",
+            "type": "string"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          }
+        },
+        "required": [
+          "dataset_id"
+        ],
+        "title": "ScheduleCreateRequest",
+        "type": "object"
+      },
+      "ScheduleResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "dataset_id": {
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "frequency": {
+            "title": "Frequency",
+            "type": "string"
+          },
+          "goal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goal"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "last_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Job Id"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "dataset_id",
+          "user_id",
+          "frequency",
+          "goal",
+          "is_active",
+          "last_run_at",
+          "next_run_at",
+          "last_job_id",
+          "created_at"
+        ],
+        "title": "ScheduleResponse",
+        "type": "object"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "token_type": {
+            "default": "bearer",
+            "title": "Token Type",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserResponse"
+          }
+        },
+        "required": [
+          "access_token",
+          "user"
+        ],
+        "title": "TokenResponse",
+        "type": "object"
+      },
+      "UserLoginRequest": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserLoginRequest",
+        "type": "object"
+      },
+      "UserRegisterRequest": {
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "UserRegisterRequest",
+        "type": "object"
+      },
+      "UserResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "full_name",
+          "is_active",
+          "created_at"
+        ],
+        "title": "UserResponse",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Autonomous AI Data Analyst Agent Backend API \u2014 Data ingestion, cleaning, profiling, and autonomous agent orchestration.",
+    "title": "Autonomous AI Data Analyst Agent",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Root"
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Authenticate user with email and password, returning an access token.",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "description": "Retrieve profile of the currently authenticated user.",
+        "operationId": "get_me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Me",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "description": "Register a new user account with hashed password and return access token.",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Register",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/chat": {
+      "post": {
+        "description": "Process user analytical question over dataset insights, run logs, and cleaning reports.",
+        "operationId": "handle_chat_query_api_v1_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Handle Chat Query",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/v1/chat/": {
+      "post": {
+        "description": "Process user analytical question over dataset insights, run logs, and cleaning reports.",
+        "operationId": "handle_chat_query_api_v1_chat__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Handle Chat Query",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/v1/datasets": {
+      "get": {
+        "description": "List datasets scoped to current authenticated user or public/demo datasets.",
+        "operationId": "list_datasets_api_v1_datasets_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Skip",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DatasetListItem"
+                  },
+                  "title": "Response List Datasets Api V1 Datasets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Datasets",
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}": {
+      "get": {
+        "description": "Get metadata for a specific dataset.",
+        "operationId": "get_dataset_api_v1_datasets__dataset_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Dataset",
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/clean": {
+      "post": {
+        "description": "Execute the data cleaning pipeline on the specified dataset.",
+        "operationId": "clean_dataset_endpoint_api_v1_datasets__dataset_id__clean_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DatasetCleaningOptions"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Options"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetCleaningResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Clean Dataset Endpoint",
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/cleaning-report": {
+      "get": {
+        "description": "Retrieve full cleaning report (sentinels, invalid values, returns, imputation).",
+        "operationId": "get_dataset_cleaning_report_endpoint_api_v1_datasets__dataset_id__cleaning_report_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Dataset Cleaning Report Endpoint",
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/preview": {
+      "get": {
+        "description": "Retrieve head preview of the dataset rows and columns.",
+        "operationId": "get_dataset_preview_api_v1_datasets__dataset_id__preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rows",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Rows",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "use_cleaned",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Use Cleaned",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Dataset Preview",
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/{dataset_id}/profile": {
+      "get": {
+        "description": "Retrieve pre-computed profile for the dataset.",
+        "operationId": "get_dataset_profile_api_v1_datasets__dataset_id__profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Dataset Profile",
+        "tags": [
+          "Datasets"
+        ]
+      },
+      "post": {
+        "description": "Generate a comprehensive deterministic statistical profile for the dataset.",
+        "operationId": "profile_dataset_endpoint_api_v1_datasets__dataset_id__profile_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "title": "Dataset Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Whether to profile cleaned data if available",
+            "in": "query",
+            "name": "use_cleaned",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Whether to profile cleaned data if available",
+              "title": "Use Cleaned",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetProfile"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Profile Dataset Endpoint",
+        "tags": [
+          "Datasets"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/jobs": {
+      "get": {
+        "description": "Retrieve list of recent analysis jobs scoped to user or public demo jobs.",
+        "operationId": "list_analysis_jobs_api_v1_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dataset_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dataset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobStatusResponse"
+                  },
+                  "title": "Response List Analysis Jobs Api V1 Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Analysis Jobs",
+        "tags": [
+          "Jobs"
+        ]
+      },
+      "post": {
+        "description": "Submit an autonomous analysis job.\nDispatches via Celery worker if available; falls back to BackgroundTasks if broker is unreachable.",
+        "operationId": "submit_analysis_job_api_v1_jobs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Submit Analysis Job Api V1 Jobs Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Analysis Job",
+        "tags": [
+          "Jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "description": "Retrieve current execution status and live progress for an analysis job.",
+        "operationId": "get_job_status_api_v1_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Job Status",
+        "tags": [
+          "Jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/insights": {
+      "get": {
+        "description": "Retrieve ranked insights for an analysis job.",
+        "operationId": "get_job_insights_api_v1_jobs__job_id__insights_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Job Insights",
+        "tags": [
+          "Jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/insights/{insight_id}/feedback": {
+      "get": {
+        "description": "Retrieve all feedbacks and summary ratings for an insight.",
+        "operationId": "get_insight_feedback_api_v1_jobs__job_id__insights__insight_id__feedback_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "insight_id",
+            "required": true,
+            "schema": {
+              "title": "Insight Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightFeedbackSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Insight Feedback",
+        "tags": [
+          "Feedback"
+        ]
+      },
+      "post": {
+        "description": "Submit rating and optional feedback for an analysis insight.",
+        "operationId": "submit_insight_feedback_api_v1_jobs__job_id__insights__insight_id__feedback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "insight_id",
+            "required": true,
+            "schema": {
+              "title": "Insight Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Submit Insight Feedback",
+        "tags": [
+          "Feedback"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/logs": {
+      "get": {
+        "description": "Retrieve ordered explainability run log for an analysis job.",
+        "operationId": "get_job_run_log_api_v1_jobs__job_id__logs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Job Run Log",
+        "tags": [
+          "Jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}/report": {
+      "post": {
+        "description": "Generate and export a publication-ready PDF or Word document for an analysis job.",
+        "operationId": "create_job_report_api_v1_jobs__job_id__report_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Report format: pdf or docx",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "pdf",
+              "description": "Report format: pdf or docx",
+              "pattern": "^(pdf|docx)$",
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Job Report",
+        "tags": [
+          "Jobs"
+        ]
+      }
+    },
+    "/api/v1/reports": {
+      "get": {
+        "description": "List all previously generated reports.",
+        "operationId": "list_reports_api_v1_reports_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReportMetadata"
+                  },
+                  "title": "Response List Reports Api V1 Reports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reports",
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/reports/": {
+      "get": {
+        "description": "List all previously generated reports.",
+        "operationId": "list_reports_api_v1_reports__get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReportMetadata"
+                  },
+                  "title": "Response List Reports Api V1 Reports  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Reports",
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/reports/{report_id}/download": {
+      "get": {
+        "description": "Download a generated PDF or Word report.",
+        "operationId": "download_report_api_v1_reports__report_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Download Report",
+        "tags": [
+          "Reports"
+        ]
+      }
+    },
+    "/api/v1/schedules": {
+      "get": {
+        "description": "List recurring schedules.",
+        "operationId": "list_schedules_api_v1_schedules_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ScheduleResponse"
+                  },
+                  "title": "Response List Schedules Api V1 Schedules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Schedules",
+        "tags": [
+          "Schedules"
+        ]
+      },
+      "post": {
+        "description": "Create a recurring analysis schedule for a dataset.",
+        "operationId": "create_schedule_api_v1_schedules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Schedule",
+        "tags": [
+          "Schedules"
+        ]
+      }
+    },
+    "/api/v1/schedules/{schedule_id}": {
+      "delete": {
+        "description": "Delete a recurring schedule.",
+        "operationId": "delete_schedule_api_v1_schedules__schedule_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "title": "Schedule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Schedule",
+        "tags": [
+          "Schedules"
+        ]
+      }
+    },
+    "/api/v1/schedules/{schedule_id}/trigger": {
+      "post": {
+        "description": "Manually trigger immediate execution of a scheduled recurring analysis.",
+        "operationId": "trigger_schedule_api_v1_schedules__schedule_id__trigger_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "schedule_id",
+            "required": true,
+            "schema": {
+              "title": "Schedule Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Trigger Schedule",
+        "tags": [
+          "Schedules"
+        ]
+      }
+    },
+    "/api/v1/upload": {
+      "post": {
+        "description": "Upload a dataset file (CSV, XLSX, XLS, JSON).\nValidates file format, limits file size, parses dimensions, and stores record.",
+        "operationId": "upload_dataset_file_api_v1_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_dataset_file_api_v1_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Upload Dataset File",
+        "tags": [
+          "Upload"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health Check"
+      }
+    }
+  }
+}
