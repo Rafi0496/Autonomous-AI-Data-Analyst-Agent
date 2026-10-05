@@ -432,7 +432,14 @@ class HeuristicClient(LLMClient):
 
         from backend.app.services.chat_sql import extract_question_columns, insight_shares_column
         question_cols = extract_question_columns(question, available_columns)
-        matched_insights = [ins for ins in insights if insight_shares_column(ins, question_cols)]
+        if question_cols:
+            matched_insights = [ins for ins in insights if insight_shares_column(ins, question_cols)]
+        else:
+            q_words = set(re.findall(r"\b[a-zA-Z]{4,}\b", q_lower)) - {"what", "which", "where", "when", "does", "have", "with", "from", "that", "this", "rate", "difference"}
+            matched_insights = [
+                ins for ins in insights
+                if any(w in (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower() for w in q_words)
+            ]
 
         # Never append unrelated insights. Only append insights that share a column with the question
         for ins in matched_insights[:2]:

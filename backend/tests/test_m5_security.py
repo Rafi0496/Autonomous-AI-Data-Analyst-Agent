@@ -10,13 +10,30 @@ from backend.app.models.job import AnalysisJob
 from backend.app.models.schedule import AnalysisSchedule
 from backend.app.models.user import User
 
+@pytest.fixture(autouse=True)
+def enforce_security_isolation():
+    """Ensure all M5 tests run with strict authentication (ALLOW_ANONYMOUS=False)."""
+    orig_anon = settings.ALLOW_ANONYMOUS
+    settings.ALLOW_ANONYMOUS = False
+    yield
+    settings.ALLOW_ANONYMOUS = orig_anon
+
 @pytest.fixture
 def client():
     return TestClient(app)
 
 def test_security_settings_values():
     """Verify security settings meet or exceed M5 specification."""
-    assert settings.ALLOW_ANONYMOUS is False, "ALLOW_ANONYMOUS must be False by default"
+    import os
+    from backend.app.core.config import Settings
+    env_backup = os.environ.pop("ALLOW_ANONYMOUS", None)
+    try:
+        default_cfg = Settings()
+        assert default_cfg.ALLOW_ANONYMOUS is False, "ALLOW_ANONYMOUS must be False by default"
+    finally:
+        if env_backup is not None:
+            os.environ["ALLOW_ANONYMOUS"] = env_backup
+
     assert settings.PBKDF2_ITERATIONS >= 600_000, "PBKDF2 iterations must be >= 600,000"
     assert settings.MIN_PASSWORD_LENGTH >= 8, "Minimum password length must be >= 8"
     assert settings.ALLOWED_EXTENSIONS == [".csv"], "Allowed upload extensions must be CSV only"

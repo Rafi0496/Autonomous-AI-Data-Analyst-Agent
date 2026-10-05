@@ -68,7 +68,7 @@ def run_correlation(
             pair_subset = num_df.loc[~pair_imputed, [col_x, col_y]].dropna()
             
             pair_n_used = int(len(pair_subset))
-            pair_n_excluded = int(pair_imputed.sum())
+            pair_n_excluded = int(len(df) - pair_n_used)
 
             if pair_n_used >= 2:
                 r_val = round(float(pair_subset[col_x].corr(pair_subset[col_y])), 4)

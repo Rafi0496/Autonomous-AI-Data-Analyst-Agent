@@ -40,9 +40,45 @@ def run_playwright_e2e(base_url: str = "http://localhost:3000"):
         page = context.new_page()
 
         try:
+            # 0. Authenticate via backend API and inject token
+            try:
+                import json
+                import urllib.request
+                auth_payload = json.dumps({
+                    "email": "ui_playwright_test@example.com",
+                    "password": "UiPassword123!"
+                }).encode("utf-8")
+                token = None
+                try:
+                    req_reg = urllib.request.Request(
+                        "http://localhost:8000/api/v1/auth/register",
+                        data=auth_payload,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    with urllib.request.urlopen(req_reg, timeout=3) as resp:
+                        token = json.loads(resp.read().decode()).get("access_token")
+                except Exception:
+                    req_login = urllib.request.Request(
+                        "http://localhost:8000/api/v1/auth/login",
+                        data=auth_payload,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    with urllib.request.urlopen(req_login, timeout=3) as resp:
+                        token = json.loads(resp.read().decode()).get("access_token")
+
+                if token:
+                    context.add_init_script(f"""
+                        window.localStorage.setItem('auth_token', '{token}');
+                        window.localStorage.setItem('token', '{token}');
+                    """)
+                    print("      Injected JWT authentication token into browser context.")
+            except Exception as e:
+                print(f"      Auth setup note: {str(e)}")
+
             # 1. Upload Page
             print("\n[1/5] Navigating to Upload page...")
             page.goto(f"{base_url}/upload", timeout=30000, wait_until="networkidle")
+
             time.sleep(3)
             p1 = SCREENSHOTS_DIR / "01_upload_page.png"
             page.screenshot(path=str(p1), full_page=True)

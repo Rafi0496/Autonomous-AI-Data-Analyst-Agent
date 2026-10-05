@@ -42,6 +42,16 @@ def handle_chat_query(
             detail="Authentication required."
         )
 
+    from backend.app.services.chat_service import is_destructive_or_out_of_scope
+    if is_destructive_or_out_of_scope(request.question):
+        return ChatResponse(
+            answer="This request was rejected. The autonomous data analyst is strictly restricted to data analysis tasks.",
+            evidence=[],
+            verification={"is_valid": True},
+            provider="guardrail",
+            tool_calls_used=[]
+        )
+
     job = db.query(AnalysisJob).filter(AnalysisJob.id == request.job_id).first()
     if job:
         if job.user_id and (not current_user or job.user_id != current_user.id):

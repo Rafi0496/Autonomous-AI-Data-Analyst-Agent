@@ -9,6 +9,8 @@ import jwt
 from backend.app.core.config import settings
 
 ALGORITHM = "HS256"
+PBKDF2_ITERATIONS = getattr(settings, "PBKDF2_ITERATIONS", 600_000)
+MIN_PASSWORD_LENGTH = getattr(settings, "MIN_PASSWORD_LENGTH", 8)
 
 def hash_password(password: str) -> str:
     """Hash a plaintext password using PBKDF2 HMAC-SHA256 with per-user salt and >= 600,000 iterations."""

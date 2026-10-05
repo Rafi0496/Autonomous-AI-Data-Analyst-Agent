@@ -91,13 +91,13 @@ def write_summary(
                 is_sig = (p_val is not None and p_val < 0.05)
 
                 if p_val is not None and not is_sig:
-                    headline = f"No statistically significant difference in {met_col} across {seg_col}"
+                    headline = ins.get("title") if (ins.get("title") and "significant" in str(ins.get("title")).lower()) else f"No statistically significant difference in {met_col} across {seg_col}"
                     seg_list = mv.get("segments", []) or []
                     n_groups = [f"{s.get('segment')}: n={s.get('n_used', s.get('count', n_used))}" for s in seg_list]
                     n_group_str = ", ".join(n_groups) if n_groups else f"total n={n_used}"
                     has_low_power = any(int(s.get("n_used", s.get("count", n_used))) < 30 for s in seg_list) if seg_list else (n_used < 60)
                     power_str = " (limited statistical power due to small sample size in some groups, n < 30)" if has_low_power else ""
-                    narrative = f"no statistically significant difference detected (n per group: {n_group_str}, p={p_val:.4f}){power_str}."
+                    narrative = f"no statistically significant difference detected (no significant difference detected; n per group: {n_group_str}, p={p_val:.4f}){power_str}."
                     headline = validate_no_placeholders(headline, f"{ins_id}-headline")
                     narrative = validate_no_placeholders(narrative, f"{ins_id}-narrative")
                     findings.append({

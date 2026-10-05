@@ -102,6 +102,21 @@ def verify_phase3():
     demo_base_dir = BASE_DIR / "data" / "demo_outputs"
     demo_base_dir.mkdir(parents=True, exist_ok=True)
 
+    # Authenticate user
+    reg_resp = client.post("/api/v1/auth/register", json={
+        "email": "verify_phase3_tester@example.com",
+        "password": "VerifyPassword123!"
+    })
+    if reg_resp.status_code == 201:
+        auth_token = reg_resp.json()["access_token"]
+    else:
+        login_resp = client.post("/api/v1/auth/login", json={
+            "email": "verify_phase3_tester@example.com",
+            "password": "VerifyPassword123!"
+        })
+        auth_token = login_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {auth_token}"}
+
     results_summary = {}
 
     for ds_info in SAMPLE_DATASETS:
@@ -123,7 +138,8 @@ def verify_phase3():
         with open(file_path, "rb") as f:
             upload_resp = client.post(
                 "/api/v1/upload",
-                files={"file": (filename, f, "text/csv")}
+                files={"file": (filename, f, "text/csv")},
+                headers=headers
             )
         assert upload_resp.status_code == 201, f"Upload failed: {upload_resp.text}"
         dataset_id = upload_resp.json()["dataset_id"]
@@ -131,9 +147,9 @@ def verify_phase3():
 
         # 2. Clean & Profile
         print("[2/7] Cleaning and profiling dataset...")
-        clean_resp = client.post(f"/api/v1/datasets/{dataset_id}/clean")
+        clean_resp = client.post(f"/api/v1/datasets/{dataset_id}/clean", headers=headers)
         assert clean_resp.status_code == 200, f"Clean failed: {clean_resp.text}"
-        profile_resp = client.post(f"/api/v1/datasets/{dataset_id}/profile")
+        profile_resp = client.post(f"/api/v1/datasets/{dataset_id}/profile", headers=headers)
         assert profile_resp.status_code == 200, f"Profile failed: {profile_resp.text}"
         profile_data = profile_resp.json()
         total_rows = profile_data.get("row_count", 0)
@@ -144,7 +160,8 @@ def verify_phase3():
         t_start = time.perf_counter()
         job_resp = client.post(
             "/api/v1/jobs",
-            json={"dataset_id": dataset_id, "max_steps": 5, "token_budget": 15000}
+            json={"dataset_id": dataset_id, "max_steps": 5, "token_budget": 15000},
+            headers=headers
         )
         assert job_resp.status_code == 202, f"Job submission failed: {job_resp.text}"
         job_id = job_resp.json()["job_id"]
@@ -155,7 +172,8 @@ def verify_phase3():
 
         # 4. Fetch Insights & Invariant Verification
         print("[4/7] Fetching ranked insights and verifying invariants...")
-        insights_resp = client.get(f"/api/v1/jobs/{job_id}/insights")
+        insights_resp = client.get(f"/api/v1/jobs/{job_id}/insights", headers=headers)
+
         if insights_resp.status_code != 200:
             insights_resp = client.get(f"/jobs/{job_id}/insights")
         assert insights_resp.status_code == 200, f"Get insights failed: {insights_resp.text}"
@@ -264,7 +282,8 @@ def verify_phase3():
 
             chat_resp = client.post(
                 "/api/v1/chat",
-                json={"job_id": job_id, "question": q_text, "history": [], "dataset_id": dataset_id}
+                json={"job_id": job_id, "question": q_text, "history": [], "dataset_id": dataset_id},
+                headers=headers
             )
             assert chat_resp.status_code == 200, f"Chat failed: {chat_resp.text}"
             chat_data = chat_resp.json()
@@ -302,24 +321,25 @@ def verify_phase3():
         # 7. Report Generation (PDF & DOCX)
         print("\n[7/7] Generating and validating PDF & DOCX reports...")
         # PDF
-        pdf_gen = client.post(f"/api/v1/jobs/{job_id}/report?format=pdf")
+        pdf_gen = client.post(f"/api/v1/jobs/{job_id}/report?format=pdf", headers=headers)
         assert pdf_gen.status_code == 200, f"PDF report gen failed: {pdf_gen.text}"
         pdf_rep_id = pdf_gen.json()["report_id"]
 
-        pdf_down = client.get(f"/api/v1/reports/{pdf_rep_id}/download")
+        pdf_down = client.get(f"/api/v1/reports/{pdf_rep_id}/download", headers=headers)
         assert pdf_down.status_code == 200, f"PDF download failed: {pdf_down.status_code}"
         pdf_path = out_dir / "report.pdf"
         with open(pdf_path, "wb") as pf:
             pf.write(pdf_down.content)
 
         # DOCX
-        docx_gen = client.post(f"/api/v1/jobs/{job_id}/report?format=docx")
+        docx_gen = client.post(f"/api/v1/jobs/{job_id}/report?format=docx", headers=headers)
         assert docx_gen.status_code == 200, f"DOCX report gen failed: {docx_gen.text}"
         docx_rep_id = docx_gen.json()["report_id"]
 
-        docx_down = client.get(f"/api/v1/reports/{docx_rep_id}/download")
+        docx_down = client.get(f"/api/v1/reports/{docx_rep_id}/download", headers=headers)
         assert docx_down.status_code == 200, f"DOCX download failed: {docx_down.status_code}"
         docx_path = out_dir / "report.docx"
+
         with open(docx_path, "wb") as df:
             df.write(docx_down.content)
 

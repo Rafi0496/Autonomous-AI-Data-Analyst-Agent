@@ -29,6 +29,9 @@ settings.DATABASE_URL = TEST_DATABASE_URL
 settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 settings.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 settings.SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
+# M5.a: ALLOW_ANONYMOUS=false by default (true only via env for tests and demo scripts)
+os.environ.setdefault("ALLOW_ANONYMOUS", "true")
+settings.ALLOW_ANONYMOUS = True
 
 import pytest
 from fastapi.testclient import TestClient
