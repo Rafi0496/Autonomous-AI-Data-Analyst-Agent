@@ -31,6 +31,12 @@ async def upload_dataset_file(
             detail="No file was uploaded."
         )
 
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     # Save to disk with chunked stream and size validation
     dataset_id, file_type, file_path, total_size = await StorageService.save_upload_file(file)
 
@@ -53,11 +59,13 @@ async def upload_dataset_file(
             detail=f"Dataset exceeds maximum supported row count for v1 ({settings.MAX_ROW_COUNT_LIMIT:,} rows). Provided dataset has {row_count:,} rows."
         )
 
+    safe_filename = StorageService.sanitize_filename(file.filename)
+
     # Store metadata in DB (isolated per user if authenticated)
     dataset_record = Dataset(
         id=dataset_id,
         user_id=current_user.id if current_user else None,
-        filename=file.filename,
+        filename=safe_filename,
         file_type=file_type,
         file_path=str(file_path),
         file_size_bytes=total_size,
@@ -65,6 +73,7 @@ async def upload_dataset_file(
         column_count=col_count,
         status=DatasetStatus.UPLOADED.value
     )
+
     db.add(dataset_record)
     db.commit()
     db.refresh(dataset_record)

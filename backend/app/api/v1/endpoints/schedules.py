@@ -5,6 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 from backend.app.api.deps import get_optional_current_user
+from backend.app.core.config import settings
 from backend.app.core.database import get_db
 from backend.app.models.dataset import Dataset
 from backend.app.models.job import AnalysisJob
@@ -56,11 +57,22 @@ def create_schedule(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Create a recurring analysis schedule for a dataset."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     dataset = db.query(Dataset).filter(Dataset.id == req.dataset_id).first()
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Dataset {req.dataset_id} not found."
+        )
+    if dataset.user_id and (not current_user or dataset.user_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this dataset."
         )
 
     next_run = compute_next_run(req.frequency)
@@ -95,6 +107,12 @@ def list_schedules(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """List recurring schedules."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     query = db.query(AnalysisSchedule)
     if current_user:
         query = query.filter(
@@ -124,13 +142,19 @@ def delete_schedule(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Delete a recurring schedule."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     schedule = db.query(AnalysisSchedule).filter(AnalysisSchedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Schedule {schedule_id} not found."
         )
-    if current_user and schedule.user_id and schedule.user_id != current_user.id:
+    if schedule.user_id and (not current_user or schedule.user_id != current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this schedule."
@@ -146,12 +170,24 @@ def trigger_schedule(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Manually trigger immediate execution of a scheduled recurring analysis."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     schedule = db.query(AnalysisSchedule).filter(AnalysisSchedule.id == schedule_id).first()
     if not schedule:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Schedule {schedule_id} not found."
         )
+    if schedule.user_id and (not current_user or schedule.user_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this schedule."
+        )
+
 
     # Create AnalysisJob
     job = AnalysisJob(

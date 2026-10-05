@@ -48,6 +48,22 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user: UserResponse
 
+import time
+from backend.app.core.config import settings
+
+_login_attempts: dict = {}
+
+def check_login_rate_limit(key: str, max_attempts: int = 10, window_seconds: int = 60):
+    now = time.time()
+    attempts = [t for t in _login_attempts.get(key, []) if now - t < window_seconds]
+    if len(attempts) >= max_attempts:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please wait before trying again."
+        )
+    attempts.append(now)
+    _login_attempts[key] = attempts
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(req: UserRegisterRequest, db: Session = Depends(get_db)):
     """Register a new user account with hashed password and return access token."""
@@ -57,10 +73,10 @@ def register(req: UserRegisterRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A user with this email address already exists."
         )
-    if len(req.password) < 6:
+    if len(req.password) < settings.MIN_PASSWORD_LENGTH:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 6 characters long."
+            detail=f"Password must be at least {settings.MIN_PASSWORD_LENGTH} characters long."
         )
     
     new_user = User(
@@ -93,6 +109,7 @@ def register(req: UserRegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login", response_model=TokenResponse)
 def login(req: UserLoginRequest, db: Session = Depends(get_db)):
     """Authenticate user with email and password, returning an access token."""
+    check_login_rate_limit(req.email.lower())
     user = db.query(User).filter(User.email == req.email.lower()).first()
     if not user or not verify_password(req.password, user.hashed_password):
         raise HTTPException(
@@ -110,6 +127,7 @@ def login(req: UserLoginRequest, db: Session = Depends(get_db)):
         subject=user.id,
         extra_claims={"email": user.email}
     )
+
 
     return TokenResponse(
         access_token=token,

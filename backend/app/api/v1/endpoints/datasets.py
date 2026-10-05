@@ -22,6 +22,11 @@ router = APIRouter()
 
 def check_dataset_access(dataset: Dataset, current_user: Optional[User]):
     """Verify that current_user has access to private dataset, allowing shared public/demo datasets."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
     if dataset.user_id and (not current_user or dataset.user_id != current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -36,11 +41,17 @@ def list_datasets(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """List datasets scoped to current authenticated user or public/demo datasets."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
     query = db.query(Dataset)
     if current_user:
         query = query.filter((Dataset.user_id == current_user.id) | (Dataset.user_id == None))
     else:
         query = query.filter(Dataset.user_id == None)
+
         
     datasets = query.order_by(Dataset.created_at.desc()).offset(skip).limit(limit).all()
     return [

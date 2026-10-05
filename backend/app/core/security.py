@@ -1,5 +1,6 @@
 """Security utilities for password hashing and JWT token management."""
 import hashlib
+import hmac
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -10,22 +11,29 @@ from backend.app.core.config import settings
 ALGORITHM = "HS256"
 
 def hash_password(password: str) -> str:
-    """Hash a plaintext password using PBKDF2 HMAC-SHA256 with a unique salt."""
+    """Hash a plaintext password using PBKDF2 HMAC-SHA256 with per-user salt and >= 600,000 iterations."""
     salt = os.urandom(16)
-    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
-    return f"{salt.hex()}${key.hex()}"
+    iterations = getattr(settings, "PBKDF2_ITERATIONS", 600_000)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+    return f"{salt.hex()}${iterations}${key.hex()}"
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plaintext password against a stored salt$hash string."""
+    """Verify a plaintext password against a stored hash using hmac.compare_digest."""
     try:
         parts = hashed_password.split("$")
-        if len(parts) != 2:
+        if len(parts) == 3:
+            salt_hex, iter_str, key_hex = parts
+            iterations = int(iter_str)
+        elif len(parts) == 2:
+            salt_hex, key_hex = parts
+            iterations = 100_000  # legacy hash support
+        else:
             return False
-        salt_hex, key_hex = parts
+            
         salt = bytes.fromhex(salt_hex)
         expected_key = bytes.fromhex(key_hex)
-        actual_key = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt, 100_000)
-        return secrets.compare_digest(actual_key, expected_key)
+        actual_key = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt, iterations)
+        return hmac.compare_digest(actual_key, expected_key)
     except Exception:
         return False
 
@@ -58,3 +66,4 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
         return payload
     except (jwt.PyJWTError, Exception):
         return None
+

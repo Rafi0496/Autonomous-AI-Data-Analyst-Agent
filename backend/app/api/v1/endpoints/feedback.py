@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 from backend.app.api.deps import get_optional_current_user
+from backend.app.core.config import settings
 from backend.app.core.database import get_db
 from backend.app.models.feedback import InsightFeedback
 from backend.app.models.job import AnalysisJob
@@ -49,11 +50,21 @@ def submit_insight_feedback(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Submit rating and optional feedback for an analysis insight."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
     job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Analysis job {job_id} not found."
+        )
+    if job.user_id and (not current_user or job.user_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this analysis job."
         )
 
     feedback = InsightFeedback(
@@ -81,9 +92,27 @@ def submit_insight_feedback(
 def get_insight_feedback(
     job_id: str,
     insight_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Retrieve all feedbacks and summary ratings for an insight."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+    job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first()
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis job {job_id} not found."
+        )
+    if job.user_id and (not current_user or job.user_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this analysis job."
+        )
+
     items = db.query(InsightFeedback).filter(
         InsightFeedback.job_id == job_id,
         InsightFeedback.insight_id == insight_id

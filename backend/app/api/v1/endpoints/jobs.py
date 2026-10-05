@@ -3,6 +3,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, s
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from backend.app.api.deps import get_optional_current_user
+from backend.app.core.config import settings
 from backend.app.core.database import get_db
 from backend.app.models.dataset import Dataset
 from backend.app.models.job import AnalysisJob
@@ -13,6 +14,11 @@ router = APIRouter()
 
 def check_job_access(job: AnalysisJob, current_user: Optional[User]):
     """Verify that current_user has access to private job, allowing shared public/demo jobs."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
     if job.user_id and (not current_user or job.user_id != current_user.id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -53,6 +59,12 @@ def submit_analysis_job(
     Submit an autonomous analysis job.
     Dispatches via Celery worker if available; falls back to BackgroundTasks if broker is unreachable.
     """
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
+
     # 1. Verify dataset exists and check permissions
     ds = db.query(Dataset).filter(Dataset.id == req.dataset_id).first()
     if not ds:
@@ -137,11 +149,17 @@ def list_analysis_jobs(
     current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     """Retrieve list of recent analysis jobs scoped to user or public demo jobs."""
+    if not settings.ALLOW_ANONYMOUS and not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required."
+        )
     query = db.query(AnalysisJob)
     if current_user:
         query = query.filter((AnalysisJob.user_id == current_user.id) | (AnalysisJob.user_id == None))
     else:
         query = query.filter(AnalysisJob.user_id == None)
+
         
     if dataset_id:
         query = query.filter(AnalysisJob.dataset_id == dataset_id)
@@ -262,4 +280,5 @@ def create_job_report(
     check_job_access(job, current_user)
 
     from backend.app.api.v1.endpoints.reports import generate_report_for_job
-    return generate_report_for_job(job_id=job_id, format=format, db=db)
+    return generate_report_for_job(job_id=job_id, format=format, db=db, current_user=current_user)
+
