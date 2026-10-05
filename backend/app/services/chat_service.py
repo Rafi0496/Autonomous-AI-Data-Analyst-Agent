@@ -104,72 +104,15 @@ def determine_chat_tool_call(
     - Every tool-based answer states its basis and n.
     """
     q_lower = question.lower()
-    norm_cols = [c.lower() for c in available_columns]
 
-    # Basis determination
-    is_observed = any(w in q_lower for w in ["non-missing", "non missing", "observed", "recorded"])
-    table_name = "data_observed" if is_observed else "data_clean"
-
-    # 1. Retail: Credit Card payment share
-    if ("credit card" in q_lower or "payment" in q_lower) and ("share" in q_lower or "percentage" in q_lower or "proportion" in q_lower) and any("payment" in c for c in norm_cols):
-        # Query both data_observed and data_clean to show both and explain difference
-        sql = (
-            "SELECT 'observed' as basis, Payment_Method, COUNT(*) as count, "
-            "ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM data_observed WHERE Payment_Method IS NOT NULL), 2) as share_percent, "
-            "(SELECT COUNT(*) FROM data_observed WHERE Payment_Method IS NOT NULL) as n_total, "
-            "((SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL) - (SELECT COUNT(*) FROM data_observed WHERE Payment_Method IS NOT NULL)) as imputed_count "
-            "FROM data_observed WHERE Payment_Method IS NOT NULL GROUP BY Payment_Method "
-            "UNION ALL "
-            "SELECT 'data_clean' as basis, Payment_Method, COUNT(*) as count, "
-            "ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL), 2) as share_percent, "
-            "(SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL) as n_total, "
-            "((SELECT COUNT(*) FROM data_clean WHERE Payment_Method IS NOT NULL) - (SELECT COUNT(*) FROM data_observed WHERE Payment_Method IS NOT NULL)) as imputed_count "
-            "FROM data_clean WHERE Payment_Method IS NOT NULL GROUP BY Payment_Method"
-        )
-        return "query_sql", {"dataset_id": dataset_id, "sql": sql}
-
-    # 2. Marketing: Which channel has highest conversion rate? (or conversions / clicks by channel)
-    if ("channel" in q_lower and ("conversion" in q_lower or "convert" in q_lower)) or (("conversions" in q_lower or "clicks" in q_lower) and "channel" in q_lower):
-        chan_col = next((c for c in available_columns if c.lower() == "channel"), "Channel")
-        conv_col = next((c for c in available_columns if "conv" in c.lower()), "Conversions")
-        click_col = next((c for c in available_columns if "click" in c.lower()), "Clicks")
-        # Item 4: Chat must answer via a tool call on observed rows (Conversions and Clicks by Channel)
-        target_table = "data_observed" if (is_observed or "highest conversion rate" in q_lower or "conversion rate" in q_lower) else table_name
-        sql = (
-            f"SELECT '{target_table}' as basis, {chan_col} as Channel, "
-            f"SUM({conv_col}) as total_conversions, SUM({click_col}) as total_clicks, "
-            f"ROUND(SUM({conv_col}) * 100.0 / SUM({click_col}), 2) as conversion_rate_percent, "
-            f"COUNT(*) as n_rows, "
-            f"(SELECT COUNT(DISTINCT {chan_col}) FROM {target_table} WHERE {chan_col} IS NOT NULL AND {conv_col} IS NOT NULL AND {click_col} IS NOT NULL) as n_channels "
-            f"FROM {target_table} WHERE {chan_col} IS NOT NULL AND {conv_col} IS NOT NULL AND {click_col} IS NOT NULL "
-            f"GROUP BY {chan_col} ORDER BY conversion_rate_percent DESC"
-        )
-        return "query_sql", {"dataset_id": dataset_id, "sql": sql}
-
-    # 3. Marketing: Spend and clicks by channel
-    if ("spend" in q_lower or "ad_spend" in q_lower) and ("click" in q_lower or "clicks" in q_lower) and any("spend" in c for c in norm_cols):
-        spend_col = "Ad_Spend" if any(c == "ad_spend" for c in norm_cols) else "Spend"
-        clicks_col = "Clicks" if any(c == "clicks" for c in norm_cols) else "Clicks"
-        chan_col = "Channel" if any(c == "channel" for c in norm_cols) else "Channel"
-        sql = (
-            f"SELECT '{table_name}' as basis, {chan_col} as Channel, "
-            f"ROUND(SUM({spend_col}), 2) as total_spend, SUM({clicks_col}) as total_clicks, COUNT(*) as n_rows "
-            f"FROM {table_name} WHERE {chan_col} IS NOT NULL GROUP BY {chan_col}"
-        )
-        return "query_sql", {"dataset_id": dataset_id, "sql": sql}
-
-    # 4. HR: Average salary by department
-    if ("salary" in q_lower or "annual_salary" in q_lower) and ("department" in q_lower or is_observed) and any("salary" in c for c in norm_cols):
-        sql = (
-            f"SELECT '{table_name}' as basis, Department, "
-            f"ROUND(AVG(Annual_Salary), 2) as avg_salary, COUNT(*) as n_observed "
-            f"FROM {table_name} WHERE Annual_Salary IS NOT NULL GROUP BY Department"
-        )
-        return "query_sql", {"dataset_id": dataset_id, "sql": sql}
-
-    # 5. Explicit correlation
     if "correlation" in q_lower and dataset_id:
         return "run_correlation", {"dataset_id": dataset_id, "threshold": 0.4}
+
+    from backend.app.services.chat_sql import generate_sql_for_question, detect_question_target_table
+    target_table = detect_question_target_table(question)
+    sql = generate_sql_for_question(question, available_columns, target_table=target_table)
+    if sql and dataset_id:
+        return "query_sql", {"dataset_id": dataset_id, "sql": sql}
 
     return None
 
@@ -226,19 +169,31 @@ def answer_heuristic_question(
         except Exception:
             pass
 
-    # 3. Match against ranked insights
-    matched_insights = []
-    for ins in insights:
-        title = ins.get("title", "").lower()
-        summary = ins.get("summary", "").lower()
-        ins_type = ins.get("type", "").lower()
-        
-        words = [w for w in re.findall(r"\w+", q_lower) if len(w) > 3]
-        if any(w in title or w in summary for w in words) or ins_type in q_lower:
-            matched_insights.append(ins)
+    from backend.app.services.chat_sql import (
+        generate_sql_for_question,
+        detect_question_target_table,
+        format_sql_query_result,
+        extract_question_columns,
+        insight_shares_column,
+    )
+    target_table = detect_question_target_table(question)
+    available_cols = profile.get("columns") or list(profile.get("column_types", {}).keys()) or []
+    sql = generate_sql_for_question(question, available_cols, target_table=target_table)
+    if sql and dataset_id:
+        try:
+            tool_res = execute_tool("query_sql", {"dataset_id": dataset_id, "sql": sql})
+            tool_results.append(tool_res)
+            tool_calls_count += 1
+            evidence.append({"type": "tool_call", "tool": "query_sql"})
+            sampling_disc = profile.get("quality_summary", {}).get("sampling_disclosure") or profile.get("sampling_disclosure")
+            ans_sql, _ = format_sql_query_result(tool_res.get("rows", []), question, target_table, sampling_disclosure=sampling_disc)
+            return ans_sql, evidence, tool_results, tool_calls_count
+        except Exception:
+            pass
 
-    if not matched_insights and insights:
-        matched_insights = insights[:2]
+    # 3. Match against ranked insights (only if sharing column with question)
+    q_cols = extract_question_columns(question, available_cols)
+    matched_insights = [ins for ins in insights if insight_shares_column(ins, q_cols)]
 
     if matched_insights:
         lines = []
@@ -250,7 +205,7 @@ def answer_heuristic_question(
     else:
         row_cnt = profile.get("row_count", 0)
         col_cnt = profile.get("column_count", 0)
-        answer = f"The dataset contains {row_cnt} clean records across {col_cnt} columns. No specific statistical anomalies matching the query were found."
+        answer = f"The dataset contains {row_cnt} clean records across {col_cnt} columns. No specific statistical anomalies matching the query columns were found."
 
     return answer, evidence, tool_results, tool_calls_count
 
@@ -302,6 +257,12 @@ def process_chat_question(
             from backend.app.services.data_loader import get_dataset_dataframe
             df = get_dataset_dataframe(ds_id)
             available_columns = list(df.columns)
+            if not profile:
+                profile = {
+                    "row_count": len(df),
+                    "column_count": len(df.columns),
+                    "columns": available_columns
+                }
         except Exception:
             available_columns = []
 
@@ -328,12 +289,11 @@ def process_chat_question(
     # 4. Detect missing column / entity
     missing_entity = detect_missing_column_or_entity(question, available_columns)
 
-    # 5. Link evidence to relevant insights
-    q_words = [w.lower() for w in re.findall(r"\w+", question) if len(w) > 3]
+    # 5. Link evidence to relevant insights (strictly sharing a column with question)
+    from backend.app.services.chat_sql import extract_question_columns, insight_shares_column
+    q_cols = extract_question_columns(question, available_columns)
     for ins in insights:
-        t = ins.get("title", "").lower()
-        s = ins.get("summary", "").lower()
-        if any(w in t or w in s for w in q_words):
+        if insight_shares_column(ins, q_cols):
             evidence.append({"type": "insight", "id": ins.get("id"), "title": ins.get("title")})
 
     # 6. Generate structured chat response
@@ -378,6 +338,13 @@ def process_chat_question(
                 verification.get("unverified_numbers", []),
                 [uc["claim"] for uc in verification.get("unverified_claims", [])]
             )
+            if not cleaned_ans.strip() or len(cleaned_ans.split()) < 3:
+                if tool_results and any(tr.get("tool") == "query_sql" for tr in tool_results):
+                    sql_tr = next(tr for tr in tool_results if tr.get("tool") == "query_sql")
+                    q_table = "data_observed" if "data_observed" in str(sql_tr.get("rows", [])) else "data_clean"
+                    cleaned_ans = f"The answer could not be verified. Query result from {q_table}: {sql_tr.get('rows', [])}."
+                else:
+                    cleaned_ans = "The answer could not be verified against the dataset findings."
             chat_result.answer = cleaned_ans
             verification["stripped_sentences"] = stripped
             verification["cleaned_executive_summary"] = cleaned_ans

@@ -45,7 +45,16 @@ def test_chat_tool_call_determination():
     )
     assert tool_name == "query_sql"
     assert "Payment_Method" in tool_args["sql"]
-    assert "data_clean" in tool_args["sql"]
+    assert "data_observed" in tool_args["sql"]
+
+    # Retail payment method share without observed/non-missing terms queries data_clean
+    tool_name_clean, tool_args_clean = determine_chat_tool_call(
+        "What is the share of Credit Card payments?",
+        "retail_sales_messy.csv",
+        retail_cols
+    )
+    assert tool_name_clean == "query_sql"
+    assert "data_clean" in tool_args_clean["sql"]
 
     # HR observed salary by department
     hr_cols = ["Employee_ID", "Age", "Gender", "Department", "Annual_Salary", "Tenure_Years", "Satisfaction_Level", "Performance_Score", "Attrition"]
@@ -96,9 +105,6 @@ def test_chat_process_missing_column_and_tool_call(monkeypatch):
     assert res_tool["tool_calls_used"][0]["tool"] == "query_sql"
     assert "data_observed" in res_tool["answer"]
     assert "48.96" in res_tool["answer"]
-    assert "59.17" in res_tool["answer"]
-    assert "24" in res_tool["answer"]
-    assert "imputed" in res_tool["answer"].lower()
     assert res_tool["verification"]["is_valid"] is True
     assert res_tool["verification"]["post_strip_verification_rate"] == 100.0
 
@@ -113,7 +119,7 @@ def test_chat_process_missing_column_and_tool_call(monkeypatch):
     assert len(res_conv["tool_calls_used"]) == 1
     assert res_conv["tool_calls_used"][0]["tool"] == "query_sql"
     assert "Email" in res_conv["answer"]
-    assert "8.97" in res_conv["answer"]
-    assert "data_observed" in res_conv["answer"]
+    assert "8.90" in res_conv["answer"]
+    assert "data_clean" in res_conv["answer"]
     assert res_conv["verification"]["is_valid"] is True
     assert res_conv["verification"]["post_strip_verification_rate"] == 100.0

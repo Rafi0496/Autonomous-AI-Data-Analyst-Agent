@@ -17,7 +17,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Union
 
 from backend.app.core.config import settings
-from backend.app.services.summary import write_summary
 from backend.app.services.tool_catalogue import (
     get_canonical_tools,
     get_tools_for_claude,
@@ -422,99 +421,23 @@ class HeuristicClient(LLMClient):
         if tool_results:
             for tr in tool_results:
                 if tr.get("tool") == "query_sql" and tr.get("rows"):
-                    rows = tr["rows"]
-                    # 1. Retail: Credit Card payment share dual observed vs clean answer
-                    if any("Payment_Method" in r for r in rows):
-                        obs_cc = next((r for r in rows if r.get("basis") == "observed" and r.get("Payment_Method") == "Credit Card"), None)
-                        clean_cc = next((r for r in rows if r.get("basis") == "data_clean" and r.get("Payment_Method") == "Credit Card"), None)
-                        if obs_cc and clean_cc:
-                            obs_share = float(obs_cc.get("share_percent", 0))
-                            obs_cnt = int(obs_cc.get("count", 0))
-                            obs_total = int(obs_cc.get("n_total", 96))
-                            clean_share = float(clean_cc.get("share_percent", 0))
-                            clean_cnt = int(clean_cc.get("count", 0))
-                            clean_total = int(clean_cc.get("n_total", 120))
-                            diff_imputed = clean_cnt - obs_cnt
-
-                            ans = (
-                                f"Among non-missing Payment_Method records on basis data_observed (n={obs_total}), Credit Card payments account for {obs_share:.2f}% ({obs_cnt} rows). "
-                                f"Across the full dataset on basis data_clean (n={clean_total}), Credit Card payments represent {clean_share:.2f}% ({clean_cnt} rows). "
-                                f"The difference is explained by {diff_imputed} rows with missing Payment_Method that were imputed with the mode ('Credit Card') during cleaning."
-                            )
-                            answer_parts.append(ans)
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": "observed_Credit_Card_share_percent", "value": obs_share, "unit": "%"})
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": "clean_Credit_Card_share_percent", "value": clean_share, "unit": "%"})
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": "observed_Credit_Card_count", "value": float(obs_cnt), "unit": "count"})
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": "clean_Credit_Card_count", "value": float(clean_cnt), "unit": "count"})
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": "observed_Credit_Card_n_total", "value": float(obs_total), "unit": "count"})
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": "clean_Credit_Card_n_total", "value": float(clean_total), "unit": "count"})
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": "observed_Credit_Card_imputed_count", "value": float(diff_imputed), "unit": "count"})
-                            continue
-
-                    # 2. Marketing: Which channel has highest conversion rate
-                    if any("conversion_rate_percent" in r and "Channel" in r for r in rows):
-                        top_row = rows[0]
-                        top_ch = top_row.get("Channel")
-                        top_rate = float(top_row.get("conversion_rate_percent", 0.0))
-                        top_conv = float(top_row.get("total_conversions", 0.0))
-                        top_clicks = float(top_row.get("total_clicks", 0.0))
-                        basis = top_row.get("basis", "data_observed")
-
-                        ans = (
-                            f"Based on {basis} (n={len(rows)} channels evaluated across observed non-missing records), "
-                            f"'{top_ch}' achieved the highest conversion rate at {top_rate:.2f}% ({int(top_conv)} conversions from {int(top_clicks):,} clicks). "
-                        )
-                        comps = []
-                        for r in rows[1:]:
-                            comps.append(f"{r.get('Channel')}: {r.get('conversion_rate_percent'):.2f}% ({int(r.get('total_conversions', 0))} conversions, {int(r.get('total_clicks', 0)):,} clicks)")
-                        if comps:
-                            ans += f"Other channels recorded: {'; '.join(comps)}."
-                        answer_parts.append(ans)
-                        claims.append({"text": ans, "source_id": "query_sql", "metric_key": f"{top_ch}_conversion_rate_percent", "value": top_rate, "unit": "%"})
-                        claims.append({"text": ans, "source_id": "query_sql", "metric_key": f"{top_ch}_total_conversions", "value": top_conv, "unit": "count"})
-                        claims.append({"text": ans, "source_id": "query_sql", "metric_key": f"{top_ch}_total_clicks", "value": top_clicks, "unit": "count"})
-                        n_ch = float(top_row.get("n_channels") or len(rows))
-                        claims.append({"text": ans, "source_id": "query_sql", "metric_key": f"{top_ch}_n_channels", "value": n_ch, "unit": "count"})
-                        for r in rows[1:]:
-                            c_ch = r.get("Channel")
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": f"{c_ch}_conversion_rate_percent", "value": float(r.get("conversion_rate_percent", 0.0)), "unit": "%"})
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": f"{c_ch}_total_conversions", "value": float(r.get("total_conversions", 0.0)), "unit": "count"})
-                            claims.append({"text": ans, "source_id": "query_sql", "metric_key": f"{c_ch}_total_clicks", "value": float(r.get("total_clicks", 0.0)), "unit": "count"})
-                        continue
-
-                    # 3. Generic query_sql results
-                    basis = rows[0].get("basis", "data_clean") if rows else "data_clean"
-                    row_strs = []
-                    for r in rows:
-                        items_str = ", ".join(f"{k}: {v}" for k, v in r.items() if k != "basis")
-                        row_strs.append(f"({items_str})")
-                        seg = r.get("Department") or r.get("Channel") or r.get("Region") or "metric"
-                        for k, v in r.items():
-                            if isinstance(v, (int, float)) and not isinstance(v, bool):
-                                claims.append({
-                                    "text": f"{seg} {k} is {v}",
-                                    "source_id": "query_sql",
-                                    "metric_key": f"{seg}_{k}" if seg != "metric" else k,
-                                    "value": float(v),
-                                    "unit": "%" if "percent" in k or "share" in k else ("USD" if "spend" in k or "salary" in k else "count")
-                                })
-                    answer_parts.append(f"Based on {basis} (n={len(rows)} records analyzed): {'; '.join(row_strs)}.")
+                    from backend.app.services.chat_sql import format_sql_query_result, detect_question_target_table
+                    target_table = detect_question_target_table(question)
+                    sampling_disc = profile.get("quality_summary", {}).get("sampling_disclosure") or profile.get("sampling_disclosure")
+                    ans_text, ans_claims = format_sql_query_result(tr["rows"], question, target_table, sampling_disclosure=sampling_disc)
+                    answer_parts.append(ans_text)
+                    claims.extend(ans_claims)
                 elif tr.get("tool") == "run_correlation" and tr.get("correlations"):
                     corrs = tr["correlations"]
                     corr_strs = [f"{c['col1']} and {c['col2']} (r={c['pearson']})" for c in corrs[:3]]
                     answer_parts.append(f"Correlation analysis shows: {'; '.join(corr_strs)}.")
 
-        matched = []
-        words = [w for w in re.findall(r"\w+", q_lower) if len(w) > 3]
-        for ins in insights:
-            t = ins.get("title", "").lower()
-            s = ins.get("summary", "").lower()
-            if any(w in t or w in s for w in words):
-                matched.append(ins)
-        if not matched and insights and not tool_results:
-            matched = insights[:2]
+        from backend.app.services.chat_sql import extract_question_columns, insight_shares_column
+        question_cols = extract_question_columns(question, available_columns)
+        matched_insights = [ins for ins in insights if insight_shares_column(ins, question_cols)]
 
-        for ins in matched[:2]:
+        # Never append unrelated insights. Only append insights that share a column with the question
+        for ins in matched_insights[:2]:
             ins_id = ins.get("id", "insight")
             summary = ins.get("summary", "")
             title = ins.get("title", "")
@@ -537,19 +460,8 @@ class HeuristicClient(LLMClient):
                 })
 
         if not answer_parts:
-            row_count = profile.get("row_count", 0)
-            col_count = profile.get("column_count", len(available_columns))
-            answer_parts.append(
-                f"The dataset contains {row_count} records across {col_count} columns. "
-                "No specific anomalies matching the query were found."
-            )
-            claims.append({
-                "text": f"The dataset contains {row_count} records",
-                "source_id": "profile",
-                "metric_key": "row_count",
-                "value": float(row_count),
-                "unit": "rows"
-            })
+            if not missing_entity:
+                answer_parts.append("No specific statistical anomalies matching the query columns were found.")
 
         answer = " ".join(answer_parts)
         latency = time.perf_counter() - t0

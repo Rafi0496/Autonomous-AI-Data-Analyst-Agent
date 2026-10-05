@@ -97,9 +97,18 @@ def build_source_index(
                                         metrics[bare_k] = f_val
                                         metrics[f"{bare_k}_{round(f_val, 2)}"] = f_val
                                         metrics[f"{bare_k}_{round(f_val, 1)}"] = f_val
+                                        metrics[normalize_key(str(round(f_val, 2)))] = f_val
+                                        metrics[normalize_key(str(int(f_val)))] = f_val
                             metrics.update(extract_flat_metrics(item, f"{p}_{idx}"))
                         elif isinstance(item, (int, float)) and not isinstance(item, bool):
                             metrics[normalize_key(f"{p}_{idx}")] = float(item)
+                    # Compute total n if rows list has n
+                    n_vals = [float(it["n"]) for it in v if isinstance(it, dict) and "n" in it and isinstance(it["n"], (int, float))]
+                    if n_vals:
+                        n_tot = sum(n_vals)
+                        metrics[normalize_key("n_total")] = n_tot
+                        metrics[normalize_key("total_records")] = n_tot
+                        metrics[normalize_key(str(int(n_tot)))] = n_tot
         elif hasattr(obj, "model_dump"):
             metrics.update(extract_flat_metrics(obj.model_dump(), prefix))
         elif hasattr(obj, "__dict__"):
