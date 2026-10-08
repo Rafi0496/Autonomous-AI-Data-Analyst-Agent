@@ -103,16 +103,106 @@ def extract_question_columns(question: str, available_columns: List[str]) -> Lis
     return matched_cols
 
 
-def insight_shares_column(ins: Dict[str, Any], question_cols: List[str]) -> bool:
-    """Check if an insight references any of the columns in question_cols."""
+SEGMENT_COLUMNS = {
+    "department", "channel", "region", "branch", "category", "payment_method",
+    "gender", "job_role", "education_field", "marital_status", "device", "location",
+    "country", "city", "state", "segment", "product"
+}
+
+
+def is_segment_column(col_name: str) -> bool:
+    return str(col_name).strip().lower() in SEGMENT_COLUMNS
+
+
+def get_insight_metric_columns(ins: Dict[str, Any]) -> List[str]:
+    """Extract metric/measured columns from an insight."""
+    mv = ins.get("metric_values") or {}
+    metrics = []
+
+    if mv.get("metric_column"):
+        metrics.append(str(mv["metric_column"]))
+    if mv.get("target"):
+        metrics.append(str(mv["target"]))
+    if mv.get("value_column"):
+        metrics.append(str(mv["value_column"]))
+    if mv.get("column"):
+        col = str(mv["column"])
+        if not is_segment_column(col):
+            metrics.append(col)
+
+    # Check id convention
+    ins_id = ins.get("id", "")
+    if ins_id.startswith("insight-seg-"):
+        parts = ins_id.replace("insight-seg-", "").split("-")
+        if len(parts) >= 2 and not is_segment_column(parts[1]):
+            metrics.append(parts[1])
+    elif "trend-" in ins_id:
+        parts = ins_id.split("trend-")
+        if len(parts) >= 2:
+            metrics.append(parts[1])
+
+    # Fallback to columns list (filter out segment columns)
+    cols = ins.get("columns", []) or []
+    if isinstance(cols, str):
+        cols = [cols]
+    for c in cols:
+        sc = str(c)
+        if not is_segment_column(sc) and sc not in metrics:
+            metrics.append(sc)
+
+    return list(dict.fromkeys(metrics))
+
+
+def insight_shares_column(ins: Dict[str, Any], question_cols: List[str], question: Optional[str] = None) -> bool:
+    """
+    Check if an insight is relevant to the question.
+    CRITICAL: Include an insight only if it shares the question's METRIC column.
+    Sharing a segment column is NOT enough.
+    """
     if not question_cols:
         return False
+
+    # Identify metric columns in the question
+    question_metric_cols = [c for c in question_cols if not is_segment_column(c)]
+    if question:
+        q_lower = question.lower()
+        if any(k in q_lower for k in ["attrition", "turnover", "churn"]):
+            if "Attrition" not in question_metric_cols:
+                question_metric_cols.append("Attrition")
+        if any(k in q_lower for k in ["trend", "sales", "revenue"]):
+            for cand in ["Quantity", "Total_Amount", "sales", "revenue"]:
+                if cand not in question_metric_cols:
+                    question_metric_cols.append(cand)
+
+    # Get metric columns of the insight
+    ins_metric_cols = get_insight_metric_columns(ins)
+
+    # If the question specifies a metric column, insight MUST share that metric column
+    if question_metric_cols:
+        if ins_metric_cols:
+            matches_metric = any(
+                qm.lower() in [im.lower() for im in ins_metric_cols] or
+                any(qm.lower() in im.lower() or im.lower() in qm.lower() for im in ins_metric_cols)
+                for qm in question_metric_cols
+            )
+            if matches_metric:
+                return True
+        # Also check if question metric appears explicitly in title or summary
+        ins_text = (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower()
+        if any(re.search(rf"\b{re.escape(qm.lower())}\b", ins_text) for qm in question_metric_cols):
+            return True
+        # If question has a metric column, sharing a segment column is NOT enough
+        return False
+
+    # If the question does NOT specify any metric column (e.g., 'What is the breakdown of Region?'):
+    # Then allow matching segment column
     ins_cols = ins.get("columns", []) or []
     if isinstance(ins_cols, str):
         ins_cols = [ins_cols]
     col = ins.get("column")
     if col and col not in ins_cols:
         ins_cols.append(col)
+    ins_cols.extend(ins_metric_cols)
 
     ins_text = (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower()
     return any(c.lower() in [ic.lower() for ic in ins_cols] for c in question_cols) or \

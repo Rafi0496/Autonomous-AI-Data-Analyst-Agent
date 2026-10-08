@@ -65,10 +65,14 @@ def test_unseen_questions_pandas_verification(db_session, monkeypatch):
         assert f"{exp_salary:,.2f}" in res1["answer"] or f"{exp_salary:.2f}" in res1["answer"]
     assert res1["verification"]["is_valid"] is True
 
-    # 2. Marketing: "total ad spend and total clicks by channel" -> data_clean
+    # 2. Marketing: "total ad spend and total clicks by channel" -> defaults to data_observed (numeric aggregates)
     mkt_clean = get_dataset_dataframe("marketing_campaign_messy.csv", prefer_cleaned=True)
-    expected_spend = mkt_clean.groupby("Channel")["Ad_Spend"].sum().round(2).to_dict()
-    expected_clicks = mkt_clean.groupby("Channel")["Clicks"].sum().round(2).to_dict()
+    mask_sp = get_column_imputed_mask(mkt_clean, "Ad_Spend")
+    mask_cl = get_column_imputed_mask(mkt_clean, "Clicks")
+    mkt_obs = mkt_clean[~mask_sp & ~mask_cl] if (mask_sp.any() or mask_cl.any()) else mkt_clean
+    mkt_valid = mkt_obs[mkt_obs["Channel"].notna() & mkt_obs["Ad_Spend"].notna() & mkt_obs["Clicks"].notna()]
+    expected_spend = mkt_valid.groupby("Channel")["Ad_Spend"].sum().round(2).to_dict()
+    expected_clicks = mkt_valid.groupby("Channel")["Clicks"].sum().round(2).to_dict()
 
     res2 = process_chat_question(
         db=db_session,
@@ -76,7 +80,7 @@ def test_unseen_questions_pandas_verification(db_session, monkeypatch):
         question="total ad spend and total clicks by channel",
         dataset_id="marketing_campaign_messy.csv"
     )
-    mkt_valid = mkt_clean[mkt_clean["Channel"].notna() & mkt_clean["Ad_Spend"].notna() & mkt_clean["Clicks"].notna()]
+    assert "data_observed" in res2["answer"]
     assert f"n={len(mkt_valid)}" in res2["answer"]
     for ch, exp_sp in expected_spend.items():
         assert f"{exp_sp:,.2f}" in res2["answer"] or f"{exp_sp:.2f}" in res2["answer"]
@@ -196,3 +200,67 @@ def test_stripped_claims_fallback(db_session, monkeypatch):
     assert "could not be verified" in res["answer"].lower()
     assert "999999" not in res["answer"]
     assert "Query result from" in res["answer"] or "data_clean" in res["answer"]
+
+
+def test_insight_shares_metric_column_strictness():
+    """Verify that an insight is included only if it shares the question's METRIC column."""
+    hr_cols = ["Employee_ID", "Age", "Gender", "Department", "Annual_Salary", "Tenure_Years", "Satisfaction_Level", "Performance_Score", "Attrition"]
+    q_att = "Which department has the highest employee attrition rate and is the difference statistically significant?"
+    q_cols = extract_question_columns(q_att, hr_cols)
+
+    salary_insight = {
+        "id": "insight-seg-Department-Annual_Salary",
+        "title": "Difference in Annual_Salary across Department",
+        "summary": "Average salary varies across departments.",
+        "metric_values": {"segment_column": "Department", "metric_column": "Annual_Salary"},
+        "columns": ["Department", "Annual_Salary"]
+    }
+    # Sharing only Department (segment column) must NOT match
+    assert not insight_shares_column(salary_insight, q_cols, question=q_att)
+
+    attrition_insight = {
+        "id": "insight-seg-Department-Attrition",
+        "title": "Difference in Attrition across Department",
+        "summary": "Attrition rate varies across departments.",
+        "metric_values": {"segment_column": "Department", "metric_column": "Attrition"},
+        "columns": ["Department", "Attrition"]
+    }
+    # Sharing Attrition (metric column) MUST match
+    assert insight_shares_column(attrition_insight, q_cols, question=q_att)
+
+
+def test_a3_retail_trend_and_hr_highest_attrition(db_session, monkeypatch):
+    """Verify A3 direct answers for Retail trend (suppression explanation) and HR attrition (Marketing highest + significance caveat)."""
+    monkeypatch.setenv("LLM_PROVIDER", "heuristic")
+
+    # Retail trend: says what was checked and why no trend is available (suppressed rule exclusion_rate > 0.5)
+    res_retail = process_chat_question(
+        db=db_session,
+        job_id="",
+        question="What is the overall trend in monthly retail sales and is it statistically significant?",
+        dataset_id="retail_sales_messy.csv"
+    )
+    ans_retail = res_retail["answer"]
+    assert "Quantity" in ans_retail
+    assert "Date" in ans_retail or "monthly" in ans_retail.lower()
+    assert "exclusion_rate > 0.5" in ans_retail
+    assert "65.0" in ans_retail
+    assert "42" in ans_retail
+    assert "120" in ans_retail
+    assert res_retail["verification"]["is_valid"] is True
+
+    # HR highest attrition: names Marketing, rate 68.18%, n=22, significance caveat p=0.2947
+    res_hr = process_chat_question(
+        db=db_session,
+        job_id="",
+        question="Which department has the highest employee attrition rate and is the difference statistically significant?",
+        dataset_id="hr_attrition_messy.csv"
+    )
+    ans_hr = res_hr["answer"]
+    assert "Marketing" in ans_hr
+    assert "68.18" in ans_hr
+    assert "22" in ans_hr
+    assert "0.2947" in ans_hr
+    assert "not statistically significant" in ans_hr.lower()
+    assert res_hr["verification"]["is_valid"] is True
+

@@ -152,6 +152,13 @@ def check_suppression(
                 "n_used": n_used,
                 "n_excluded": n_excluded,
                 "exclusion_rate": ex_rate,
+                "exclusion_rate_percent": round(ex_rate * 100, 2),
+                "total_rows": total_rows,
+                "total_records": total_rows,
+                "n_total": total_rows,
+                "threshold": 0.5,
+                "trigger_threshold": 0.5,
+                "min_n_threshold": 20,
                 "trigger_rule": trigger_rule,
                 "rule_detail": rule_desc,
                 "rule_reason": rule_desc

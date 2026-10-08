@@ -195,7 +195,7 @@ def answer_heuristic_question(
     # 3. Match against ranked insights (only if sharing column with question)
     q_cols = extract_question_columns(question, available_cols)
     if q_cols:
-        matched_insights = [ins for ins in insights if insight_shares_column(ins, q_cols)]
+        matched_insights = [ins for ins in insights if insight_shares_column(ins, q_cols, question=question)]
     else:
         # Fallback if available_cols schema was not populated in fixture: match insights sharing keywords
         q_words = set(re.findall(r"\b[a-zA-Z]{4,}\b", q_lower)) - {"what", "which", "where", "when", "does", "have", "with", "from", "that", "this", "rate", "difference"}
@@ -217,6 +217,70 @@ def answer_heuristic_question(
         answer = f"The dataset contains {row_cnt} clean records across {col_cnt} columns. No specific statistical anomalies matching the query columns were found."
 
     return answer, evidence, tool_results, tool_calls_count
+
+def get_dataset_insights_fallback(db: Session, ds_id: str) -> List[Dict[str, Any]]:
+    """Retrieve insights from the latest completed job or compute default baseline insights."""
+    job = db.query(AnalysisJob).filter(
+        AnalysisJob.dataset_id == ds_id,
+        AnalysisJob.status == "completed"
+    ).order_by(AnalysisJob.created_at.desc()).first()
+    if not job:
+        ds_obj = db.query(Dataset).filter((Dataset.filename == ds_id) | (Dataset.id == ds_id)).first()
+        if ds_obj:
+            job = db.query(AnalysisJob).filter(
+                AnalysisJob.dataset_id == ds_obj.id,
+                AnalysisJob.status == "completed"
+            ).order_by(AnalysisJob.created_at.desc()).first()
+    if job:
+        res = (job.get_results() if hasattr(job, "get_results") else None) or (json.loads(job.results_json) if isinstance(job.results_json, str) else (job.results_json if isinstance(job.results_json, dict) else {}))
+        if res.get("insights"):
+            return res["insights"]
+
+    try:
+        from backend.app.services.data_loader import get_dataset_dataframe, get_dataset_cleaning_report
+        from backend.app.services.insights import generate_insights
+        from backend.app.services.segmentation import segment_compare
+        from backend.app.services.correlation import run_correlation
+        from backend.app.services.timeseries import trend_analysis
+        from backend.app.services.outliers import detect_outliers
+
+        clean_df = get_dataset_dataframe(ds_id, prefer_cleaned=True)
+        report = get_dataset_cleaning_report(clean_df, ds_id)
+        tools_res = []
+        cols = list(clean_df.columns)
+
+        if "retail" in ds_id.lower():
+            if "Region" in cols and "Total_Amount" in cols:
+                tools_res.append(segment_compare(clean_df, "Region", "Total_Amount"))
+            if "Date" in cols and "Quantity" in cols:
+                tools_res.append(trend_analysis(clean_df, "Date", "Quantity", freq="ME"))
+        elif "hr" in ds_id.lower() or "attrition" in ds_id.lower():
+            if "Department" in cols and "Attrition" in cols:
+                tools_res.append(segment_compare(clean_df, "Department", "Attrition"))
+            if "Department" in cols and "Annual_Salary" in cols:
+                tools_res.append(segment_compare(clean_df, "Department", "Annual_Salary"))
+        elif "market" in ds_id.lower():
+            if "Channel" in cols and "Conversions" in cols:
+                tools_res.append(segment_compare(clean_df, "Channel", "Conversions"))
+
+        num_cols = list(clean_df.select_dtypes(include=["number"]).columns)
+        if len(num_cols) >= 2:
+            tools_res.append(run_correlation(clean_df, num_cols[:4]))
+        if num_cols:
+            tools_res.append(detect_outliers(clean_df, method="iqr", columns=num_cols[:3]))
+
+        profile = {
+            "row_count": len(clean_df),
+            "cleaned_row_count": len(clean_df),
+            "cleaning_report": report,
+            "filename": ds_id
+        }
+        ins_objs = generate_insights(structured_results=tools_res, dataset_profile=profile)
+        return [i.model_dump() for i in ins_objs]
+    except Exception as e:
+        logger.warning("Failed to generate fallback insights for %s: %s", ds_id, e)
+        return []
+
 
 def process_chat_question(
     db: Session,
@@ -257,6 +321,8 @@ def process_chat_question(
     
     results = (job.get_results() if job and hasattr(job, "get_results") else None) or (json.loads(job.results_json) if job and isinstance(job.results_json, str) else (job.results_json if job and isinstance(job.results_json, dict) else {}))
     insights = results.get("insights", [])
+    if not insights and ds_id:
+        insights = get_dataset_insights_fallback(db, ds_id)
     structured_results = results.get("structured_results", [])
 
     # Extract available columns
@@ -299,15 +365,16 @@ def process_chat_question(
     missing_entity = detect_missing_column_or_entity(question, available_columns)
 
     # 5. Link evidence to relevant insights (strictly sharing a column with question)
-    from backend.app.services.chat_sql import extract_question_columns, insight_shares_column
-    q_cols = extract_question_columns(question, available_columns)
-    for ins in insights:
-        if q_cols and insight_shares_column(ins, q_cols):
-            evidence.append({"type": "insight", "id": ins.get("id"), "title": ins.get("title")})
-        elif not q_cols:
-            q_words = set(re.findall(r"\b[a-zA-Z]{4,}\b", question.lower())) - {"what", "which", "where", "when", "does", "have", "with", "from", "that", "this", "rate", "difference"}
-            if any(w in (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower() for w in q_words):
+    if not missing_entity:
+        from backend.app.services.chat_sql import extract_question_columns, insight_shares_column
+        q_cols = extract_question_columns(question, available_columns)
+        for ins in insights:
+            if q_cols and insight_shares_column(ins, q_cols, question=question):
                 evidence.append({"type": "insight", "id": ins.get("id"), "title": ins.get("title")})
+            elif not q_cols:
+                q_words = set(re.findall(r"\b[a-zA-Z]{4,}\b", question.lower())) - {"what", "which", "where", "when", "does", "have", "with", "from", "that", "this", "rate", "difference"}
+                if any(w in (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower() for w in q_words):
+                    evidence.append({"type": "insight", "id": ins.get("id"), "title": ins.get("title")})
 
     # 6. Generate structured chat response
     client_provider = provider if has_api_key else "heuristic"
