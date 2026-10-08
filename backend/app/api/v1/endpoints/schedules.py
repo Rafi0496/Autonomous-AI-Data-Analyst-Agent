@@ -71,8 +71,8 @@ def create_schedule(
         )
     if dataset.user_id and (not current_user or dataset.user_id != current_user.id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this dataset."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset {req.dataset_id} not found."
         )
 
     next_run = compute_next_run(req.frequency)
@@ -156,8 +156,8 @@ def delete_schedule(
         )
     if schedule.user_id and (not current_user or schedule.user_id != current_user.id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this schedule."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Schedule {schedule_id} not found."
         )
     db.delete(schedule)
     db.commit()
@@ -184,8 +184,8 @@ def trigger_schedule(
         )
     if schedule.user_id and (not current_user or schedule.user_id != current_user.id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this schedule."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Schedule {schedule_id} not found."
         )
 
 

@@ -29,8 +29,8 @@ def check_dataset_access(dataset: Dataset, current_user: Optional[User]):
         )
     if dataset.user_id and (not current_user or dataset.user_id != current_user.id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this dataset."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Dataset not found."
         )
 
 @router.get("", response_model=List[DatasetListItem])

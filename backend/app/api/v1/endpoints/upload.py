@@ -25,16 +25,16 @@ async def upload_dataset_file(
     Upload a dataset file (CSV, XLSX, XLS, JSON).
     Validates file format, limits file size, parses dimensions, and stores record.
     """
-    if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No file was uploaded."
-        )
-
     if not settings.ALLOW_ANONYMOUS and not current_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required."
+        )
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No file was uploaded."
         )
 
     # Save to disk with chunked stream and size validation

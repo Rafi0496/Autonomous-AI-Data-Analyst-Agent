@@ -56,15 +56,15 @@ def handle_chat_query(
     if job:
         if job.user_id and (not current_user or job.user_id != current_user.id):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this analysis job."
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Job not found."
             )
     elif request.dataset_id:
         ds = db.query(Dataset).filter(Dataset.id == request.dataset_id).first()
         if ds and ds.user_id and (not current_user or ds.user_id != current_user.id):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this dataset."
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Dataset not found."
             )
         if not ds:
             from backend.app.services.data_loader import get_dataset_dataframe

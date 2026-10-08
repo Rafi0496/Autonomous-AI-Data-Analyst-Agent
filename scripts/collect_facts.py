@@ -864,7 +864,10 @@ def collect_section_7_api() -> str:
                     concrete_path = concrete_path.replace(param, val)
 
                 body = None
-                if "chat" in path and method == "POST":
+                files = None
+                if "upload" in path and method == "POST":
+                    files = {"file": ("probe_dummy.csv", io.BytesIO(b"id,val\n1,2\n"), "text/csv")}
+                elif "chat" in path and method == "POST":
                     body = {"job_id": job_id, "question": "Probe test question"}
                 elif "schedules" in path and method == "POST" and "{" not in path:
                     body = {"dataset_id": dataset_id, "frequency": "daily"}
@@ -877,7 +880,12 @@ def collect_section_7_api() -> str:
                 if method == "GET":
                     res_anon = client.get(concrete_path)
                 elif method == "POST":
-                    res_anon = client.post(concrete_path, json=body) if body else client.post(concrete_path)
+                    if files:
+                        res_anon = client.post(concrete_path, files={"file": ("probe_dummy.csv", io.BytesIO(b"id,val\n1,2\n"), "text/csv")})
+                    elif body:
+                        res_anon = client.post(concrete_path, json=body)
+                    else:
+                        res_anon = client.post(concrete_path)
                 elif method == "DELETE":
                     res_anon = client.delete(concrete_path)
                 else:
@@ -887,7 +895,12 @@ def collect_section_7_api() -> str:
                 if method == "GET":
                     res_b = client.get(concrete_path, headers=headers_b)
                 elif method == "POST":
-                    res_b = client.post(concrete_path, json=body, headers=headers_b) if body else client.post(concrete_path, headers=headers_b)
+                    if files:
+                        res_b = client.post(concrete_path, files={"file": ("probe_dummy.csv", io.BytesIO(b"id,val\n1,2\n"), "text/csv")}, headers=headers_b)
+                    elif body:
+                        res_b = client.post(concrete_path, json=body, headers=headers_b)
+                    else:
+                        res_b = client.post(concrete_path, headers=headers_b)
                 elif method == "DELETE":
                     res_b = client.delete(concrete_path, headers=headers_b)
                 else:

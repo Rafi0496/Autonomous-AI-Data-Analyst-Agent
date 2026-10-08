@@ -5,7 +5,16 @@ import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
 
+from backend.app.core.config import settings
+
 client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def enforce_auth():
+    orig_anon = settings.ALLOW_ANONYMOUS
+    settings.ALLOW_ANONYMOUS = False
+    yield
+    settings.ALLOW_ANONYMOUS = orig_anon
 
 def test_user_registration_and_login():
     uid = uuid.uuid4().hex[:8]
@@ -81,9 +90,9 @@ def test_multi_user_data_isolation():
     ds2_list = client.get("/api/v1/datasets", headers={"Authorization": f"Bearer {token2}"}).json()
     assert not any(d["id"] == dataset1_id for d in ds2_list)
 
-    # User 2 attempts to get User 1's dataset -> 403 Forbidden
+    # User 2 attempts to get User 1's dataset -> 404 Not Found
     forbidden_get = client.get(f"/api/v1/datasets/{dataset1_id}", headers={"Authorization": f"Bearer {token2}"})
-    assert forbidden_get.status_code == 403
+    assert forbidden_get.status_code == 404
 
     # User 1 can access dataset1 -> 200 OK
     allowed_get = client.get(f"/api/v1/datasets/{dataset1_id}", headers={"Authorization": f"Bearer {token1}"})
@@ -99,10 +108,41 @@ def test_multi_user_data_isolation():
     assert job_res.status_code == 202
     job_id = job_res.json()["job_id"]
 
-    # User 2 attempts to view User 1's job -> 403 Forbidden
+    # User 2 attempts to view User 1's job -> 404 Not Found
     job_forbidden = client.get(f"/api/v1/jobs/{job_id}", headers={"Authorization": f"Bearer {token2}"})
-    assert job_forbidden.status_code == 403
+    assert job_forbidden.status_code == 404
 
     # User 1 can view their job
     job_allowed = client.get(f"/api/v1/jobs/{job_id}", headers={"Authorization": f"Bearer {token1}"})
     assert job_allowed.status_code == 200
+
+
+def test_upload_auth_valid_csv():
+    """A1: require auth on POST /api/v1/upload. Valid CSV: no token -> 401, valid token -> 200/201."""
+    uid = uuid.uuid4().hex[:8]
+    # Register a user
+    user_res = client.post("/api/v1/auth/register", json={
+        "email": f"auth_upload_{uid}@test.com", "password": "SecurePassword123!"
+    })
+    token = user_res.json()["access_token"]
+
+    valid_csv = b"colA,colB\n1,10\n2,20\n"
+
+    # 1. No token -> 401
+    res_no_token = client.post(
+        "/api/v1/upload",
+        files={"file": ("test_auth.csv", io.BytesIO(valid_csv), "text/csv")}
+    )
+    assert res_no_token.status_code == 401, f"Expected 401 without token, got {res_no_token.status_code}"
+
+    # 2. Valid token -> 200/201
+    res_valid_token = client.post(
+        "/api/v1/upload",
+        files={"file": ("test_auth.csv", io.BytesIO(valid_csv), "text/csv")},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res_valid_token.status_code in (200, 201), f"Expected 200/201 with valid token, got {res_valid_token.status_code}"
+    data = res_valid_token.json()
+    assert data["row_count"] == 2
+    assert "dataset_id" in data
+

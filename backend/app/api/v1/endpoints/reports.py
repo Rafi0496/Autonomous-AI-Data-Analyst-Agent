@@ -68,8 +68,8 @@ def generate_report_for_job(
         )
     if job.user_id and (not current_user or job.user_id != current_user.id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this analysis job."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Analysis job '{job_id}' not found."
         )
         
     ds = db.query(Dataset).filter(Dataset.id == job.dataset_id).first()
@@ -187,15 +187,15 @@ def download_report(
             # Ownership check
             if meta.get("user_id") and (not current_user or meta["user_id"] != current_user.id):
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied to this report."
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Report not found."
                 )
             if meta.get("job_id"):
                 job = db.query(AnalysisJob).filter(AnalysisJob.id == meta["job_id"]).first()
                 if job and job.user_id and (not current_user or job.user_id != current_user.id):
                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Access denied to this report."
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Report not found."
                     )
         except HTTPException:
             raise

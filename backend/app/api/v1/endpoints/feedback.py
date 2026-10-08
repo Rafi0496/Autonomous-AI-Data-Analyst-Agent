@@ -63,8 +63,8 @@ def submit_insight_feedback(
         )
     if job.user_id and (not current_user or job.user_id != current_user.id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this analysis job."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found."
         )
 
     feedback = InsightFeedback(
@@ -109,8 +109,8 @@ def get_insight_feedback(
         )
     if job.user_id and (not current_user or job.user_id != current_user.id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this analysis job."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found."
         )
 
     items = db.query(InsightFeedback).filter(
