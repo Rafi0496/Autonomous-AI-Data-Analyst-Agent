@@ -90,6 +90,75 @@ class PlanActReflectOrchestrator:
             except Exception:
                 pass
 
+    def _run_baseline_scan(
+        self,
+        df: pd.DataFrame,
+        dataset_id: str,
+        profile_dict: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """
+        Execute deterministic baseline scan across dataset distributions:
+        1. Outliers on all numeric columns (3.0x IQR fence)
+        2. Correlation matrix across numeric columns
+        3. segment_compare for top categorical x numeric pairs
+        The LLM adds depth on top.
+        """
+        import numpy as np
+        baseline_results: List[Dict[str, Any]] = []
+        columns_meta = profile_dict.get("columns", {})
+        num_cols = [c for c, p in columns_meta.items() if p.get("inferred_type") == "numeric"]
+        if not num_cols:
+            num_cols = list(df.select_dtypes(include=[np.number]).columns)
+        cat_cols = [c for c, p in columns_meta.items() if p.get("inferred_type") in ("categorical", "text")]
+        if not cat_cols:
+            cat_cols = list(df.select_dtypes(include=["object", "category"]).columns)
+
+        # 1. Outlier scan across all numeric columns (3.0x IQR fence)
+        if num_cols:
+            try:
+                out_res = execute_tool("detect_outliers", {
+                    "dataset_id": dataset_id,
+                    "method": "iqr",
+                    "columns": num_cols,
+                    "threshold": 3.0
+                })
+                baseline_results.append(out_res)
+            except Exception:
+                pass
+
+        # 2. Correlation matrix across numeric columns
+        if len(num_cols) >= 2:
+            try:
+                corr_res = execute_tool("run_correlation", {
+                    "dataset_id": dataset_id,
+                    "columns": num_cols[:10]
+                })
+                baseline_results.append(corr_res)
+            except Exception:
+                pass
+
+        # 3. segment_compare for top categorical x numeric pairs
+        valid_cats = []
+        for c in cat_cols:
+            if c in df.columns:
+                card = df[c].nunique()
+                if 2 <= card <= 20:
+                    valid_cats.append(c)
+
+        for cat in valid_cats[:2]:
+            for num in num_cols[:2]:
+                try:
+                    seg_res = execute_tool("segment_compare", {
+                        "dataset_id": dataset_id,
+                        "segment_column": cat,
+                        "metric_column": num
+                    })
+                    baseline_results.append(seg_res)
+                except Exception:
+                    pass
+
+        return baseline_results
+
     def run_analysis(
         self,
         dataset_id: str,
@@ -138,12 +207,23 @@ class PlanActReflectOrchestrator:
             profile_dict["column_imputation_stats"] = cleaning_report.get("column_imputation_stats", {})
             profile_dict["missing_values_imputed"] = cleaning_report.get("missing_values_imputed", {})
 
-        # Step 1: PLAN (Provider-agnostic via LLMClient)
+        # Step 0b: Execute Deterministic Baseline Scan
+        self._emit_progress("Executing deterministic baseline scan (outliers, correlation, segment comparisons)...", 0, phase="baseline")
+        baseline_results = self._run_baseline_scan(df, dataset_id, profile_dict)
+        executed_results = list(baseline_results)
+
+        # Step 1: PLAN (Provider-agnostic via LLMClient, adding depth on top)
         if job:
             job.phase = "planning"
             job.current_step = 0
             job.current_step_name = f"Planning analysis via {self.llm_client.provider_name}"
             db.commit()
+
+        # Proactive token estimation check before plan call
+        est_plan_tokens = 1200
+        if self.tokens_used + est_plan_tokens > self.token_budget and self.token_budget > 0 and self.llm_client.provider_name != "heuristic":
+            self.budget_tripped = True
+            self.trip_reason = f"Token budget projected to exceed before planning ({self.tokens_used} + {est_plan_tokens} > {self.token_budget})"
 
         self._emit_progress(f"Step 0/{self.max_steps}: Initial Plan (calling LLM {self.llm_client.provider_name})...", 0, phase="planning")
         plan_result = self.llm_client.plan(
@@ -154,7 +234,6 @@ class PlanActReflectOrchestrator:
         self._accumulate_tokens(plan_result.usage)
         initial_llm_latency_ms = round(plan_result.latency_seconds * 1000, 2)
         
-        executed_results = []
         current_round = 1
         max_rounds = 3
         pending_plan = [
@@ -220,6 +299,13 @@ class PlanActReflectOrchestrator:
                     if "candidates" in sig.parameters or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
                         ref_kwargs["candidates"] = candidates
                         ref_kwargs["candidate_reasons"] = reasons
+
+                    # Proactive token estimation check before reflection call
+                    est_reflect_tokens = 1200
+                    if self.tokens_used + est_reflect_tokens > self.token_budget and self.token_budget > 0 and self.llm_client.provider_name != "heuristic":
+                        self.budget_tripped = True
+                        self.trip_reason = f"Token budget projected to exceed before reflection ({self.tokens_used} + {est_reflect_tokens} > {self.token_budget})"
+                        break
 
                     reflect_res = self.llm_client.reflect(
                         step_result=last_output,
@@ -364,8 +450,20 @@ class PlanActReflectOrchestrator:
             "Do not calculate rates against original raw row counts. "
             "Surface relevant data quality findings (such as sentinel values like Quantity=999, invalid domain values, and imputation) in the findings and narrative."
         )
+        # Proactive token estimation check before synthesis call
+        est_synth_tokens = 1800
+        if self.tokens_used + est_synth_tokens > self.token_budget and self.token_budget > 0 and self.llm_client.provider_name != "heuristic":
+            self.budget_tripped = True
+            self.trip_reason = f"Token budget projected to exceed before synthesis ({self.tokens_used} + {est_synth_tokens} > {self.token_budget})"
+
         synth_start = time.perf_counter()
-        synth_res = self.llm_client.synthesize(
+        if self.budget_tripped and self.llm_client.provider_name != "heuristic":
+            from backend.app.agent.llm_client import HeuristicClient
+            synth_client = HeuristicClient()
+        else:
+            synth_client = self.llm_client
+
+        synth_res = synth_client.synthesize(
             results=executed_results,
             dataset_profile=profile_dict,
             goal=synth_goal,

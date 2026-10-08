@@ -88,6 +88,7 @@ class DataProfilingService:
                 if not num_series.empty:
                     q25 = float(num_series.quantile(0.25))
                     q75 = float(num_series.quantile(0.75))
+                    iqr = q75 - q25
                     lower_bound = q25 - 3.0 * iqr
                     upper_bound = q75 + 3.0 * iqr
                     outliers_count = int(((num_series < lower_bound) | (num_series > upper_bound)).sum())
