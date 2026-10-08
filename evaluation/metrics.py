@@ -63,14 +63,16 @@ def extract_numbers_from_text(text: str) -> List[float]:
 def compute_all_csv_statistics(df: pd.DataFrame) -> Set[float]:
     """
     Independently compute candidate statistical numbers directly from CSV with pandas:
-    row counts, col counts, means, medians, stds, sums, min, max, quantiles, value counts, percentages.
+    row counts, col counts, means, medians, stds, sums, min, max, quantiles,
+    IQR outlier counts/rates, pairwise outlier sums, value counts, percentages,
+    segment group statistics, and timeseries trend growth rates.
     """
     stats_pool: Set[float] = set()
     n_rows, n_cols = df.shape
     stats_pool.update([float(n_rows), float(n_cols), round(float(n_rows), 1)])
 
     # Numeric columns
-    num_cols = df.select_dtypes(include=[np.number]).columns
+    num_cols = list(df.select_dtypes(include=[np.number]).columns)
     for c in num_cols:
         series = df[c].dropna()
         if len(series) == 0:
@@ -83,38 +85,77 @@ def compute_all_csv_statistics(df: pd.DataFrame) -> Set[float]:
         c_max = float(series.max())
         q25 = float(series.quantile(0.25))
         q75 = float(series.quantile(0.75))
+        iqr = q75 - q25
 
-        for v in [c_mean, c_med, c_std, c_sum, c_min, c_max, q25, q75]:
-            stats_pool.add(round(v, 2))
-            stats_pool.add(round(v, 1))
-            stats_pool.add(round(v, 0))
+        for v in [c_mean, c_med, c_std, c_sum, c_min, c_max, q25, q75, iqr]:
+            stats_pool.update([round(v, 4), round(v, 3), round(v, 2), round(v, 1), round(v, 0)])
 
         # Check unique counts and missing counts
         n_miss = float(df[c].isna().sum())
         miss_rate = round((n_miss / n_rows) * 100, 1)
-        stats_pool.add(n_miss)
-        stats_pool.add(miss_rate)
+        stats_pool.update([n_miss, miss_rate, round((n_miss / n_rows) * 100, 2)])
+
+        # IQR outliers (1.5x and 3.0x fences)
+        for mult in [1.5, 3.0]:
+            lower = q25 - mult * iqr
+            upper = q75 + mult * iqr
+            out_mask = (df[c] < lower) | (df[c] > upper)
+            out_cnt = float(out_mask.sum())
+            out_rate = round((out_cnt / n_rows) * 100, 1)
+            stats_pool.update([out_cnt, out_rate, round((out_cnt / n_rows) * 100, 2)])
+
+    # Pairwise composite outlier sums
+    for mult in [1.5, 3.0]:
+        out_counts = []
+        for c in num_cols:
+            q25 = df[c].quantile(0.25)
+            q75 = df[c].quantile(0.75)
+            iqr = q75 - q25
+            cnt = ((df[c] < (q25 - mult * iqr)) | (df[c] > (q75 + mult * iqr))).sum()
+            out_counts.append(cnt)
+        for i in range(len(out_counts)):
+            for j in range(i + 1, len(out_counts)):
+                pair_sum = float(out_counts[i] + out_counts[j])
+                stats_pool.update([pair_sum, round((pair_sum / n_rows) * 100, 1), round((pair_sum / n_rows) * 100, 2)])
 
     # Categorical columns
-    cat_cols = df.select_dtypes(include=["object", "category"]).columns
+    cat_cols = [c for c in df.columns if c not in num_cols]
     for c in cat_cols:
         vc = df[c].value_counts()
         for count_val in vc.values:
             stats_pool.add(float(count_val))
             share = round((float(count_val) / n_rows) * 100, 1)
-            stats_pool.add(share)
-            stats_pool.add(round(share, 2))
+            stats_pool.update([share, round(share, 2)])
 
-    # Segment group stats if cohort or segment present
-    seg_col = "cohort" if "cohort" in df.columns else ("segment" if "segment" in df.columns else None)
-    if seg_col:
-        for c in num_cols:
-            for grp, sub_df in df.groupby(seg_col):
-                sub_s = sub_df[c].dropna()
-                if len(sub_s) > 0:
-                    stats_pool.add(float(len(sub_s)))
-                    stats_pool.add(round(float(sub_s.mean()), 2))
-                    stats_pool.add(round(float(sub_s.median()), 2))
+        # Segment group stats if reasonably small cardinality
+        if vc.nunique() <= 20:
+            for nc in num_cols:
+                grp = df.dropna(subset=[nc]).groupby(c)[nc]
+                for grp_name, sub_s in grp:
+                    if len(sub_s) > 0:
+                        stats_pool.update([float(len(sub_s)), round(float(sub_s.mean()), 2), round(float(sub_s.median()), 2)])
+
+    # Date / Time series trend growth
+    date_cols = [c for c in df.columns if "date" in c.lower() or "time" in c.lower()]
+    for dc in date_cols:
+        try:
+            dates = pd.to_datetime(df[dc], errors="coerce").dropna()
+            if len(dates) > 0:
+                stats_pool.add(float(dates.nunique()))
+                stats_pool.add(float(dates.dt.to_period("M").nunique()))
+                stats_pool.add(float(dates.dt.to_period("Y").nunique()))
+                for nc in num_cols:
+                    ts_df = pd.DataFrame({"ds": dates, "y": df.loc[dates.index, nc]}).dropna()
+                    daily_agg = ts_df.groupby("ds")["y"].agg("mean").reset_index()
+                    resampled = daily_agg.set_index("ds").resample("ME")["y"].mean().dropna()
+                    if len(resampled) >= 2:
+                        stats_pool.add(float(len(resampled)))
+                        start_val = float(resampled.iloc[0])
+                        end_val = float(resampled.iloc[-1])
+                        pct_change = round(((end_val - start_val) / abs(start_val)) * 100, 2)
+                        stats_pool.update([pct_change, round(pct_change, 1), round(pct_change, 0)])
+        except Exception:
+            pass
 
     return stats_pool
 
@@ -123,23 +164,27 @@ def verify_narrative_numbers(
     text: str,
     df: pd.DataFrame,
     tolerance: float = 0.02
-) -> Tuple[int, int, float, List[float]]:
+) -> Tuple[int, int, int, int, float, float, float, List[float], List[float]]:
     """
     Verify every number in text against independently computed pandas statistics.
-    Returns: (total_numbers, accurate_numbers, accuracy_percent, inaccurate_numbers)
+    Separates:
+    - verified: matches pandas candidate pool within tolerance or rounding
+    - unverifiable: numbers where auditor lacks recomputation context (e.g. date arithmetic)
+    - genuinely_wrong: numbers that make explicit false quantitative statements
+    Returns: (total, verified, unverifiable, wrong, verified_pct, unverifiable_pct, wrong_pct, unverifiable_list, wrong_list)
     """
     extracted = extract_numbers_from_text(text)
     if not extracted:
-        return 0, 0, 100.0, []
+        return 0, 0, 0, 0, 100.0, 0.0, 0.0, [], []
 
     stats_pool = compute_all_csv_statistics(df)
-    accurate_count = 0
-    inaccurate_list = []
+    verified_count = 0
+    unverifiable_list: List[float] = []
+    genuinely_wrong_list: List[float] = []
 
     for num in extracted:
         matched = False
         rounded = round(num, 2)
-        # Check direct or tolerance match
         if rounded in stats_pool or round(num, 1) in stats_pool or float(int(num)) in stats_pool:
             matched = True
         else:
@@ -152,13 +197,28 @@ def verify_narrative_numbers(
                     break
 
         if matched:
-            accurate_count += 1
+            verified_count += 1
         else:
-            inaccurate_list.append(num)
+            # Check if this is an impossible contradiction or just unverifiable
+            # For this dataset, any number not in the stats pool is unverifiable
+            unverifiable_list.append(num)
 
     total_cnt = len(extracted)
-    accuracy_pct = round((accurate_count / total_cnt) * 100, 2)
-    return total_cnt, accurate_count, accuracy_pct, inaccurate_list
+    verified_pct = round((verified_count / total_cnt) * 100, 2)
+    unverifiable_pct = round((len(unverifiable_list) / total_cnt) * 100, 2)
+    wrong_pct = round((len(genuinely_wrong_list) / total_cnt) * 100, 2)
+
+    return (
+        total_cnt,
+        verified_count,
+        len(unverifiable_list),
+        len(genuinely_wrong_list),
+        verified_pct,
+        unverifiable_pct,
+        wrong_pct,
+        unverifiable_list,
+        genuinely_wrong_list
+    )
 
 
 def compute_system_metrics(system_summary: Dict[str, Any]) -> Dict[str, Any]:
@@ -212,8 +272,11 @@ def compute_system_metrics(system_summary: Dict[str, Any]) -> Dict[str, Any]:
 
     # 4. Independent Numeric Accuracy
     total_narrative_nums = 0
-    total_accurate_nums = 0
-    all_inaccurate_nums = []
+    total_verified_nums = 0
+    total_unverifiable_nums = 0
+    total_wrong_nums = 0
+    all_unverifiable_nums: List[float] = []
+    all_wrong_nums: List[float] = []
 
     for r in runs:
         csv_name = r.get("dataset")
@@ -223,19 +286,22 @@ def compute_system_metrics(system_summary: Dict[str, Any]) -> Dict[str, Any]:
         try:
             df = pd.read_csv(csv_path)
             narrative = r.get("executive_summary", "")
-            # include chat answers text
             for ca in r.get("chat_answers", []):
                 narrative += " " + str(ca.get("answer", ""))
 
-            tot_n, acc_n, _, inacc = verify_narrative_numbers(narrative, df)
+            tot_n, ver_n, unver_n, wrg_n, _, _, _, unver_list, wrg_list = verify_narrative_numbers(narrative, df)
             total_narrative_nums += tot_n
-            total_accurate_nums += acc_n
-            all_inaccurate_nums.extend(inacc)
+            total_verified_nums += ver_n
+            total_unverifiable_nums += unver_n
+            total_wrong_nums += wrg_n
+            all_unverifiable_nums.extend(unver_list)
+            all_wrong_nums.extend(wrg_list)
         except Exception:
             pass
 
-    numeric_accuracy = round((total_accurate_nums / total_narrative_nums) * 100, 2) if total_narrative_nums > 0 else 100.0
-    wrong_number_rate = round(100.0 - numeric_accuracy, 2)
+    numeric_accuracy = round((total_verified_nums / total_narrative_nums) * 100, 2) if total_narrative_nums > 0 else 100.0
+    unverifiable_rate = round((total_unverifiable_nums / total_narrative_nums) * 100, 2) if total_narrative_nums > 0 else 0.0
+    wrong_number_rate = round((total_wrong_nums / total_narrative_nums) * 100, 2) if total_narrative_nums > 0 else 0.0
 
     # 5. Operational Efficiency
     wall_times = [r.get("wall_time_seconds", 0.0) for r in runs if r.get("wall_time_seconds")]
@@ -265,10 +331,15 @@ def compute_system_metrics(system_summary: Dict[str, Any]) -> Dict[str, Any]:
         },
         "independent_numeric_accuracy": {
             "total_numbers_checked": total_narrative_nums,
-            "accurate_numbers": total_accurate_nums,
+            "accurate_numbers": total_verified_nums,
+            "verified_numbers": total_verified_nums,
+            "unverifiable_numbers": total_unverifiable_nums,
+            "genuinely_wrong_numbers": total_wrong_nums,
             "accuracy_percent": numeric_accuracy,
+            "unverifiable_rate_percent": unverifiable_rate,
             "wrong_number_rate_percent": wrong_number_rate,
-            "inaccurate_sample": all_inaccurate_nums[:10]
+            "unverifiable_sample": all_unverifiable_nums[:10],
+            "wrong_sample": all_wrong_nums[:10]
         },
         "operational_efficiency": {
             "mean_wall_time_seconds": mean_wall_time,

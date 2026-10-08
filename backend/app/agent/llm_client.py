@@ -443,6 +443,24 @@ class HeuristicClient(LLMClient):
                 ins for ins in insights
                 if any(w in (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower() for w in q_words)
             ]
+        # Filter matched insights by analytical intent
+        is_segment_q = any(k in q_lower for k in ["difference", "segment", "cohort", "department", "group"]) and not any(k in q_lower for k in ["outlier", "anomaly", "clean", "quality"])
+        is_outlier_q = any(k in q_lower for k in ["outlier", "anomal", "extreme", "spike"])
+        is_corr_q = any(k in q_lower for k in ["correlation", "correlated", "relationship", "association"])
+        is_trend_q = any(k in q_lower for k in ["trend", "trajectory", "over time", "monthly"])
+
+        if is_segment_q:
+            seg_ins = [ins for ins in matched_insights if ins.get("metric_values", {}).get("analysis") == "segment_difference" or ins.get("id", "").startswith("insight-seg")]
+            matched_insights = seg_ins
+            if not matched_insights and not answer_parts:
+                target_str = ", ".join(question_cols) if question_cols else "metrics"
+                answer_parts.append(f"No statistically significant difference in {target_str} across segments was detected.")
+        elif is_outlier_q:
+            matched_insights = [ins for ins in matched_insights if "outlier" in ins.get("id", "").lower() or ins.get("metric_values", {}).get("analysis") == "outlier"]
+        elif is_corr_q:
+            matched_insights = [ins for ins in matched_insights if "corr" in ins.get("id", "").lower() or ins.get("metric_values", {}).get("analysis") == "correlation"]
+        elif is_trend_q:
+            matched_insights = [ins for ins in matched_insights if "trend" in ins.get("id", "").lower() or ins.get("metric_values", {}).get("analysis") == "trend"]
 
         # Check for specific question types: Retail trend and HR highest attrition
         is_retail_trend = any(k in q_lower for k in ["trend"]) and any(k in q_lower for k in ["retail", "sales", "monthly"])

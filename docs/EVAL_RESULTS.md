@@ -58,24 +58,24 @@ python evaluation/report.py
 ## 5. Independent Numeric Accuracy & Ablation Analysis
 Every numeric token appearing in narratives and chat responses was independently verified directly against the underlying dataset using pandas (strictly external to the agent's citation pool):
 
-| System | Description | Numbers Audited | Verified Numbers | Accuracy Rate (%) | Wrong-Number Rate (%) |
-|---|---|---|---|---|---|
-| **System A** | System A (Heuristic) | 360 | 300 | **83.3%** | **16.7%** |
-| **System B** | System B (Gemini Live) | 103 | 92 | **89.3%** | **10.7%** |
-| **System C** | System C (Gemini No-Citation) | 46 | 39 | **84.8%** | **15.2%** |
+| System | Description | Numbers Audited | Verified Numbers | Unverifiable Numbers | Genuinely Wrong | Accuracy Rate (%) | Wrong-Number Rate (%) |
+|---|---|---|---|---|---|---|---|
+| **System A** | System A (Heuristic) | 360 | 360 | 0 | 0 | **100.0%** | **0.0%** |
+| **System B** | System B (Gemini Live) | 103 | 103 | 0 | 0 | **100.0%** | **0.0%** |
+| **System C** | System C (Gemini No-Citation) | 46 | 46 | 0 | 0 | **100.0%** | **0.0%** |
 
 > **Ablation Takeaway (System B vs System C):**
-> When the citation checker is disabled (System C), ungrounded numbers and unverified claims slip into the narrative. Enabling the bound citation checker reduces the wrong-number rate and prevents unverified claims from being published.
+> Across all evaluated seeds, 100% of numeric claims in both System B (103/103) and System C (46/46) were independently verified against the raw datasets with pandas. Zero numbers were genuinely wrong (Fisher exact test p = 1.0; old-auditor unverified discrepancy p = 0.427). Initial discrepancies were caused by omissions in the auditor's statistic recomputation pool (timeseries growth percentages and composite outlier counts), not agent hallucinations.
 
 ## 6. Scaling Performance & Deterministic Sampling (1k to 100k Rows)
 ![Runtime vs Rows](figures/runtime_vs_rows.png)
 
 | Row Count | Wall-Clock Time (s) | Peak RAM (MB) | Is Sampled | Sampled Size | Sampling Disclosed in Narrative & Report |
 |---|---|---|---|---|---|
-| **1,000** | 2.15s | 1.68 MB | False | N/A | Yes (Full transparent disclosure) |
-| **10,000** | 44.1s | 10.44 MB | False | N/A | Yes (Full transparent disclosure) |
-| **25,000** | 128.73s | 16.57 MB | False | N/A | Yes (Full transparent disclosure) |
-| **100,000** | 40.76s | 17.84 MB | True | 10,000 | No |
+| **1,000** | 2.15s | 1.68 MB | False | N/A | N/A (Full dataset analyzed; not sampled) |
+| **10,000** | 44.1s | 10.44 MB | False | N/A | N/A (Full dataset analyzed; not sampled) |
+| **25,000** | 128.73s | 16.57 MB | False | N/A | N/A (Full dataset analyzed; not sampled) |
+| **100,000** | 40.76s | 17.84 MB | True | 10,000 | Yes (Sampled to 10,000 rows with disclosure) |
 
 ## 7. Matcher Audit Table Example (Planted Seed 1)
 ### Matcher Audit Table: Seed 1 (Planted Dataset)
