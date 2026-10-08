@@ -1,0 +1,1542 @@
+{
+  "system": "A",
+  "total_runs": 20,
+  "planted_runs_count": 10,
+  "null_runs_count": 10,
+  "planted_findings_total": 70,
+  "planted_findings_found": 40,
+  "overall_recall_percent": 57.14,
+  "total_null_false_positives": 40,
+  "runs": [
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_1.csv",
+      "seed": 1,
+      "is_null": false,
+      "wall_time_seconds": 0.53,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+5809.4%) across 2000 observations. A correlation coefficient of r=0.9088 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.5855 was observed between var_x and var_y across 2000 observations. Identified 153 anomalous rows (10.0% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupA: n=809, GroupC: n=386, GroupB: n=805, p=0.2304). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.5855 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 29 statistical outliers identified (1.4%): Identified 29 anomalous rows (1.4% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.5855 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 1,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.59)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 1 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.59) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_2.csv",
+      "seed": 2,
+      "is_null": false,
+      "wall_time_seconds": 0.52,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+4851.7%) across 2000 observations. A correlation coefficient of r=0.9036 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.6019 was observed between var_x and var_y across 2000 observations. Identified 141 anomalous rows (9.3% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=417, GroupA: n=796, GroupB: n=787, p=0.9567). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6019 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 28 statistical outliers identified (1.4%): Identified 28 anomalous rows (1.4% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6019 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 2,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.60)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 2 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.60) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_3.csv",
+      "seed": 3,
+      "is_null": false,
+      "wall_time_seconds": 0.48,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+5022.4%) across 2000 observations. A correlation coefficient of r=0.9074 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.5978 was observed between var_x and var_y across 2000 observations. Identified 162 anomalous rows (10.7% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupB: n=765, GroupA: n=835, GroupC: n=400, p=0.1991). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.5978 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 24 statistical outliers identified (1.2%): Identified 24 anomalous rows (1.2% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.5978 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 3,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.60)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 3 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.60) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_4.csv",
+      "seed": 4,
+      "is_null": false,
+      "wall_time_seconds": 0.52,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+3831.5%) across 2000 observations. A correlation coefficient of r=0.9084 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.5673 was observed between var_x and var_y across 2000 observations. Identified 137 anomalous rows (9.0% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupB: n=801, GroupA: n=800, GroupC: n=399, p=0.8180). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.5673 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 27 statistical outliers identified (1.4%): Identified 27 anomalous rows (1.4% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.5673 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 4,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.57)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 4 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.57) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_5.csv",
+      "seed": 5,
+      "is_null": false,
+      "wall_time_seconds": 0.49,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+3383.2%) across 2000 observations. A correlation coefficient of r=0.9057 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.6100 was observed between var_x and var_y across 2000 observations. Identified 155 anomalous rows (10.2% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=393, GroupB: n=815, GroupA: n=792, p=0.6076). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6100 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 32 statistical outliers identified (1.6%): Identified 32 anomalous rows (1.6% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6100 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 5,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.61)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 5 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.61) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_6.csv",
+      "seed": 6,
+      "is_null": false,
+      "wall_time_seconds": 0.52,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+5931.5%) across 2000 observations. A correlation coefficient of r=0.9014 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.5805 was observed between var_x and var_y across 2000 observations. Identified 157 anomalous rows (10.3% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupA: n=789, GroupC: n=412, GroupB: n=799, p=0.1739). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.5805 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 36 statistical outliers identified (1.8%): Identified 36 anomalous rows (1.8% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.5805 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 6,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.58)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 6 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.58) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_7.csv",
+      "seed": 7,
+      "is_null": false,
+      "wall_time_seconds": 0.49,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+5896.0%) across 2000 observations. A correlation coefficient of r=0.9027 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.6003 was observed between var_x and var_y across 2000 observations. Identified 137 anomalous rows (9.0% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=420, GroupB: n=790, GroupA: n=790, p=0.7259). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6003 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 24 statistical outliers identified (1.2%): Identified 24 anomalous rows (1.2% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6003 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 7,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.60)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 7 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.60) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_8.csv",
+      "seed": 8,
+      "is_null": false,
+      "wall_time_seconds": 0.52,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+4549.3%) across 2000 observations. A correlation coefficient of r=0.9077 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.6030 was observed between var_x and var_y across 2000 observations. Identified 151 anomalous rows (9.9% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=395, GroupA: n=778, GroupB: n=827, p=0.3807). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6030 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 31 statistical outliers identified (1.6%): Identified 31 anomalous rows (1.6% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6030 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 8,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.60)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 8 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.60) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_9.csv",
+      "seed": 9,
+      "is_null": false,
+      "wall_time_seconds": 0.51,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+5043.6%) across 2000 observations. A correlation coefficient of r=0.9063 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.6155 was observed between var_x and var_y across 2000 observations. Identified 135 anomalous rows (8.9% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=386, GroupB: n=842, GroupA: n=772, p=0.4108). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6155 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 22 statistical outliers identified (1.1%): Identified 22 anomalous rows (1.1% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6155 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 9,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.62)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 9 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.62) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "planted_seed_10.csv",
+      "seed": 10,
+      "is_null": false,
+      "wall_time_seconds": 0.53,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+4855.1%) across 2000 observations. A correlation coefficient of r=0.9059 was observed between record_id and trend_metric across 2000 observations. A correlation coefficient of r=0.6203 was observed between var_x and var_y across 2000 observations. Identified 160 anomalous rows (10.5% anomaly rate) across 2000 records. no statistically significant difference detected (no significant difference detected; n per group: GroupB: n=787, GroupA: n=800, GroupC: n=413, p=0.2414). Data quality caveats: Detected and sanitized 60 sentinel values (999.0) in column 'satisfaction_score' prior to imputation. Identified and sanitized 40 invalid values in column 'salary' violating non_negative_constraint prior to imputation.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6203 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%). 29 statistical outliers identified (1.4%): Identified 29 anomalous rows (1.4% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Strong positive relationship between var_x and var_y: A correlation coefficient of r=0.6203 was observed between var_x and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 10,
+        "is_null": false,
+        "total_planted": 7,
+        "found_count": 4,
+        "recall_percent": 57.14,
+        "matches": {
+          "S1": {
+            "planted_id": "S1",
+            "expected_type": "segment_difference",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "S1 not found in surviving insights"
+          },
+          "C1": {
+            "planted_id": "C1",
+            "expected_type": "correlation",
+            "found": true,
+            "matching_insight_id": "insight-corr-var_x-var_y",
+            "note": "Matched C1 (r=0.62)"
+          },
+          "T1": {
+            "planted_id": "T1",
+            "expected_type": "trend",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "T1 not found in surviving insights"
+          },
+          "O1": {
+            "planted_id": "O1",
+            "expected_type": "outlier",
+            "found": true,
+            "matching_insight_id": "insight-outlier-volume",
+            "note": "Matched O1 (outliers in volume)"
+          },
+          "Q1": {
+            "planted_id": "Q1",
+            "expected_type": "sentinel",
+            "found": true,
+            "matching_insight_id": "insight-dq-sentinel-satisfaction_score",
+            "note": "Matched Q1 (999 sentinel in satisfaction_score)"
+          },
+          "Q2": {
+            "planted_id": "Q2",
+            "expected_type": "invalid_domain",
+            "found": true,
+            "matching_insight_id": "insight-dq-invalid-salary",
+            "note": "Matched Q2 (negative salary values)"
+          },
+          "M1": {
+            "planted_id": "M1",
+            "expected_type": "missingness",
+            "found": false,
+            "matching_insight_id": null,
+            "note": "M1 not found in data quality insights"
+          }
+        },
+        "false_positives": [],
+        "false_positive_count": 0,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 10 (Planted Dataset)\n| Planted ID | Expected Type | Found | Matching Insight ID | Audit Note |\n|---|---|---|---|---|\n| **S1** | `segment_difference` | **No** | `\u2014` | S1 not found in surviving insights |\n| **C1** | `correlation` | **Yes** | `insight-corr-var_x-var_y` | Matched C1 (r=0.62) |\n| **T1** | `trend` | **No** | `\u2014` | T1 not found in surviving insights |\n| **O1** | `outlier` | **Yes** | `insight-outlier-volume` | Matched O1 (outliers in volume) |\n| **Q1** | `sentinel` | **Yes** | `insight-dq-sentinel-satisfaction_score` | Matched Q1 (999 sentinel in satisfaction_score) |\n| **Q2** | `invalid_domain` | **Yes** | `insight-dq-invalid-salary` | Matched Q2 (negative salary values) |\n| **M1** | `missingness` | **No** | `\u2014` | M1 not found in data quality insights |"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_101.csv",
+      "seed": 101,
+      "is_null": true,
+      "wall_time_seconds": 0.44,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+4658.9%) across 2000 observations. Identified 125 anomalous rows (6.2% anomaly rate) across 2000 records. A correlation coefficient of r=-0.0395 was observed between metric_score and decoy_num2 across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=429, GroupB: n=766, GroupA: n=805, p=0.4148).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak negative relationship between record_id and var_x: A correlation coefficient of r=-0.0323 was observed between record_id and var_x across 2000 observations (exclusion rate 0.0%). 34 statistical outliers identified (1.7%): Identified 34 anomalous rows (1.7% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak negative relationship between record_id and var_x: A correlation coefficient of r=-0.0323 was observed between record_id and var_x across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 101,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-metric_score-decoy_num2",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 101 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_102.csv",
+      "seed": 102,
+      "is_null": true,
+      "wall_time_seconds": 0.48,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+5034.3%) across 2000 observations. Identified 136 anomalous rows (6.8% anomaly rate) across 2000 records. A correlation coefficient of r=-0.0573 was observed between record_id and var_y across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupA: n=803, GroupC: n=395, GroupB: n=802, p=0.4970).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak negative relationship between record_id and var_y: A correlation coefficient of r=-0.0573 was observed between record_id and var_y across 2000 observations (exclusion rate 0.0%). 33 statistical outliers identified (1.6%): Identified 33 anomalous rows (1.6% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak negative relationship between record_id and var_y: A correlation coefficient of r=-0.0573 was observed between record_id and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 102,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-record_id-var_y",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 102 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-record_id-var_y`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_103.csv",
+      "seed": 103,
+      "is_null": true,
+      "wall_time_seconds": 0.49,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+3855.0%) across 2000 observations. Identified 141 anomalous rows (7.0% anomaly rate) across 2000 records. A correlation coefficient of r=0.0512 was observed between activity_index and decoy_num2 across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=407, GroupA: n=778, GroupB: n=815, p=0.7642).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak positive relationship between metric_score and var_y: A correlation coefficient of r=0.0448 was observed between metric_score and var_y across 2000 observations (exclusion rate 0.0%). 24 statistical outliers identified (1.2%): Identified 24 anomalous rows (1.2% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak positive relationship between metric_score and var_y: A correlation coefficient of r=0.0448 was observed between metric_score and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 103,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-activity_index-decoy_num2",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 103 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-activity_index-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_104.csv",
+      "seed": 104,
+      "is_null": true,
+      "wall_time_seconds": 0.49,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+6193.1%) across 2000 observations. Identified 153 anomalous rows (7.7% anomaly rate) across 2000 records. A correlation coefficient of r=0.0537 was observed between var_y and decoy_num1 across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupA: n=835, GroupB: n=767, GroupC: n=398, p=0.5899).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak negative relationship between record_id and var_x: A correlation coefficient of r=-0.0451 was observed between record_id and var_x across 2000 observations (exclusion rate 0.0%). 35 statistical outliers identified (1.8%): Identified 35 anomalous rows (1.8% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak negative relationship between record_id and var_x: A correlation coefficient of r=-0.0451 was observed between record_id and var_x across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 104,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-var_y-decoy_num1",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 104 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-var_y-decoy_num1`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_105.csv",
+      "seed": 105,
+      "is_null": true,
+      "wall_time_seconds": 0.47,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+3937.6%) across 2000 observations. GroupC recorded the highest record_id (median 1093.00) compared to GroupB (median 957.00), a 1.09x differential (p=0.0384) across 2000 records. Identified 116 anomalous rows (5.8% anomaly rate) across 2000 records. A correlation coefficient of r=0.0517 was observed between salary and decoy_num2 across 2000 observations.",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak positive relationship between record_id and var_x: A correlation coefficient of r=0.0351 was observed between record_id and var_x across 2000 observations (exclusion rate 0.0%). 28 statistical outliers identified (1.4%): Identified 28 anomalous rows (1.4% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak positive relationship between record_id and var_x: A correlation coefficient of r=0.0351 was observed between record_id and var_x across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 105,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-salary-decoy_num2",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 105 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-salary-decoy_num2`: Signal claimed on NULL dataset (type: correlation)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_106.csv",
+      "seed": 106,
+      "is_null": true,
+      "wall_time_seconds": 0.42,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+4313.9%) across 2000 observations. Identified 133 anomalous rows (6.7% anomaly rate) across 2000 records. A correlation coefficient of r=-0.0532 was observed between trend_metric and volume across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=396, GroupB: n=811, GroupA: n=793, p=0.9696).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak negative relationship between record_id and metric_score: A correlation coefficient of r=-0.0394 was observed between record_id and metric_score across 2000 observations (exclusion rate 0.0%). 33 statistical outliers identified (1.6%): Identified 33 anomalous rows (1.6% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak negative relationship between record_id and metric_score: A correlation coefficient of r=-0.0394 was observed between record_id and metric_score across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 106,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-trend_metric-volume",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 106 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-trend_metric-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_107.csv",
+      "seed": 107,
+      "is_null": true,
+      "wall_time_seconds": 0.42,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+6130.5%) across 2000 observations. Identified 147 anomalous rows (7.3% anomaly rate) across 2000 records. A correlation coefficient of r=-0.0597 was observed between trend_metric and volume across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupB: n=754, GroupA: n=841, GroupC: n=405, p=0.8772).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak positive relationship between record_id and var_y: A correlation coefficient of r=0.0311 was observed between record_id and var_y across 2000 observations (exclusion rate 0.0%). 33 statistical outliers identified (1.6%): Identified 33 anomalous rows (1.6% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak positive relationship between record_id and var_y: A correlation coefficient of r=0.0311 was observed between record_id and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 107,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-trend_metric-volume",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 107 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-trend_metric-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_108.csv",
+      "seed": 108,
+      "is_null": true,
+      "wall_time_seconds": 0.42,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+4794.6%) across 2000 observations. Identified 142 anomalous rows (7.1% anomaly rate) across 2000 records. A correlation coefficient of r=0.0450 was observed between metric_score and trend_metric across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupC: n=400, GroupA: n=781, GroupB: n=819, p=0.2551).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak negative relationship between metric_score and var_y: A correlation coefficient of r=-0.0250 was observed between metric_score and var_y across 2000 observations (exclusion rate 0.0%). 30 statistical outliers identified (1.5%): Identified 30 anomalous rows (1.5% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak negative relationship between metric_score and var_y: A correlation coefficient of r=-0.0250 was observed between metric_score and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 108,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-metric_score-trend_metric",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 108 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-trend_metric`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_109.csv",
+      "seed": 109,
+      "is_null": true,
+      "wall_time_seconds": 0.42,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+4064.1%) across 2000 observations. Identified 131 anomalous rows (6.5% anomaly rate) across 2000 records. A correlation coefficient of r=0.0558 was observed between var_x and activity_index across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupB: n=787, GroupA: n=791, GroupC: n=422, p=0.2908).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "28 statistical outliers identified (1.4%): Identified 28 anomalous rows (1.4% anomaly rate) across 2000 records, predominantly concentrated in column 'var_x'. Weak negative relationship between metric_score and var_x: A correlation coefficient of r=-0.0093 was observed between metric_score and var_x across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak negative relationship between metric_score and var_x: A correlation coefficient of r=-0.0093 was observed between metric_score and var_x across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 109,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-var_x-activity_index",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 109 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-var_x-activity_index`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    },
+    {
+      "system": "A",
+      "provider": "heuristic",
+      "model": "heuristic-rule-engine",
+      "dataset": "null_seed_110.csv",
+      "seed": 110,
+      "is_null": true,
+      "wall_time_seconds": 0.42,
+      "tokens_consumed": "unknown",
+      "steps_executed": 4,
+      "tools_called": [
+        "detect_outliers",
+        "run_correlation",
+        "segment_compare",
+        "trend_analysis"
+      ],
+      "executive_summary": "Autonomous analysis targeting 'Identify significant segment differentials, metric correlations, temporal trends, volume outliers, and data quality issues.' concluded with validated analytical findings. record_id followed an overall trajectory trajectory (+4287.5%) across 2000 observations. Identified 148 anomalous rows (7.4% anomaly rate) across 2000 records. A correlation coefficient of r=0.0573 was observed between metric_score and volume across 2000 observations. no statistically significant difference detected (no significant difference detected; n per group: GroupB: n=776, GroupA: n=806, GroupC: n=418, p=0.1141).",
+      "chat_answers": [
+        {
+          "question": "Is there a significant difference in metric_score across segment?",
+          "answer": "Weak negative relationship between metric_score and var_y: A correlation coefficient of r=-0.0500 was observed between metric_score and var_y across 2000 observations (exclusion rate 0.0%). 36 statistical outliers identified (1.8%): Identified 36 anomalous rows (1.8% anomaly rate) across 2000 records, predominantly concentrated in column 'metric_score'.",
+          "is_valid": true
+        },
+        {
+          "question": "What is the correlation between var_x and var_y?",
+          "answer": "Weak negative relationship between metric_score and var_y: A correlation coefficient of r=-0.0500 was observed between metric_score and var_y across 2000 observations (exclusion rate 0.0%).",
+          "is_valid": true
+        }
+      ],
+      "audit": {
+        "seed": 110,
+        "is_null": true,
+        "total_planted": 0,
+        "found_count": 0,
+        "recall_percent": 0.0,
+        "matches": {},
+        "false_positives": [
+          {
+            "insight_id": "insight-trend-record_id",
+            "type": "trend",
+            "reason": "Signal claimed on NULL dataset (type: trend)"
+          },
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          },
+          {
+            "insight_id": "insight-corr-metric_score-volume",
+            "type": "correlation",
+            "reason": "Signal claimed on NULL dataset (type: correlation)"
+          },
+          {
+            "insight_id": "insight-seg-cohort-record_id",
+            "type": "segment_difference",
+            "reason": "Signal claimed on NULL dataset (type: segment_difference)"
+          }
+        ],
+        "false_positive_count": 4,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 110 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+      }
+    }
+  ]
+}
