@@ -74,8 +74,10 @@ def match_single_planted_finding(
                 if col_match:
                     p_val = ins.get("significance", 1.0)
                     if p_val is None or p_val < 0.05:
-                        return True, ins.get("id"), f"Matched S1 (p={p_val})"
-        return False, None, "S1 not found in surviving insights"
+                        diff_val = ins.get("effect_size")
+                        diff_str = f", diff={diff_val:.3f}" if isinstance(diff_val, (int, float)) else ""
+                        return True, ins.get("id"), f"Matched S1 ({ins.get('segment_column', target_seg)} vs {ins.get('metric_column', target_metric)}: p={p_val}{diff_str})"
+        return False, None, f"S1 not found in surviving insights (evaluated segment={target_seg}, metric={target_metric})"
 
     # 2. C1 Correlation
     if planted_id == "C1" or p_type == "correlation":
@@ -87,8 +89,10 @@ def match_single_planted_finding(
                 if (c1 in full_text or "var_x" in full_text) and (c2 in full_text or "var_y" in full_text):
                     r_val = ins.get("effect_size", 0.0)
                     if abs(r_val) >= 0.40:
-                        return True, ins.get("id"), f"Matched C1 (r={r_val:.2f})"
-        return False, None, "C1 not found in surviving insights"
+                        p_val = ins.get("significance")
+                        p_str = f", p={p_val}" if p_val is not None else ""
+                        return True, ins.get("id"), f"Matched C1 ({c1}~{c2}: r={r_val:.2f}{p_str})"
+        return False, None, f"C1 not found in surviving insights (evaluated {c1}~{c2} |r|>=0.40)"
 
     # 3. T1 Trend
     if planted_id == "T1" or p_type == "trend":
@@ -99,8 +103,10 @@ def match_single_planted_finding(
                 if t_col in full_text or "trend_metric" in full_text:
                     direction = ins.get("direction", "upward")
                     if direction in ("upward", "positive", "increasing"):
-                        return True, ins.get("id"), f"Matched T1 (trend on {t_col})"
-        return False, None, "T1 not found in surviving insights"
+                        p_val = ins.get("significance")
+                        p_str = f", p={p_val}" if p_val is not None else ""
+                        return True, ins.get("id"), f"Matched T1 ({t_col}: {direction} trend{p_str})"
+        return False, None, f"T1 not found in surviving insights (evaluated trend on {t_col})"
 
     # 4. O1 Outliers
     if planted_id == "O1" or p_type in ("outlier", "outliers"):
@@ -109,8 +115,10 @@ def match_single_planted_finding(
             if ins.get("type") in ("outlier", "outliers"):
                 full_text = _normalize(f"{ins.get('title')} {ins.get('summary')} {ins.get('headline')}")
                 if o_col in full_text or "volume" in full_text:
-                    return True, ins.get("id"), "Matched O1 (outliers in volume)"
-        return False, None, "O1 not found in surviving insights"
+                    cnt = ins.get("metric_values", {}).get("outlier_count")
+                    cnt_str = f", count={cnt}" if cnt is not None else ""
+                    return True, ins.get("id"), f"Matched O1 ({o_col}: 3.0x IQR outliers{cnt_str})"
+        return False, None, f"O1 not found in surviving insights (evaluated 3.0x IQR outliers on {o_col})"
 
     # 5. Q1 Sentinel
     if planted_id == "Q1" or p_type == "sentinel":
@@ -118,8 +126,10 @@ def match_single_planted_finding(
         for item in dq_items:
             full_text = _normalize(f"{item.get('title')} {item.get('summary')} {item.get('headline')} {item.get('narrative')} {item.get('details')}")
             if ("999" in full_text or "sentinel" in full_text) and (q_col in full_text or "satisfaction" in full_text):
-                return True, item.get("id") or "dq_sentinel", "Matched Q1 (999 sentinel in satisfaction_score)"
-        return False, None, "Q1 not found in data quality insights"
+                cnt = item.get("metric_values", {}).get("count_999") or item.get("metric_values", {}).get("affected_count")
+                cnt_str = f", count={cnt}" if cnt is not None else ""
+                return True, item.get("id") or "dq_sentinel", f"Matched Q1 ({q_col}: sentinel 999{cnt_str})"
+        return False, None, f"Q1 not found in data quality insights (evaluated sentinel 999 on {q_col})"
 
     # 6. Q2 Invalid Domain
     if planted_id == "Q2" or p_type == "invalid_domain":
@@ -127,8 +137,10 @@ def match_single_planted_finding(
         for item in dq_items:
             full_text = _normalize(f"{item.get('title')} {item.get('summary')} {item.get('headline')} {item.get('narrative')} {item.get('details')}")
             if ("negative" in full_text or "invalid" in full_text) and (q2_col in full_text or "salary" in full_text):
-                return True, item.get("id") or "dq_invalid", "Matched Q2 (negative salary values)"
-        return False, None, "Q2 not found in data quality insights"
+                cnt = item.get("metric_values", {}).get("negative_count") or item.get("metric_values", {}).get("affected_count")
+                cnt_str = f", count={cnt}" if cnt is not None else ""
+                return True, item.get("id") or "dq_invalid", f"Matched Q2 ({q2_col}: negative values domain violation{cnt_str})"
+        return False, None, f"Q2 not found in data quality insights (evaluated negative domain values on {q2_col})"
 
     # 7. M1 Missingness
     if planted_id == "M1" or p_type == "missingness":
@@ -136,8 +148,10 @@ def match_single_planted_finding(
         for item in dq_items:
             full_text = _normalize(f"{item.get('title')} {item.get('summary')} {item.get('headline')} {item.get('narrative')} {item.get('details')}")
             if ("missing" in full_text or "imput" in full_text) and (m_col in full_text or "activity" in full_text):
-                return True, item.get("id") or "dq_missing", "Matched M1 (missingness in activity_index)"
-        return False, None, "M1 not found in data quality insights"
+                rate = item.get("metric_values", {}).get("imputation_rate") or item.get("imputation_rate")
+                rate_str = f", rate={float(rate)*100:.1f}%" if isinstance(rate, (int, float)) else " (>=10% reporting threshold)"
+                return True, item.get("id") or "dq_missing", f"Matched M1 ({m_col}: missingness/imputation{rate_str})"
+        return False, None, f"M1 not found in data quality insights (evaluated missingness on {m_col} >= 10%)"
 
     return False, None, f"Unknown planted finding type: {p_type}"
 

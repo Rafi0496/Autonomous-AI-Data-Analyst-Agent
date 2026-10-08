@@ -880,11 +880,11 @@ def generate_insights(
             impact_score=0.42
         ))
 
-    # E: Imputation Rates > 25%
+    # E: Imputation / Missingness Rates >= 10% (Documented reporting threshold >= 10%)
     for col, stats in cl_report.get("column_imputation_stats", {}).items():
         imp_rate = stats.get("imputation_rate", 0.0)
         imp_cnt = stats.get("imputed_count", 0)
-        if imp_rate > 0.25:
+        if imp_rate >= 0.10:
             n_used_imp = max(0, total_rows - imp_cnt)
             conf = determine_confidence(n_used_imp, imp_rate)
             score = compute_impact_score("data_quality", imp_rate, None, n_used_imp, imp_cnt, conf)
