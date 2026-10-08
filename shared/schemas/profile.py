@@ -20,9 +20,10 @@ class DataQualitySummary(BaseModel):
     missing_percentage: float
     duplicate_rows: int
     duplicate_percentage: float
-    quality_score: float  # 0 to 100 (computed on RAW data)
+    quality_score: float  # 0 to 100 (headline field, computed on RAW data)
     raw_quality_score: Optional[float] = None
-    cleaned_quality_score: Optional[float] = None
+    post_cleaning_completeness: Optional[float] = None
+    cleaned_quality_score: Optional[float] = None  # retained for backward compatibility
     sampling_disclosure: Optional[str] = None
     warnings: List[str] = Field(default_factory=list)
 

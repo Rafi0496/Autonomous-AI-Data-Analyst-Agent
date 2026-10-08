@@ -32,7 +32,9 @@ def test_m1_raw_vs_cleaned_quality_scores(sample_datasets_dir: Path):
     clean_hr, res_hr = clean_data(df_hr, "hr_test")
     
     assert res_hr.raw_quality_score is not None
+    assert res_hr.quality_score == res_hr.raw_quality_score
     assert res_hr.cleaned_quality_score is not None
+    assert res_hr.post_cleaning_completeness == res_hr.cleaned_quality_score
     # HR must visibly score low
     assert res_hr.raw_quality_score < 60.0, f"HR raw score {res_hr.raw_quality_score} was expected to score < 60.0"
     assert res_hr.cleaned_quality_score > res_hr.raw_quality_score
@@ -41,6 +43,7 @@ def test_m1_raw_vs_cleaned_quality_scores(sample_datasets_dir: Path):
     assert prof_hr.quality_summary.quality_score == res_hr.raw_quality_score
     assert prof_hr.quality_summary.raw_quality_score == res_hr.raw_quality_score
     assert prof_hr.quality_summary.cleaned_quality_score == res_hr.cleaned_quality_score
+    assert prof_hr.quality_summary.post_cleaning_completeness == res_hr.post_cleaning_completeness
 
     # 2. Marketing Campaign
     df_mkt = pd.read_csv(mkt_path)

@@ -33,8 +33,10 @@ class DatasetCleaningResult(BaseModel):
     suspected_repeated_extremes: List[Dict[str, Any]] = Field(default_factory=list)
     suspected_returns: List[Dict[str, Any]] = Field(default_factory=list)
     duplicates_removed: int = 0
+    quality_score: Optional[float] = None  # headline raw quality score
     raw_quality_score: Optional[float] = None
-    cleaned_quality_score: Optional[float] = None
+    post_cleaning_completeness: Optional[float] = None
+    cleaned_quality_score: Optional[float] = None  # alias for backward compatibility
     is_sampled: bool = False
     sampling_rate: Optional[float] = None
     population_row_count: Optional[int] = None

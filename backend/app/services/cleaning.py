@@ -654,7 +654,9 @@ class DataCleaningService:
             suspected_repeated_extremes=suspected_repeated_extremes,
             suspected_returns=suspected_returns,
             duplicates_removed=duplicates_removed,
+            quality_score=raw_score,
             raw_quality_score=raw_score,
+            post_cleaning_completeness=cleaned_score,
             cleaned_quality_score=cleaned_score,
             is_sampled=is_sampled,
             sampling_rate=sampling_rate,
@@ -666,7 +668,9 @@ class DataCleaningService:
             cleaned_file_path=saved_path_str
         )
 
+        cleaned_df.attrs["quality_score"] = raw_score
         cleaned_df.attrs["raw_quality_score"] = raw_score
+        cleaned_df.attrs["post_cleaning_completeness"] = cleaned_score
         cleaned_df.attrs["cleaned_quality_score"] = cleaned_score
         cleaned_df.attrs["is_sampled"] = is_sampled
         cleaned_df.attrs["sampling_disclosure"] = sampling_disclosure

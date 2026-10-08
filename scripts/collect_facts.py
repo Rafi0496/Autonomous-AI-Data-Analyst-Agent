@@ -303,19 +303,18 @@ def collect_section_4_datasets() -> Tuple[str, Dict[str, Any]]:
             "name": ds_name,
             "filename": fname,
             "raw_score": c_res.raw_quality_score,
-            "cleaned_score": c_res.cleaned_quality_score,
-            "delta": c_res.cleaned_quality_score - c_res.raw_quality_score
+            "post_cleaning_completeness": c_res.post_cleaning_completeness or c_res.cleaned_quality_score,
         })
 
     # 4.0 Summary Table
-    lines.append("### 4.0 Data Quality Scores Summary (Raw vs Cleaned Data)")
-    lines.append("Computed strictly on RAW data (missingness, sentinels, invalid domain values, duplicates) vs Cleaned data:")
+    lines.append("### 4.0 Data Quality Scores Summary (Raw Data Quality vs Post-Cleaning Completeness)")
+    lines.append("Computed strictly on RAW data (missingness, sentinels, invalid domain values, duplicates) and Post-Cleaning Completeness:")
     lines.append("")
-    lines.append("| Dataset Name | Raw File | Raw Data Score | Cleaned Data Score | Quality Improvement | Assessment |")
-    lines.append("|---|---|---|---|---|---|")
+    lines.append("| Dataset Name | Raw File | Quality Score (Raw) | Post-Cleaning Completeness | Assessment |")
+    lines.append("|---|---|---|---|---|")
     for s in summary_scores:
         assessment = "Visibly Low Raw (46% missing salaries, 31 negative, 18 impossible ages) -> High Cleaned" if "hr" in s["filename"] else "Cleaned & normalized"
-        lines.append(f"| {s['name']} | `{s['filename']}` | **{s['raw_score']:.1f} / 100** | **{s['cleaned_score']:.1f} / 100** | +{s['delta']:.1f} | {assessment} |")
+        lines.append(f"| {s['name']} | `{s['filename']}` | **{s['raw_score']:.1f} / 100** | **{s['post_cleaning_completeness']:.1f} / 100** | {assessment} |")
     lines.append("")
 
     # 4.0.1 Imputation Policy Statement
@@ -349,8 +348,8 @@ def collect_section_4_datasets() -> Tuple[str, Dict[str, Any]]:
 
         lines.append(f"- **Raw Dimensions:** `{raw_rows}` rows, `{raw_cols}` columns")
         lines.append(f"- **Column Names:** `{', '.join(raw_columns)}`")
-        lines.append(f"- **Raw Data Quality Score:** `{c_res.raw_quality_score:.1f} / 100`")
-        lines.append(f"- **Cleaned Data Quality Score:** `{c_res.cleaned_quality_score:.1f} / 100`")
+        lines.append(f"- **Quality Score (Raw Headline):** `{c_res.raw_quality_score:.1f} / 100`")
+        lines.append(f"- **Post-Cleaning Completeness:** `{c_res.post_cleaning_completeness:.1f} / 100`")
         lines.append(f"- **Duplicates Removed:** `{c_res.duplicates_removed}`")
         lines.append(f"- **Cleaned Row Count:** `{c_res.cleaned_row_count}`")
         if c_res.is_sampled:

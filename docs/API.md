@@ -79,7 +79,9 @@ The `results` payload contains partitioned insight categories:
     {
       "id": "insight_dq_raw",
       "type": "data_quality",
+      "quality_score": 46.0,
       "raw_quality_score": 46.0,
+      "post_cleaning_completeness": 92.5,
       "cleaned_quality_score": 92.5,
       "imputation_policy": "Identifiers and segments left missing; numeric mask preserved."
     }

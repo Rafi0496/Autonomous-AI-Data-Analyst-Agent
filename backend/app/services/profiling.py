@@ -141,17 +141,17 @@ class DataProfilingService:
         duplicate_rows = int(df.duplicated().sum())
         dup_pct = round((duplicate_rows / row_count) * 100, 2) if row_count > 0 else 0.0
         
-        # Retrieve raw and cleaned quality scores and sampling disclosure if available
-        raw_score = df.attrs.get("raw_quality_score")
-        clean_score = df.attrs.get("cleaned_quality_score")
+        # Retrieve raw and post-cleaning completeness scores and sampling disclosure if available
+        raw_score = df.attrs.get("quality_score") or df.attrs.get("raw_quality_score")
+        clean_score = df.attrs.get("post_cleaning_completeness") or df.attrs.get("cleaned_quality_score")
         sampling_disclosure = df.attrs.get("sampling_disclosure")
 
         cl_report = df.attrs.get("cleaning_report")
         if isinstance(cl_report, dict):
             if raw_score is None:
-                raw_score = cl_report.get("raw_quality_score")
+                raw_score = cl_report.get("quality_score") or cl_report.get("raw_quality_score")
             if clean_score is None:
-                clean_score = cl_report.get("cleaned_quality_score")
+                clean_score = cl_report.get("post_cleaning_completeness") or cl_report.get("cleaned_quality_score")
             if sampling_disclosure is None:
                 sampling_disclosure = cl_report.get("sampling_disclosure")
 
@@ -176,6 +176,7 @@ class DataProfilingService:
             duplicate_percentage=dup_pct,
             quality_score=quality_score,
             raw_quality_score=raw_score,
+            post_cleaning_completeness=clean_score,
             cleaned_quality_score=clean_score,
             sampling_disclosure=sampling_disclosure,
             warnings=overall_warnings
