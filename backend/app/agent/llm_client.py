@@ -422,7 +422,8 @@ class HeuristicClient(LLMClient):
                     from backend.app.services.chat_sql import format_sql_query_result, detect_question_target_table
                     target_table = detect_question_target_table(question)
                     sampling_disc = profile.get("quality_summary", {}).get("sampling_disclosure") or profile.get("sampling_disclosure")
-                    ans_text, ans_claims = format_sql_query_result(tr["rows"], question, target_table, sampling_disclosure=sampling_disc)
+                    imp_stats = cleaning_report.get("column_imputation_stats", {})
+                    ans_text, ans_claims = format_sql_query_result(tr["rows"], question, target_table, sampling_disclosure=sampling_disc, imputation_stats=imp_stats)
                     answer_parts.append(ans_text)
                     claims.extend(ans_claims)
                 elif tr.get("tool") == "run_correlation" and tr.get("correlations"):

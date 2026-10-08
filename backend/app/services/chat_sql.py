@@ -11,11 +11,39 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 def detect_question_target_table(question: str) -> str:
-    """Determine whether to query data_observed or data_clean based on question terms."""
+    """
+    Determine whether to query data_observed or data_clean:
+    - Numeric aggregates (sum, avg, mean, rate, total, min, max) default to data_observed.
+    - Explicit observed keywords ('observed', 'non-missing', 'recorded') -> data_observed.
+    - Explicit clean keywords ('clean', 'cleaned', 'imputed', 'all rows') -> data_clean.
+    - data_clean only for row counts, IDs, and categorical counts (e.g. 'number of transactions', 'how many employees').
+    """
     q_lower = question.lower()
-    if any(w in q_lower for w in ["non-missing", "non missing", "observed", "recorded"]):
+    if any(w in q_lower for w in ["data_clean", "clean records", "cleaned data", "all rows", "imputed rows"]):
+        return "data_clean"
+    if any(w in q_lower for w in ["non-missing", "non missing", "observed", "recorded", "data_observed"]):
         return "data_observed"
-    return "data_clean"
+
+    # Categorical counts, row counts, IDs and categorical share use data_clean
+    is_categorical_or_count = (
+        any(w in q_lower for w in [
+            "number of", "transactions per", "how many", "count of", "headcount", "how many records", "how many rows", "per region"
+        ])
+        or ("share of credit card" in q_lower and not any(w in q_lower for w in ["observed", "non-missing", "non missing"]))
+        or ("share of" in q_lower and "payment" in q_lower and not any(w in q_lower for w in ["observed", "non-missing", "non missing"]))
+    ) and not any(w in q_lower for w in ["salary", "spend", "conversion", "price", "revenue", "average", "avg", "mean"])
+
+    if is_categorical_or_count:
+        return "data_clean"
+
+    # All numeric aggregates (sum, avg, mean, numeric rate, conversions, spend, salary, etc.) default to data_observed
+    has_numeric_agg = any(w in q_lower for w in [
+        "salary", "spend", "conversion", "rate", "sum", "average", "avg", "mean", "price", "quantity", "revenue"
+    ])
+    if has_numeric_agg:
+        return "data_observed"
+
+    return "data_observed"
 
 
 def extract_question_columns(question: str, available_columns: List[str]) -> List[str]:
@@ -238,15 +266,25 @@ def generate_sql_for_question(
     return None
 
 
+def format_label(val: Any) -> Any:
+    if isinstance(val, str) and val.islower():
+        if val.upper() in {"HR", "IT", "ID", "PR", "AI", "ML", "BI", "USA", "UK", "EU"}:
+            return val.upper()
+        return val.title()
+    return val
+
+
 def format_sql_query_result(
     rows: List[Dict[str, Any]],
     question: str,
     target_table: str,
-    sampling_disclosure: Optional[str] = None
+    sampling_disclosure: Optional[str] = None,
+    imputation_stats: Optional[Dict[str, Any]] = None
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Format query result rows into a natural language response with bound claims.
     Enforces that basis and n are stated and match the queried table.
+    When data_clean is used for a numeric column with imputed cells, states the imputed share.
     """
     if not rows:
         ans = f"Based on {target_table}: no matching records were found."
@@ -287,13 +325,24 @@ def format_sql_query_result(
     if any("conversion_rate_percent" in r for r in rows):
         group_key = next((k for k in first_row.keys() if k not in ["basis", "n", "total_conversions", "total_clicks", "conversion_rate_percent"]), None)
         top = rows[0]
-        top_name = top.get(group_key, "Top")
+        top_name = format_label(top.get(group_key, "Top"))
         top_rate = float(top["conversion_rate_percent"])
         top_conv = float(top["total_conversions"])
         top_clicks = float(top["total_clicks"])
 
+        impute_note = ""
+        if basis == "data_clean" and imputation_stats:
+            imp_items = []
+            for col_k in ["Conversions", "Clicks"]:
+                if col_k in imputation_stats and imputation_stats[col_k].get("imputation_rate", 0) > 0:
+                    ir = imputation_stats[col_k]["imputation_rate"]
+                    imp_items.append(f"{col_k} {ir * 100:.1f}% imputed")
+                    claims.append({"text": f"{col_k} imputed share: {ir * 100:.1f}%", "source_id": "query_sql", "metric_key": f"{col_k}_imputed_rate", "value": round(ir * 100, 1), "unit": "%"})
+            if imp_items:
+                impute_note = f" (imputed share: {', '.join(imp_items)})"
+
         ans = (
-            f"Based on {basis} (n={n_basis}{disc_note}): "
+            f"Based on {basis} (n={n_basis}{disc_note}{impute_note}): "
             f"'{top_name}' delivered the highest conversion rate at {top_rate:.2f}% ({int(top_conv)} conversions from {int(top_clicks):,} clicks)."
         )
         claims.append({"text": ans, "source_id": "query_sql", "metric_key": "total_records", "value": float(n_basis), "unit": "count"})
@@ -303,7 +352,7 @@ def format_sql_query_result(
 
         other_items = []
         for r in rows[1:]:
-            c_name = r.get(group_key)
+            c_name = format_label(r.get(group_key))
             c_rate = float(r["conversion_rate_percent"])
             c_conv = float(r["total_conversions"])
             c_clicks = float(r["total_clicks"])
@@ -320,9 +369,21 @@ def format_sql_query_result(
     group_col = next((k for k in first_row.keys() if k not in ["basis", "n", "n_total"]), None)
     metric_cols = [k for k in first_row.keys() if k not in ["basis", "n", "n_total", group_col]]
 
+    impute_note = ""
+    if basis == "data_clean" and imputation_stats:
+        imp_items = []
+        for m in metric_cols:
+            for c, stat in imputation_stats.items():
+                if c.lower() in m.lower() and stat.get("imputation_rate", 0) > 0:
+                    ir = stat["imputation_rate"]
+                    imp_items.append(f"{c} {ir * 100:.1f}% imputed")
+                    claims.append({"text": f"{c} imputed share: {ir * 100:.1f}%", "source_id": "query_sql", "metric_key": f"{c}_imputed_rate", "value": round(ir * 100, 1), "unit": "%"})
+        if imp_items:
+            impute_note = f" (imputed share: {', '.join(imp_items)})"
+
     row_sentences = []
     for r in rows:
-        grp_val = r.get(group_col)
+        grp_val = format_label(r.get(group_col))
         parts = []
         for m in metric_cols:
             val = r.get(m)
@@ -349,12 +410,12 @@ def format_sql_query_result(
         elif grp_val is not None:
             count_val = r.get("transaction_count") or r.get("employee_count") or r.get("count") or r.get("n")
             if count_val is not None:
-                row_sentences.append(f"{grp_val}: {count_val}")
+                row_sentences.append(f"{grp_val}: transaction count was {count_val}" if "transaction" in q_lower else (f"{grp_val}: employee count was {count_val}" if "employee" in q_lower else f"{grp_val}: count was {count_val}"))
                 claims.append({"text": f"{grp_val}: {count_val}", "source_id": "query_sql", "metric_key": f"{grp_val}_count", "value": float(count_val), "unit": "count"})
             else:
                 row_sentences.append(f"{grp_val}")
 
-    ans = f"Based on {basis} (n={n_basis}{disc_note}): " + "; ".join(row_sentences) + "."
+    ans = f"Based on {basis} (n={n_basis}{disc_note}{impute_note}): " + "; ".join(row_sentences) + "."
 
     # Ensure every single numeric token present in ans is bound as a claim
     from backend.app.agent.citation_checker import extract_numeric_tokens

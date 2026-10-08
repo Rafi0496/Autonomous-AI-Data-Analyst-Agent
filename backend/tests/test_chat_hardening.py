@@ -76,7 +76,16 @@ def test_chat_tool_call_determination():
     )
     assert tool_name_mkt == "query_sql"
     assert "Channel" in tool_args_mkt["sql"]
-    assert "data_clean" in tool_args_mkt["sql"]
+    assert "data_observed" in tool_args_mkt["sql"]
+
+    # Row count queries use data_clean
+    tool_name_tx, tool_args_tx = determine_chat_tool_call(
+        "number of transactions per region",
+        "retail_sales_messy.csv",
+        retail_cols
+    )
+    assert tool_name_tx == "query_sql"
+    assert "data_clean" in tool_args_tx["sql"]
 
 def test_chat_process_missing_column_and_tool_call(monkeypatch):
     """Test full chat execution with missing column notice and tool calling."""
@@ -119,7 +128,7 @@ def test_chat_process_missing_column_and_tool_call(monkeypatch):
     assert len(res_conv["tool_calls_used"]) == 1
     assert res_conv["tool_calls_used"][0]["tool"] == "query_sql"
     assert "Email" in res_conv["answer"]
-    assert "8.90" in res_conv["answer"]
-    assert "data_clean" in res_conv["answer"]
+    assert "8.97" in res_conv["answer"]
+    assert "data_observed" in res_conv["answer"]
     assert res_conv["verification"]["is_valid"] is True
     assert res_conv["verification"]["post_strip_verification_rate"] == 100.0

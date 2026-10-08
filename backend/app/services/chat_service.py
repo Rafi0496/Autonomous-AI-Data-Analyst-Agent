@@ -186,7 +186,8 @@ def answer_heuristic_question(
             tool_calls_count += 1
             evidence.append({"type": "tool_call", "tool": "query_sql"})
             sampling_disc = profile.get("quality_summary", {}).get("sampling_disclosure") or profile.get("sampling_disclosure")
-            ans_sql, _ = format_sql_query_result(tool_res.get("rows", []), question, target_table, sampling_disclosure=sampling_disc)
+            imp_stats = cleaning_report.get("column_imputation_stats", {})
+            ans_sql, _ = format_sql_query_result(tool_res.get("rows", []), question, target_table, sampling_disclosure=sampling_disc, imputation_stats=imp_stats)
             return ans_sql, evidence, tool_results, tool_calls_count
         except Exception:
             pass
