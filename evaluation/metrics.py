@@ -311,10 +311,15 @@ def compute_system_metrics(system_summary: Dict[str, Any]) -> Dict[str, Any]:
     wall_times = [r.get("wall_time_seconds", 0.0) for r in runs if r.get("wall_time_seconds")]
     tokens_list = [r.get("tokens_consumed", 0) for r in runs if isinstance(r.get("tokens_consumed"), (int, float))]
     steps_list = [r.get("steps_executed", 0) for r in runs]
+    rounds_list = [r.get("rounds", 1) for r in runs]
+    tool_calls_list = [r.get("tool_calls_count", len(r.get("tools_called", []))) for r in runs]
+    follow_up_count = sum(1 for r in planted_runs if r.get("follow_up_triggered", False))
 
     mean_wall_time = round(float(np.mean(wall_times)), 2) if wall_times else 0.0
     mean_tokens = round(float(np.mean(tokens_list)), 0) if tokens_list else 0.0
     mean_steps = round(float(np.mean(steps_list)), 2) if steps_list else 0.0
+    mean_rounds = round(float(np.mean(rounds_list)), 2) if rounds_list else 1.0
+    mean_tools = round(float(np.mean(tool_calls_list)), 2) if tool_calls_list else 0.0
 
     return {
         "system": sys_id,
@@ -353,7 +358,11 @@ def compute_system_metrics(system_summary: Dict[str, Any]) -> Dict[str, Any]:
         "operational_efficiency": {
             "mean_wall_time_seconds": mean_wall_time,
             "mean_tokens_per_run": mean_tokens,
-            "mean_steps_per_run": mean_steps
+            "mean_steps_per_run": mean_steps,
+            "mean_rounds_per_run": mean_rounds,
+            "mean_tool_calls_per_run": mean_tools,
+            "follow_up_triggered_planted_runs": follow_up_count,
+            "follow_up_triggered_percent": round((follow_up_count / len(planted_runs)) * 100, 1) if planted_runs else 0.0
         }
     }
 

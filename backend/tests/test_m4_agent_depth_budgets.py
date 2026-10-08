@@ -183,3 +183,41 @@ def test_token_budget_trips_and_returns_partial_findings():
     assert "synthesis" in result
     assert len(result["synthesis"]["key_findings"]) >= 1
     assert len(result["insights"]) >= 1
+
+
+def test_planted_s1_effect_triggers_round2_drilldown():
+    """Verify that a planted S1 effect (p < 0.05) triggers a round-2 drill-down tool call."""
+    profile = {
+        "columns": {
+            "cohort": {"inferred_type": "categorical", "unique_count": 3},
+            "decoy_cat": {"inferred_type": "categorical", "unique_count": 3},
+            "metric_score": {"inferred_type": "numeric", "unique_count": 500},
+            "var_x": {"inferred_type": "numeric", "unique_count": 500}
+        },
+        "row_count": 2000
+    }
+
+    # Planted S1 finding (Cohen's d ~ 0.8, p < 0.001)
+    executed_s1 = [
+        {
+            "tool": "segment_compare",
+            "segment_column": "cohort",
+            "metric_column": "metric_score",
+            "p_value": 0.0001,
+            "status": "success"
+        }
+    ]
+
+    candidates, reasons = compute_candidate_follow_ups(
+        executed_results=executed_s1,
+        profile=profile,
+        dataset_id="planted_seed_1"
+    )
+
+    assert len(candidates) >= 1, "Expected candidate follow-up for significant segment effect"
+    assert any("p=0.0001 < 0.05" in r or "segment p=" in r for r in reasons)
+    s1_candidate = candidates[0]
+    assert s1_candidate.name == "query_sql"
+    assert "cohort" in s1_candidate.arguments["sql"]
+    assert "decoy_cat" in s1_candidate.arguments["sql"]
+    assert "avg_metric_score" in s1_candidate.arguments["sql"]
