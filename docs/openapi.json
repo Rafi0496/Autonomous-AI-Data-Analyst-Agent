@@ -296,6 +296,17 @@
             "title": "Missing Percentage",
             "type": "number"
           },
+          "post_cleaning_completeness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Cleaning Completeness"
+          },
           "quality_score": {
             "title": "Quality Score",
             "type": "number"
@@ -480,6 +491,28 @@
               }
             ],
             "title": "Population Row Count"
+          },
+          "post_cleaning_completeness": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Cleaning Completeness"
+          },
+          "quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Score"
           },
           "raw_quality_score": {
             "anyOf": [

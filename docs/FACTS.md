@@ -1,7 +1,7 @@
 # GROUND-TRUTH FACTS REPOSITORY
 ## Autonomous AI Data Analyst Agent
 
-- **Generated At:** `2026-10-08T13:09:24+0530`
+- **Generated At:** `2026-10-08T14:48:42+0530`
 - **Executing Python:** `C:\Users\Shaik Rafi\AppData\Roaming\uv\python\cpython-3.11.16-windows-x86_64-none\python.exe`
 - **Working Directory:** `D:\Projects\Autonomous AI Data Analyst Agent`
 
@@ -16,6 +16,9 @@
 
 ### 1.1 Recent Commits (`git log -n 20 --oneline`)
 ```text
+03d685b backend-close: A7 docker ci safety verification
+5ed6b48 backend-close: A6 hr count check script and analysis
+c8a11ee backend-close: A5 raw score headline and post-cleaning completeness
 e122f3e backend-close: A4 title case group labels
 a609c3f backend-close: A3 chat relevance and direct answers
 2b6150a backend-close: A2 chat basis and observed aggregates
@@ -33,20 +36,12 @@ aba24c0 docs: update README with CI badge and refined value proposition
 0e989bf fix(data): track sample csvs in data/samples and ensure directory creation
 1b527fc fix(tests): isolate test db in temporary sqlite file and avoid app.db dependency
 2463b26 docs: ground-truth facts
-ad6e514 phase4-final: real-world readiness, jwt auth, multi-user isolation, scheduling, feedback, scale sampling, and live demo
-4bbb7f0 phase3-final: fix reflex state serialization for job_tokens_used
-b46f548 phase3-final: dashboard hydration and playwright assertions
 ```
 
 ### 1.2 Working Tree Status (`git status -s`)
 ```text
-M backend/app/services/cleaning.py
- M backend/app/services/profiling.py
- M backend/tests/test_m1_data_correctness.py
- M scripts/collect_facts.py
- M scripts/generate_api_contract.py
- M shared/schemas/dataset.py
- M shared/schemas/profile.py
+M docs/openapi.json
+?? scripts/verify_live_a8.py
 ```
 
 ### 1.3 Remote URL
@@ -168,18 +163,21 @@ backend/tests/test_upload_api.py
 scripts/collect_facts.py
 scripts/demo_scenario_walkthrough.py
 scripts/generate_api_contract.py
+scripts/hr_count_check.py
 scripts/playwright_e2e_ui.py
 scripts/print_segment_compare.py
 scripts/probe_security_routes.py
 scripts/prototype_tool_call.py
 scripts/test_live_claude.py
 scripts/test_live_llm.py
+scripts/verify_docker_ci_safety.py
+scripts/verify_live_a8.py
 scripts/verify_phase1.py
 scripts/verify_phase2.py
 scripts/verify_phase3.py
 .github/workflows/ci.yml
 ```
-*Total real files tracked across specified directories: 114*
+*Total real files tracked across specified directories: 117*
 
 
 ---
@@ -224,15 +222,18 @@ scripts/verify_phase3.py
 | **Total Collected** | **159** |
 
 ### 3.2 Automated Test Execution (`pytest -m "not live" -q`)
-- **Exit Code:** `1`
-- **Passed Tests:** `155`
-- **Failed Tests:** `1`
-- **Skipped Tests:** `1`
+- **Exit Code:** `0`
+- **Passed Tests:** `157`
+- **Failed Tests:** `0`
+- **Skipped Tests:** `0`
 - **Deselected Tests (Live LLM tests):** `2`
-- **Execution Duration:** `321.36s`
+- **Execution Duration:** `422.42s`
 
 #### Verbatim Last 15 Lines:
 ```text
+    and field_name in cls.__fields__
+
+backend/tests/test_milestone3.py: 83 warnings
   C:\Users\Shaik Rafi\.venvs\autonomous-ai-data-analyst\Lib\site-packages\reflex_base\utils\types.py:591: PydanticDeprecatedSince20: The `__fields__` attribute is deprecated, use the `model_fields` class property instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
     and hasattr(cls.__fields__[field_name], "annotation")
 
@@ -245,9 +246,6 @@ backend/tests/test_milestone3.py: 83 warnings
     return cls.__fields__[field_name].annotation
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ===========================
-SKIPPED [1] backend\tests\test_tools.py:75: sklearn native DLL blocked by Application Control policy: DLL load failed while importing _ball_tree: An Application Control policy has blocked this file.
-FAILED backend/tests/test_m7_api_contract.py::test_live_openapi_matches_committed_contract
 ```
 
 
@@ -366,67 +364,69 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **LLM Model:** `gemini-3.1-flash-lite`
 - **Execution Status:** `budget_tripped`
 - **Total Steps Executed:** `3`
-- **Total Tokens Consumed:** `25884`
-- **Total Execution Duration:** `15.715s`
+- **Total Tokens Consumed:** `25794`
+- **Total Execution Duration:** `12.774s`
 
 #### Multi-Round Execution Audit (`rounds_table`)
 | Round | Tools Executed | Reason / Trigger Status |
 |---|---|---|
-| 1 | `segment_compare`, `trend_analysis`, `detect_outliers` | Initial planned exploratory analysis |
+| 1 | `segment_compare`, `trend_analysis`, `run_correlation` | Initial planned exploratory analysis |
 | 2 | *None (Round stopped)* | No trigger fired (no segment p < 0.05, no outlier rate > 5%, no |r| > 0.5); reflection stopped. |
 
 #### Step-by-Step Tool Execution Log
 | Round | Step | Tool Name | Tool Arguments | Duration (ms) | LLM (ms) | Reflect (ms) | Rationale |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 | `segment_compare` | `{"dataset_id": "88e9cf31-79a7-4ebf-a7f3-cd4fd5bd5b7a", "metric_column": "Unit_Price", "segment_column": "Category"}` | 20.8 | 3351.9 | 0.0 | To understand how pricing varies across different product categories,  |
-| 1 | 1 | `trend_analysis` | `{"value_column": "Unit_Price", "date_column": "Date", "dataset_id": "88e9cf31-79a7-4ebf-a7f3-cd4fd5bd5b7a"}` | 24.0 | 0.0 | 0.0 | To identify temporal patterns or seasonality in transaction volume or  |
-| 1 | 1 | `detect_outliers` | `{"method": "iqr", "dataset_id": "88e9cf31-79a7-4ebf-a7f3-cd4fd5bd5b7a", "columns": ["Quantity", "Unit_Price"]}` | 29.1 | 0.0 | 0.0 | To identify anomalous transactions in quantity or price that might ind |
+| 1 | 1 | `segment_compare` | `{"metric_column": "Unit_Price", "dataset_id": "e01d1bac-7a40-497f-b4b6-28e098f98ad8", "segment_column": "Category"}` | 21.1 | 2951.3 | 0.0 | To understand how pricing varies across different product categories,  |
+| 1 | 1 | `trend_analysis` | `{"dataset_id": "e01d1bac-7a40-497f-b4b6-28e098f98ad8", "date_column": "Date", "value_column": "Quantity"}` | 23.0 | 0.0 | 0.0 | To identify temporal patterns or seasonality in sales volume (Quantity |
+| 1 | 1 | `run_correlation` | `{"dataset_id": "e01d1bac-7a40-497f-b4b6-28e098f98ad8"}` | 19.6 | 0.0 | 0.0 | To determine if there is a relationship between the quantity purchased |
 
 #### Ranked Analytical Insights
 | ID | Title | Type | Confidence | n_used | n_excluded | n_total | Impact Score |
 |---|---|---|---|---|---|---|---|
+| `insight-corr-Quantity-Unit_Price` | Weak negative relationship between Quantity and Unit_Price | `correlation` | `medium` | 79 | 41 | 120 | 0.39 |
 | `insight-seg-Category-Unit_Price` | No significant difference in Unit_Price across Category | `segment_difference` | `high` | 105 | 15 | 120 | 0.20 |
-| `insight-outlier-features` | No anomalous outliers detected across features | `outlier` | `medium` | 79 | 41 | 120 | 0.07 |
 
 #### Data Quality Caveats
 | ID | Title | Confidence | n_used | n_excluded | n_total | Impact Score |
 |---|---|---|---|---|---|---|
+| `insight-dq-insufficient-trend-Quantity` | Insufficient data for trend on Quantity | `low` | 42 | 78 | 120 | 0.49 |
 | `insight-dq-sentinel-Quantity` | Sentinel values sanitized in Quantity | `high` | 105 | 15 | 120 | 0.47 |
-| `insight-dq-insufficient-trend-Unit_Price` | Insufficient data for trend on Unit_Price | `low` | 52 | 68 | 120 | 0.45 |
 | `insight-dq-returns-Quantity` | Suspected transaction returns in Quantity | `high` | 120 | 0 | 120 | 0.45 |
 
 #### Suppressed Insights (Analytical Suppression Rules)
 | ID | Analysis Target | Triggered Rule | Detail |
 |---|---|---|---|
-| `insight-dq-insufficient-trend-Unit_Price` | `trend on Unit_Price` | `exclusion_rate > 0.5` | exclusion_rate=56.7% > 50% |
+| `insight-dq-insufficient-trend-Quantity` | `trend on Quantity` | `exclusion_rate > 0.5` | exclusion_rate=65.0% > 50% |
 
 #### Executive Narrative (Verbatim)
-> The analysis of the transaction dataset reveals a consistent pricing structure across product categories, though statistical power is limited by sample sizes. Data quality assessments identified specific challenges, including the presence of transaction returns and the necessity for imputation in key metrics. Strategic focus should be directed toward improving data collection protocols to reduce reliance on imputation. The current dataset contains 18 negative entries in the quantity field, which are associated with transaction returns, and requires robust validation to ensure future analytical reliability.
+> The exploratory analysis of the transaction dataset reveals a complex data landscape characterized by significant data quality challenges. Statistical evaluation of the relationship between transaction volume and pricing indicates a weak negative association, though this finding is tempered by a high exclusion rate during analysis. Data quality assessments identified critical issues, including the presence of sentinel values and suspected transaction returns. These factors necessitated extensive imputation and filtering, which impacted the reliability of trend analysis. Future efforts should prioritize the implementation of robust data validation protocols to mitigate the impact of sentinel values and improve the consistency of transaction records.
 
 #### Claims with Source IDs
 | Claim Text | Metric Key | Numeric Value | Unit | Source ID |
 |---|---|---|---|---|
-| No statistically significant difference detected in unit price across  | `significance` | `0.7567` | `p_value` | `insight-seg-Category-Unit_Price` |
-| Identified 18 negative entries in quantity flagged as suspected custom | `count` | `18` | `count` | `insight-dq-returns-Quantity` |
+| A correlation coefficient of r=-0.0711 was observed between Quantity a | `correlation` | `-0.0711` | `count` | `insight-corr-Quantity-Unit_Price` |
+| No statistically significant difference detected in Unit_Price across  | `significance` | `0.7567` | `p_value` | `insight-seg-Category-Unit_Price` |
+| Analytical finding for trend on Quantity was suppressed due to an excl | `exclusion_rate_percent` | `65.0` | `%` | `insight-dq-insufficient-trend-Quantity` |
 
 #### Citation Verification
 - **Verification Pass Rate:** `100.0%`
-- **Verification Status:** `PASSED`
-- **Stripped Sentences Count:** `0`
+- **Verification Status:** `FAILED`
+- **Stripped Sentences Count:** `1`
+  - Offending Sentence: `Furthermore, the evaluation of pricing across product categories shows no statistically significant difference, a result constrained by limited statistical power due to small sample size in some groups, n < 30.`
 
 #### Latency Accounting
-- **Total Tool Execution Latency:** `73.94 ms`
-- **Total LLM Orchestration Latency:** `15381.32 ms`
-- **Synthesis LLM Latency:** `12029.46 ms`
-- **Total Wall-Clock Time:** `15.715 s`
+- **Total Tool Execution Latency:** `63.75 ms`
+- **Total LLM Orchestration Latency:** `12446.35 ms`
+- **Synthesis LLM Latency:** `9495.02 ms`
+- **Total Wall-Clock Time:** `12.774 s`
 
 ### 5.2 Analysis Run: HR Workforce Attrition (`hr_attrition_messy.csv`)
 - **LLM Provider:** `llm:gemini`
 - **LLM Model:** `gemini-3.1-flash-lite`
 - **Execution Status:** `budget_tripped`
 - **Total Steps Executed:** `3`
-- **Total Tokens Consumed:** `28814`
-- **Total Execution Duration:** `26.892s`
+- **Total Tokens Consumed:** `28858`
+- **Total Execution Duration:** `13.737s`
 
 #### Multi-Round Execution Audit (`rounds_table`)
 | Round | Tools Executed | Reason / Trigger Status |
@@ -437,9 +437,9 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 #### Step-by-Step Tool Execution Log
 | Round | Step | Tool Name | Tool Arguments | Duration (ms) | LLM (ms) | Reflect (ms) | Rationale |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 | `run_correlation` | `{"dataset_id": "38068da7-3784-4923-9290-2e06bee97527"}` | 68.0 | 6051.1 | 0.0 | To identify potential relationships between numeric variables like Ann |
-| 1 | 1 | `segment_compare` | `{"segment_column": "Department", "metric_column": "Attrition", "dataset_id": "38068da7-3784-4923-9290-2e06bee97527"}` | 23.6 | 0.0 | 0.0 | To determine if specific departments have higher attrition rates, whic |
-| 1 | 1 | `detect_outliers` | `{"columns": ["Annual_Salary", "Performance_Score"], "method": "iqr", "dataset_id": "38068da7-3784-4923-9290-2e06bee97527"}` | 21.3 | 0.0 | 0.0 | To identify anomalies in salary and performance scores that might repr |
+| 1 | 1 | `run_correlation` | `{"dataset_id": "079629c6-a6b3-4035-aa56-c0b01210fa8a"}` | 103.9 | 3369.3 | 0.0 | To identify potential relationships between numeric variables like Ann |
+| 1 | 1 | `segment_compare` | `{"dataset_id": "079629c6-a6b3-4035-aa56-c0b01210fa8a", "segment_column": "Department", "metric_column": "Attrition"}` | 38.5 | 0.0 | 0.0 | To analyze if Attrition rates vary significantly across different Depa |
+| 1 | 1 | `detect_outliers` | `{"columns": ["Annual_Salary", "Performance_Score"], "dataset_id": "079629c6-a6b3-4035-aa56-c0b01210fa8a", "method": "iqr"}` | 28.1 | 0.0 | 0.0 | To identify anomalies in Annual_Salary and Performance_Score that migh |
 
 #### Ranked Analytical Insights
 | ID | Title | Type | Confidence | n_used | n_excluded | n_total | Impact Score |
@@ -460,49 +460,47 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-dq-insufficient-correlation-Performance_Score_vs_Last_Promotion_Year` | `correlation on Performance_Score vs Last_Promotion_Year` | `exclusion_rate > 0.5` | exclusion_rate=58.2% > 50% |
 
 #### Executive Narrative (Verbatim)
-> The exploratory analysis of the employee dataset reveals significant data quality challenges that impact the reliability of workforce metrics. High rates of missingness and the presence of invalid domain values necessitated extensive imputation, particularly within the Age, Annual Salary, and Performance Score columns. These data integrity issues limit the depth of current workforce modeling and require immediate remediation to support future analytical efforts.
+> The exploratory analysis of the employee dataset reveals significant data quality challenges that impact the reliability of workforce metrics. High rates of missingness and the presence of invalid domain values in key columns such as Age and Annual_Salary necessitated extensive data sanitization and imputation, which limits the confidence in current workforce modeling. This finding is constrained by limited statistical power due to small sample size in some groups, n < 30. Future efforts should prioritize improving data collection protocols to reduce reliance on imputation and ensure more robust analytical outcomes.
 
 #### Claims with Source IDs
 | Claim Text | Metric Key | Numeric Value | Unit | Source ID |
 |---|---|---|---|---|
-| The attrition rate analysis across departments yielded a p-value of 0. | `p_value` | `0.2947` | `p_value` | `insight-seg-Department-Attrition` |
-| The Age column required imputation for 29.09% of entries. | `imputation_rate` | `0.2909` | `%` | `insight-dq-imputation-Age` |
-| The Annual Salary column required imputation for 46.36% of entries. | `imputation_rate` | `0.4636` | `%` | `insight-dq-invalid-Annual_Salary` |
+| The analysis of attrition across departments yielded a p_value of 0.29 | `p_value` | `0.2947` | `p_value` | `insight-seg-Department-Attrition` |
+| The Age column required an imputation rate of 29.09%. | `imputation_rate` | `29.09` | `%` | `insight-dq-imputation-Age` |
+| The Annual_Salary column required an imputation rate of 46.36%. | `imputation_rate` | `46.36` | `%` | `insight-dq-invalid-Annual_Salary` |
 
 #### Citation Verification
 - **Verification Pass Rate:** `100.0%`
 - **Verification Status:** `FAILED`
-- **Stripped Sentences Count:** `3`
-  - Offending Sentence: `Statistical evaluation of attrition across departments indicates no statistically significant difference detected (n per group: Marketing: n=22, Sales: n=29, Engineering: n=19, HR: n=11, p=0.2947).`
-  - Offending Sentence: `This finding is constrained by limited statistical power due to small sample size in some groups, n < 30.`
-  - Offending Sentence: `Furthermore, the analysis of performance metrics in relation to promotion history was suppressed due to insufficient data for correlation (n_used=46, exclusion_rate=0.5818).`
+- **Stripped Sentences Count:** `1`
+  - Offending Sentence: `Furthermore, the assessment of attrition across departments shows no statistically significant difference detected (n per group: Marketing: n=22, Sales: n=29, Engineering: n=19, HR: n=11, p=0.2947).`
 
 #### Latency Accounting
-- **Total Tool Execution Latency:** `112.91 ms`
-- **Total LLM Orchestration Latency:** `26534.75 ms`
-- **Synthesis LLM Latency:** `20483.68 ms`
-- **Total Wall-Clock Time:** `26.892 s`
+- **Total Tool Execution Latency:** `170.44 ms`
+- **Total LLM Orchestration Latency:** `13268.47 ms`
+- **Synthesis LLM Latency:** `9899.14 ms`
+- **Total Wall-Clock Time:** `13.737 s`
 
 ### 5.3 Analysis Run: Marketing Campaigns (`marketing_campaign_messy.csv`)
 - **LLM Provider:** `llm:gemini`
 - **LLM Model:** `gemini-3.1-flash-lite`
 - **Execution Status:** `budget_tripped`
 - **Total Steps Executed:** `3`
-- **Total Tokens Consumed:** `30193`
-- **Total Execution Duration:** `11.813s`
+- **Total Tokens Consumed:** `30138`
+- **Total Execution Duration:** `19.916s`
 
 #### Multi-Round Execution Audit (`rounds_table`)
 | Round | Tools Executed | Reason / Trigger Status |
 |---|---|---|
-| 1 | `run_correlation`, `segment_compare`, `trend_analysis` | Initial planned exploratory analysis |
+| 1 | `segment_compare`, `run_correlation`, `trend_analysis` | Initial planned exploratory analysis |
 | 2 | *None (Round stopped)* | No trigger fired (no segment p < 0.05, no outlier rate > 5%, no |r| > 0.5); reflection stopped. |
 
 #### Step-by-Step Tool Execution Log
 | Round | Step | Tool Name | Tool Arguments | Duration (ms) | LLM (ms) | Reflect (ms) | Rationale |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 | `run_correlation` | `{"dataset_id": "fca24cfd-4ee0-43ec-ab33-dae4f9a6d7fc"}` | 43.5 | 2533.9 | 0.0 | To understand the relationships between marketing spend, engagement (c |
-| 1 | 1 | `segment_compare` | `{"segment_column": "Channel", "dataset_id": "fca24cfd-4ee0-43ec-ab33-dae4f9a6d7fc", "metric_column": "Conversions"}` | 12.3 | 0.0 | 0.0 | To evaluate which marketing channels are most effective at driving con |
-| 1 | 1 | `trend_analysis` | `{"value_column": "Conversions", "dataset_id": "fca24cfd-4ee0-43ec-ab33-dae4f9a6d7fc", "date_column": "Date"}` | 12.6 | 0.0 | 0.0 | To identify performance trends over time and determine if there is gro |
+| 1 | 1 | `segment_compare` | `{"dataset_id": "bb45ec17-c8e2-4bbf-9365-a33167c1327a", "metric_column": "Conversions", "segment_column": "Channel"}` | 22.9 | 9612.7 | 0.0 | To understand which marketing channels are driving the most conversion |
+| 1 | 1 | `run_correlation` | `{"dataset_id": "bb45ec17-c8e2-4bbf-9365-a33167c1327a"}` | 66.5 | 0.0 | 0.0 | To identify relationships between ad spend, impressions, clicks, and c |
+| 1 | 1 | `trend_analysis` | `{"dataset_id": "bb45ec17-c8e2-4bbf-9365-a33167c1327a", "date_column": "Date", "value_column": "Ad_Spend"}` | 21.8 | 0.0 | 0.0 | To observe how ad spend has evolved over the available dates and ident |
 
 #### Ranked Analytical Insights
 | ID | Title | Type | Confidence | n_used | n_excluded | n_total | Impact Score |
@@ -514,37 +512,37 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | ID | Title | Confidence | n_used | n_excluded | n_total | Impact Score |
 |---|---|---|---|---|---|---|
 | `insight-dq-imputation-Ad_Spend` | Elevated imputation rate in Ad_Spend (34.0%) | `medium` | 66 | 34 | 100 | 0.51 |
-| `insight-dq-insufficient-trend-Conversions` | Insufficient data for trend on Conversions | `low` | 14 | 86 | 100 | 0.50 |
+| `insight-dq-insufficient-trend-Ad_Spend` | Insufficient data for trend on Ad_Spend | `low` | 11 | 89 | 100 | 0.50 |
 | `insight-dq-extremes-Clicks` | Repeated extreme values in Clicks | `high` | 100 | 0 | 100 | 0.42 |
 | `insight-dq-extremes-Conversions` | Repeated extreme values in Conversions | `high` | 100 | 0 | 100 | 0.42 |
 
 #### Suppressed Insights (Analytical Suppression Rules)
 | ID | Analysis Target | Triggered Rule | Detail |
 |---|---|---|---|
-| `insight-dq-insufficient-trend-Conversions` | `trend on Conversions` | `n_used < 20 and exclusion_rate > 0.5` | n_used=14 < 20 and exclusion_rate=86.0% > 50% |
+| `insight-dq-insufficient-trend-Ad_Spend` | `trend on Ad_Spend` | `n_used < 20 and exclusion_rate > 0.5` | n_used=11 < 20 and exclusion_rate=89.0% > 50% |
 
 #### Executive Narrative (Verbatim)
-> The exploratory analysis of the campaign dataset reveals significant data quality challenges that limit the reliability of performance metrics. A substantial portion of the dataset, particularly in the Ad_Spend column, required deterministic imputation, which complicates the interpretation of financial performance. Furthermore, the presence of repeated extreme values in both Clicks and Conversions suggests potential systematic reporting issues that warrant further investigation into the data collection pipeline. Additionally, the analysis of the relationship between Ad_Spend and Clicks shows a weak negative association, though this is heavily influenced by the high volume of imputed data.
+> The exploratory analysis of the campaign dataset reveals significant data quality challenges that limit the reliability of performance metrics. A substantial portion of the dataset required imputation, particularly for Ad_Spend, which experienced a 34.0% imputation rate. These data gaps, combined with the presence of repeated extreme values in Clicks and Conversions, necessitate a review of current data collection and logging procedures to ensure future analytical integrity.
 
 #### Claims with Source IDs
 | Claim Text | Metric Key | Numeric Value | Unit | Source ID |
 |---|---|---|---|---|
-| The Ad_Spend column exhibits an elevated imputation rate of 34.0%. | `imputation_rate` | `34.0` | `%` | `insight-dq-imputation-Ad_Spend` |
-| The analysis of Conversions across channels yielded a p_value of 0.121 | `significance` | `0.1214` | `p_value` | `insight-seg-Channel-Conversions` |
-| Repeated extreme values were identified in the Clicks column, with 19  | `count` | `19.0` | `count` | `insight-dq-extremes-Clicks` |
+| The imputation rate for Ad_Spend reached 34.0% due to missing entries. | `imputation_rate` | `34.0` | `%` | `insight-dq-imputation-Ad_Spend` |
+| A weak negative correlation of -0.1591 is associated with Ad_Spend and | `correlation` | `-0.1591` | `count` | `insight-corr-Ad_Spend-Clicks` |
+| The p-value for the comparison of Conversions across channels is 0.121 | `significance` | `0.1214` | `p_value` | `insight-seg-Channel-Conversions` |
 
 #### Citation Verification
 - **Verification Pass Rate:** `100.0%`
 - **Verification Status:** `FAILED`
 - **Stripped Sentences Count:** `2`
-  - Offending Sentence: `Statistical analysis of channel performance indicates no statistically significant difference detected (n per group: Email: n=14, Google Ads: n=23, Instagram: n=9, LinkedIn: n=11, Facebook: n=15, p=0.1214) regarding conversion rates.`
-  - Offending Sentence: `This finding is constrained by limited statistical power due to small sample size in some groups, n < 30.`
+  - Offending Sentence: `Statistical testing regarding channel performance indicates no statistically significant difference detected (n per group: Email: n=14, Google Ads: n=23, Instagram: n=9, LinkedIn: n=11, Facebook: n=15, p=0.1214) in Conversions, with limited statistical power due to small sample size in some groups, n < 30.`
+  - Offending Sentence: `Furthermore, the relationship between Ad_Spend and Clicks is characterized by a weak negative correlation of -0.1591, though this finding is constrained by a high exclusion rate of 42.0% during the analysis.`
 
 #### Latency Accounting
-- **Total Tool Execution Latency:** `68.35 ms`
-- **Total LLM Orchestration Latency:** `11566.77 ms`
-- **Synthesis LLM Latency:** `9032.89 ms`
-- **Total Wall-Clock Time:** `11.813 s`
+- **Total Tool Execution Latency:** `111.11 ms`
+- **Total LLM Orchestration Latency:** `19498.45 ms`
+- **Synthesis LLM Latency:** `9885.75 ms`
+- **Total Wall-Clock Time:** `19.916 s`
 
 
 ---
@@ -557,7 +555,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `None (Answered from Insight context)`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Sentinel values sanitized in Quantity: Detected and sanitized 15 sentinel values (999.0) in column 'Quantity' prior to imputation. Suspected transaction returns in Quantity: Identified 18 negative entries in 'Quantity' flagged as suspected customer returns and preserved in dataset.
+> Monthly trend analysis on 'Quantity' over 'Date' was evaluated; however, no statistically reliable trend is available because the analytical finding was suppressed under data quality rule 'exclusion_rate > 0.5' (with 65.0% of records excluded or imputed, leaving 42 observed records out of 120 total).
 
 #### Question 2: [Requires query_sql Tool Call (Old Demo)]
 **User Question:** `What is the share of Credit Card payments among non-missing payment method rows?`
@@ -578,7 +576,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_clean (n=98): South: transaction count was 12 (n=12); East: transaction count was 16 (n=16); North: transaction count was 16 (n=16); West: transaction count was 14 (n=14); Central: transaction count was 40 (n=40).
+> Based on data_clean (n=98): Central: transaction count was 40 (n=40); South: transaction count was 12 (n=12); East: transaction count was 16 (n=16); North: transaction count was 16 (n=16); West: transaction count was 14 (n=14).
 
 ### 6.2 Dataset: HR Workforce Attrition (`hr_attrition_messy.csv`)
 #### Question 1: [Answerable from Insights (Old Demo)]
@@ -593,7 +591,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_observed (n=55): Sales: average annual salary was 123,591.14 (n=14); HR: average annual salary was 112,830.67 (n=9); Engineering: average annual salary was 102,094.53 (n=15); Marketing: average annual salary was 131,338.24 (n=17). Invalid domain values sanitized in Annual_Salary: Identified and sanitized 31 invalid values in column 'Annual_Salary' violating non_negative_constraint prior to imputation.
+> Based on data_observed (n=55): Engineering: average annual salary was 102,094.53 (n=15); HR: average annual salary was 112,830.67 (n=9); Sales: average annual salary was 123,591.14 (n=14); Marketing: average annual salary was 131,338.24 (n=17). Invalid domain values sanitized in Annual_Salary: Identified and sanitized 31 invalid values in column 'Annual_Salary' violating non_negative_constraint prior to imputation.
 
 #### Question 3: [Non-existent Column Query (Old Demo)]
 **User Question:** `How does customer churn correlate with employee satisfaction levels?`
@@ -607,14 +605,14 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_observed (n=55): Marketing: average annual salary was 131,338.24 (n=17); Engineering: average annual salary was 102,094.53 (n=15); HR: average annual salary was 112,830.67 (n=9); Sales: average annual salary was 123,591.14 (n=14). Invalid domain values sanitized in Annual_Salary: Identified and sanitized 31 invalid values in column 'Annual_Salary' violating non_negative_constraint prior to imputation.
+> Based on data_observed (n=55): HR: average annual salary was 112,830.67 (n=9); Marketing: average annual salary was 131,338.24 (n=17); Engineering: average annual salary was 102,094.53 (n=15); Sales: average annual salary was 123,591.14 (n=14). Invalid domain values sanitized in Annual_Salary: Identified and sanitized 31 invalid values in column 'Annual_Salary' violating non_negative_constraint prior to imputation.
 
 #### Question 5: [Unseen Paraphrased Tool Query (Milestone 2d)]
 **User Question:** `how many employees per department`
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_clean (n=103): Sales: employee count was 40 (n=40); Engineering: employee count was 24 (n=24); Marketing: employee count was 25 (n=25); HR: employee count was 14 (n=14).
+> Based on data_clean (n=103): HR: employee count was 14 (n=14); Marketing: employee count was 25 (n=25); Engineering: employee count was 24 (n=24); Sales: employee count was 40 (n=40).
 
 ### 6.3 Dataset: Marketing Campaigns (`marketing_campaign_messy.csv`)
 #### Question 1: [Answerable from Insights (Old Demo)]
@@ -622,14 +620,14 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_observed (n=60): 'Email' delivered the highest conversion rate at 8.97% (394 conversions from 4,390 clicks). Other channels recorded: Google Ads: 6.38% (285 conversions, 4,470 clicks); LinkedIn: 5.70% (57 conversions, 1,000 clicks); Instagram: 5.07% (107 conversions, 2,110 clicks); Facebook: 1.25% (58 conversions, 4,630 clicks). No significant difference in Conversions across Channel: no statistically significant difference detected (n per group: Email: n=14, Google Ads: n=23, Instagram: n=9, LinkedIn: n=11, Facebook: n=15, p=0.1214) (limited statistical power due to small sample size in some groups, n < 30). Insufficient data for trend on Conversions: Analytical finding for trend on 'Conversions' was suppressed due to insufficient data for trend (n_used=14 < 20 and exclusion_rate=86.0% > 50%).
+> Based on data_observed (n=60): 'Email' delivered the highest conversion rate at 8.97% (394 conversions from 4,390 clicks). Other channels recorded: Google Ads: 6.38% (285 conversions, 4,470 clicks); LinkedIn: 5.70% (57 conversions, 1,000 clicks); Instagram: 5.07% (107 conversions, 2,110 clicks); Facebook: 1.25% (58 conversions, 4,630 clicks). No significant difference in Conversions across Channel: no statistically significant difference detected (n per group: Email: n=14, Google Ads: n=23, Instagram: n=9, LinkedIn: n=11, Facebook: n=15, p=0.1214) (limited statistical power due to small sample size in some groups, n < 30). Repeated extreme values in Conversions: Identified 15 occurrences of repeated value 25.0 in column 'Conversions' outside 3x IQR fence; preserved as valid extremes.
 
 #### Question 2: [Requires query_sql Tool Call (Old Demo)]
 **User Question:** `What is the total ad spend and total clicks by marketing channel?`
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_observed (n=48): Facebook: total ad spend was 30,301.41, total clicks was 3,730.00 (n=12); Instagram: total ad spend was 13,331.85, total clicks was 1,520.00 (n=5); Email: total ad spend was 18,540.37, total clicks was 2,520.00 (n=6); Google Ads: total ad spend was 35,427.07, total clicks was 2,680.00 (n=16); LinkedIn: total ad spend was 22,348.86, total clicks was 2,170.00 (n=9). Weak negative relationship between Ad_Spend and Clicks: A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations (exclusion rate 42.0%). Elevated imputation rate in Ad_Spend (34.0%): Column 'Ad_Spend' required 34.0% imputation (34 missing entries imputed).
+> Based on data_observed (n=48): Email: total ad spend was 18,540.37, total clicks was 2,520.00 (n=6); Facebook: total ad spend was 30,301.41, total clicks was 3,730.00 (n=12); Google Ads: total ad spend was 35,427.07, total clicks was 2,680.00 (n=16); Instagram: total ad spend was 13,331.85, total clicks was 1,520.00 (n=5); LinkedIn: total ad spend was 22,348.86, total clicks was 2,170.00 (n=9). Weak negative relationship between Ad_Spend and Clicks: A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations (exclusion rate 42.0%). Elevated imputation rate in Ad_Spend (34.0%): Column 'Ad_Spend' required 34.0% imputation (34 missing entries imputed).
 
 #### Question 3: [Non-existent Column Query (Old Demo)]
 **User Question:** `What is the average customer credit score across the different marketing channels?`
@@ -643,7 +641,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_observed (n=48): Email: total ad spend was 18,540.37, total clicks was 2,520.00 (n=6); LinkedIn: total ad spend was 22,348.86, total clicks was 2,170.00 (n=9); Google Ads: total ad spend was 35,427.07, total clicks was 2,680.00 (n=16); Instagram: total ad spend was 13,331.85, total clicks was 1,520.00 (n=5); Facebook: total ad spend was 30,301.41, total clicks was 3,730.00 (n=12). Weak negative relationship between Ad_Spend and Clicks: A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations (exclusion rate 42.0%). Elevated imputation rate in Ad_Spend (34.0%): Column 'Ad_Spend' required 34.0% imputation (34 missing entries imputed).
+> Based on data_observed (n=48): Google Ads: total ad spend was 35,427.07, total clicks was 2,680.00 (n=16); Instagram: total ad spend was 13,331.85, total clicks was 1,520.00 (n=5); LinkedIn: total ad spend was 22,348.86, total clicks was 2,170.00 (n=9); Email: total ad spend was 18,540.37, total clicks was 2,520.00 (n=6); Facebook: total ad spend was 30,301.41, total clicks was 3,730.00 (n=12). Weak negative relationship between Ad_Spend and Clicks: A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations (exclusion rate 42.0%). Elevated imputation rate in Ad_Spend (34.0%): Column 'Ad_Spend' required 34.0% imputation (34 missing entries imputed).
 
 
 ---
