@@ -251,3 +251,24 @@ def test_sentinel_detection(sample_datasets_dir: Path):
     assert "Quantity" in result.column_imputation_stats
     assert result.column_imputation_stats["Quantity"]["imputed_count"] > 0
 
+
+def test_all_lowercase_label_groups_become_title_case(sample_datasets_dir: Path):
+    """Assert all-lowercase label groups become Title Case ('central' -> 'Central') unless short acronyms."""
+    retail_df = pd.read_csv(sample_datasets_dir / "retail_sales_messy.csv")
+    cleaned_retail, _ = clean_data(retail_df, dataset_id="retail_clean_casing")
+    region_vals = set(cleaned_retail["Region"].dropna().unique().tolist())
+    assert "Central" in region_vals
+    assert "central" not in region_vals
+
+    # Test standalone DataFrame with lowercase groups and acronyms
+    df = pd.DataFrame({"Group": ["central", "central", "hr", "hr", "it", "north", "north"]})
+    cleaned, _ = clean_data(df, dataset_id="test_labels")
+    groups = set(cleaned["Group"].tolist())
+    assert "Central" in groups
+    assert "North" in groups
+    assert "HR" in groups
+    assert "IT" in groups
+    assert "central" not in groups
+    assert "hr" not in groups
+
+

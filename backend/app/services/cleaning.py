@@ -88,17 +88,22 @@ class DataCleaningService:
             # 2. Uppercase beyond first char (e.g. LinkedIn, Google Ads)
             elif _has_upper_beyond_first(winner):
                 canonical_map[key] = winner
-            # 3. If winner is all lowercase, but a Title Case variant exists in the group, use Title Case
+            # 3. If winner is all lowercase:
             elif winner.islower():
-                title_candidates = [
-                    c for c in counts.keys()
-                    if c == key.title() or (len(c) > 0 and c[0].isupper() and not any(ch.isupper() for ch in c[1:]))
-                ]
-                if title_candidates:
-                    title_winner = sorted(title_candidates, key=lambda c: -counts[c])[0]
-                    canonical_map[key] = title_winner
+                # Short acronyms become uppercase (e.g., HR, IT)
+                if winner.upper() in {"HR", "IT", "ID", "PR", "AI", "ML", "BI", "USA", "UK", "EU"} or (len(winner) <= 3 and winner.isalnum() and any(k == winner.upper() for k in counts.keys())):
+                    canonical_map[key] = winner.upper()
                 else:
-                    canonical_map[key] = winner
+                    # All-lowercase label groups become Title Case ("central" -> "Central")
+                    title_candidates = [
+                        c for c in counts.keys()
+                        if c == key.title() or (len(c) > 0 and c[0].isupper() and not any(ch.isupper() for ch in c[1:]))
+                    ]
+                    if title_candidates:
+                        title_winner = sorted(title_candidates, key=lambda c: -counts[c])[0]
+                        canonical_map[key] = title_winner
+                    else:
+                        canonical_map[key] = winner.title()
             else:
                 canonical_map[key] = winner
 
