@@ -47,18 +47,18 @@ def generate_dataset(
 
     record_ids = np.arange(1, n_rows + 1)
 
-    # 2. Segments: GroupA (40%), GroupB (40%), GroupC (20%)
-    segment_choices = ["GroupA", "GroupB", "GroupC"]
-    segments = rng.choice(segment_choices, size=n_rows, p=[0.40, 0.40, 0.20])
+    # 2. Cohorts: GroupA (40%), GroupB (40%), GroupC (20%)
+    cohort_choices = ["GroupA", "GroupB", "GroupC"]
+    cohorts = rng.choice(cohort_choices, size=n_rows, p=[0.40, 0.40, 0.20])
 
     # 3. S1: Segment effect on metric_score (Cohen's d ~ 0.8)
     # Pooled SD = 15. Mean diff = 0.8 * 15 = 12.0
     if not is_null:
         metric_score = np.zeros(n_rows, dtype=float)
-        for i, seg in enumerate(segments):
-            if seg == "GroupA":
+        for i, coh in enumerate(cohorts):
+            if coh == "GroupA":
                 metric_score[i] = rng.normal(loc=112.0, scale=15.0)
-            elif seg == "GroupB":
+            elif coh == "GroupB":
                 metric_score[i] = rng.normal(loc=100.0, scale=15.0)
             else:
                 metric_score[i] = rng.normal(loc=103.0, scale=15.0)
@@ -133,7 +133,7 @@ def generate_dataset(
     df = pd.DataFrame({
         "record_id": record_ids,
         "date": [d.strftime("%Y-%m-%d") for d in dates],
-        "segment": segments,
+        "cohort": cohorts,
         "metric_score": np.round(metric_score, 2),
         "var_x": np.round(var_x, 2),
         "var_y": np.round(var_y, 2),
@@ -154,7 +154,7 @@ def generate_dataset(
             "S1": {
                 "id": "S1",
                 "type": "segment_difference",
-                "segment_column": "segment",
+                "segment_column": "cohort",
                 "metric_column": "metric_score",
                 "groups": ["GroupA", "GroupB"],
                 "target_effect_size": cohens_d,

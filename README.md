@@ -201,3 +201,30 @@ docker-compose up --build
 ```
 - Frontend UI: [http://localhost:3000](http://localhost:3000)
 - Backend API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+## 8. Reproduce the Evaluation
+
+To reproduce the full benchmark evaluation, metrics, and visual figures:
+
+```bash
+# 1. Generate synthetic benchmark datasets (10 planted + 10 null seeds, ~2,000 rows each)
+python evaluation/generate.py --planted-seeds 10 --null-seeds 10 --rows 2000
+
+# 2. Run benchmark evaluation across systems (A: heuristic, B: gemini live, C: citation ablation, D: claude)
+python evaluation/run.py --systems A,B,C,D
+
+# 3. Run scale benchmark (1k, 10k, 25k, 100k rows)
+python evaluation/scale_test.py --sizes 1000,10000,25000,100000
+
+# 4. Generate evaluation report and charts
+python evaluation/report.py
+```
+
+Results, audit tables, and publication-ready charts will be generated in:
+- Markdown report: `docs/EVAL_RESULTS.md`
+- Visual figures: `docs/figures/recall_by_system.png`, `docs/figures/false_positives_by_system.png`, `docs/figures/runtime_vs_rows.png`
+- Blind manual review sample: `docs/eval_manual_review.csv`
+*(Note: Live LLM runs are excluded from CI to prevent API token consumption; offline unit tests run automatically in CI).*
+
