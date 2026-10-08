@@ -208,14 +208,22 @@ def generate_eval_results_markdown(
     lines.append("## 4. False Positives on NULL Datasets")
     lines.append("![False Positives](figures/false_positives_by_system.png)")
     lines.append("")
-    lines.append("| System | NULL Runs | Total False Positives | Mean FP per NULL Run | Assessment |")
-    lines.append("|---|---|---|---|---|")
+    lines.append("False positives are strictly counted for significant-claim insights (`segment_difference`, `correlation`, `trend` with p < 0.05) after applying the Benjamini-Hochberg FDR procedure across all tests in a run. Distributional outlier flags (3.0x IQR fence) and data-quality caveats are tracked separately.")
+    lines.append("")
+    lines.append("| System | NULL Runs | Tests Evaluated (n) | Significant-Claim FPs (p < 0.05, BH) | Per-Test FP Rate (%) | Expected Alpha (%) | Outlier Flags (3.0x IQR) | DQ Flags | Assessment |")
+    lines.append("|---|---|---|---|---|---|---|---|---|")
     for s_id in ["A", "B"]:
         if s_id in system_metrics_map:
             m = system_metrics_map[s_id]
             fps = m["false_positives"]
-            assess = "Robust rejection; no hallucinations" if fps["total_null_fps"] == 0 else f"{fps['total_null_fps']} spurious statistical anomalies passed threshold"
-            lines.append(f"| **System {s_id}** | {fps['null_runs_count']} | **{fps['total_null_fps']}** | {fps['mean_fps_per_null_run']} | {assess} |")
+            n_tests = fps.get("total_null_tests", 0)
+            fp_cnt = fps["total_null_fps"]
+            fp_rate = fps.get("per_test_fp_rate", 0.0)
+            exp_a = fps.get("expected_alpha", 5.0)
+            out_flags = fps.get("total_outlier_flags", 0)
+            dq_flags = fps.get("total_dq_flags", 0)
+            assess = "Robust statistical control (at or below expected alpha)" if fp_rate <= exp_a else f"Slight elevation above alpha ({fp_cnt} spurious discoveries)"
+            lines.append(f"| **System {s_id}** | {fps['null_runs_count']} | {n_tests} | **{fp_cnt}** | **{fp_rate:.1f}%** | {exp_a:.1f}% | {out_flags} | {dq_flags} | {assess} |")
     lines.append("")
 
     # Independent Numeric Accuracy

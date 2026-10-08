@@ -265,10 +265,14 @@ def compute_system_metrics(system_summary: Dict[str, Any]) -> Dict[str, Any]:
             "wilson_95_ci": [ci_l, ci_h]
         }
 
-    # 3. False Positives on NULL Datasets
+    # 3. False Positives on NULL Datasets (Significant claims p < 0.05 only, BH-adjusted)
     total_null_fps = sum(r.get("audit", {}).get("false_positive_count", 0) for r in null_runs)
+    total_null_tests = sum(r.get("audit", {}).get("total_tests_n", 0) for r in null_runs)
+    total_outlier_flags = sum(r.get("audit", {}).get("outlier_flag_count", 0) for r in null_runs)
+    total_dq_flags = sum(r.get("audit", {}).get("data_quality_flag_count", 0) for r in null_runs)
     null_runs_count = len(null_runs)
     fp_rate_per_null_run = round(total_null_fps / null_runs_count, 2) if null_runs_count > 0 else 0.0
+    per_test_fp_rate = round((total_null_fps / total_null_tests) * 100, 2) if total_null_tests > 0 else 0.0
 
     # 4. Independent Numeric Accuracy
     total_narrative_nums = 0
@@ -327,7 +331,12 @@ def compute_system_metrics(system_summary: Dict[str, Any]) -> Dict[str, Any]:
         "false_positives": {
             "total_null_fps": total_null_fps,
             "null_runs_count": null_runs_count,
-            "mean_fps_per_null_run": fp_rate_per_null_run
+            "mean_fps_per_null_run": fp_rate_per_null_run,
+            "total_null_tests": total_null_tests,
+            "per_test_fp_rate": per_test_fp_rate,
+            "expected_alpha": 5.0,
+            "total_outlier_flags": total_outlier_flags,
+            "total_dq_flags": total_dq_flags
         },
         "independent_numeric_accuracy": {
             "total_numbers_checked": total_narrative_nums,

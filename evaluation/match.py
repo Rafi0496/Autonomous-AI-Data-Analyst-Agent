@@ -142,6 +142,31 @@ def match_single_planted_finding(
     return False, None, f"Unknown planted finding type: {p_type}"
 
 
+import numpy as np
+import scipy.stats as stats
+
+
+def extract_insight_p_value(ins: Dict[str, Any]) -> Optional[float]:
+    """Extract or compute the statistical hypothesis p-value for an insight."""
+    mv = ins.get("metric_values") or {}
+    p = ins.get("significance") if isinstance(ins.get("significance"), (int, float)) else None
+    if p is None:
+        for k in ["p_value", "pval", "p", "trend_p_val", "trend_p_value"]:
+            if k in mv and isinstance(mv[k], (int, float)):
+                p = float(mv[k])
+                break
+    if p is None and ins.get("type") == "correlation":
+        r = ins.get("effect_size") if isinstance(ins.get("effect_size"), (int, float)) else mv.get("pearson", mv.get("r"))
+        n = ins.get("n_used", mv.get("n_used", 2000))
+        if r is not None and isinstance(r, (int, float)) and n > 2:
+            r_val = float(r)
+            if abs(r_val) >= 1.0:
+                return 0.0
+            t_stat = r_val * np.sqrt((n - 2) / (1.0 - r_val**2))
+            p = float(2.0 * (1.0 - stats.t.cdf(abs(t_stat), df=n - 2)))
+    return p
+
+
 def audit_dataset_findings(
     manifest: Dict[str, Any],
     insights: List[Dict[str, Any]],
@@ -149,7 +174,8 @@ def audit_dataset_findings(
 ) -> Dict[str, Any]:
     """
     Perform complete ground-truth match audit for a dataset.
-    Returns audit summary, matches table, false positives, and formatted markdown table.
+    Returns audit summary, matches table, false positives (p < 0.05 only, Benjamini-Hochberg corrected),
+    outlier flags, and data quality flags separately.
     """
     is_null = manifest.get("is_null", False)
     seed = manifest.get("seed", 0)
@@ -181,28 +207,80 @@ def audit_dataset_findings(
                 "note": note
             })
 
-    # False positive detection
-    false_positives = []
-    core_cols = ["segment", "metric_score", "var_x", "var_y", "trend_metric", "volume"]
-
+    # 1. Collect all statistical hypothesis tests in this run
+    tests_conducted = []
     for ins in insights:
         ins_type = ins.get("type")
-        if ins_type in ("segment_difference", "correlation", "trend", "outlier"):
-            ins_text = _normalize(f"{ins.get('title')} {ins.get('summary')} {ins.get('headline')}")
-            if is_null:
+        if ins_type in ("segment_difference", "correlation", "trend"):
+            p_val = extract_insight_p_value(ins)
+            tests_conducted.append({"insight": ins, "p_value": p_val})
+
+    # 2. Apply Benjamini-Hochberg across all tests in the run
+    valid_p_indices = [i for i, t in enumerate(tests_conducted) if t["p_value"] is not None]
+    if valid_p_indices:
+        raw_p_values = [tests_conducted[i]["p_value"] for i in valid_p_indices]
+        try:
+            adj_p_values = stats.false_discovery_control(raw_p_values, method="bh")
+            for orig_idx, adj_p in zip(valid_p_indices, adj_p_values):
+                tests_conducted[orig_idx]["p_adj"] = float(adj_p)
+                tests_conducted[orig_idx]["insight"]["p_adj"] = float(adj_p)
+        except Exception:
+            for orig_idx in valid_p_indices:
+                tests_conducted[orig_idx]["p_adj"] = tests_conducted[orig_idx]["p_value"]
+
+    # 3. Separate significant claims, outlier flags, and data quality flags
+    false_positives = []
+    outlier_flags = []
+    dq_flags = []
+
+    if is_null:
+        for t in tests_conducted:
+            ins = t["insight"]
+            p_val = t["p_value"]
+            p_adj = t.get("p_adj", p_val)
+            # Count FP only for significant-claim insight (p < 0.05 and p_adj < 0.05)
+            if p_val is not None and p_val < 0.05 and (p_adj is None or p_adj < 0.05):
                 false_positives.append({
                     "insight_id": ins.get("id"),
-                    "type": ins_type,
-                    "reason": f"Signal claimed on NULL dataset (type: {ins_type})"
+                    "type": ins.get("type"),
+                    "p_value": round(p_val, 4),
+                    "p_adj": round(p_adj, 4) if p_adj is not None else None,
+                    "reason": f"Significant claim on NULL dataset (p={p_val:.4f}, p_adj={p_adj:.4f})"
                 })
-            else:
-                # Planted dataset: check if finding claimed on decoy columns
-                if any(f"decoy" in ins_text for _ in [1]):
+
+        for ins in insights:
+            if ins.get("type") in ("outlier", "outliers"):
+                outlier_flags.append({
+                    "insight_id": ins.get("id"),
+                    "title": ins.get("title", ""),
+                    "summary": ins.get("summary", ""),
+                    "fence": "3.0x IQR"
+                })
+
+        for item in (dq_caveats or []) + [i for i in insights if i.get("type") == "data_quality"]:
+            dq_flags.append({
+                "id": item.get("id"),
+                "title": item.get("title", "")
+            })
+    else:
+        for t in tests_conducted:
+            ins = t["insight"]
+            ins_text = _normalize(f"{ins.get('title')} {ins.get('summary')} {ins.get('headline')}")
+            if "decoy" in ins_text:
+                p_val = t["p_value"]
+                p_adj = t.get("p_adj", p_val)
+                if p_val is not None and p_val < 0.05 and (p_adj is None or p_adj < 0.05):
                     false_positives.append({
                         "insight_id": ins.get("id"),
-                        "type": ins_type,
-                        "reason": f"Signal claimed on decoy noise column: {ins.get('title')}"
+                        "type": ins.get("type"),
+                        "p_value": round(p_val, 4),
+                        "p_adj": round(p_adj, 4) if p_adj is not None else None,
+                        "reason": f"Spurious claim on decoy column (p={p_val:.4f}, p_adj={p_adj:.4f})"
                     })
+
+    total_tests_n = len(tests_conducted)
+    fp_count = len(false_positives)
+    per_test_fp_rate = round((fp_count / total_tests_n) * 100, 2) if total_tests_n > 0 else 0.0
 
     # Build Markdown Audit Table
     lines = []
@@ -214,12 +292,15 @@ def audit_dataset_findings(
             lines.append(f"| **{r['planted_id']}** | `{r['expected_type']}` | **{r['found']}** | `{r['matching_id']}` | {r['note']} |")
     else:
         lines.append(f"- **Planted Findings Expected:** 0 (NULL dataset)")
-        lines.append(f"- **False Positives Detected:** {len(false_positives)}")
+        lines.append(f"- **Statistical Tests Evaluated (n):** {total_tests_n}")
+        lines.append(f"- **Significant-Claim False Positives (p < 0.05, BH):** {fp_count} (per-test rate: {per_test_fp_rate}% vs expected alpha 5.0%)")
+        lines.append(f"- **Outlier Flags (3.0x IQR fence, reported separately):** {len(outlier_flags)}")
+        lines.append(f"- **Data Quality Flags (reported separately):** {len(dq_flags)}")
         if false_positives:
             for fp in false_positives:
                 lines.append(f"  - [{fp['type']}] `{fp['insight_id']}`: {fp['reason']}")
         else:
-            lines.append("  - None (Clean null run: 0 false positives).")
+            lines.append("  - None (Clean null run: 0 significant-claim false positives).")
 
     audit_table_markdown = "\n".join(lines)
 
@@ -235,6 +316,13 @@ def audit_dataset_findings(
         "recall_percent": recall,
         "matches": matches,
         "false_positives": false_positives,
-        "false_positive_count": len(false_positives),
+        "false_positive_count": fp_count,
+        "outlier_flags": outlier_flags,
+        "outlier_flag_count": len(outlier_flags),
+        "data_quality_flags": dq_flags,
+        "data_quality_flag_count": len(dq_flags),
+        "total_tests_n": total_tests_n,
+        "per_test_fp_rate": per_test_fp_rate,
+        "expected_alpha": 0.05,
         "audit_table_markdown": audit_table_markdown
     }

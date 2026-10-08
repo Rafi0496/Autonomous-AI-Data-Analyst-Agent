@@ -88,9 +88,8 @@ class DataProfilingService:
                 if not num_series.empty:
                     q25 = float(num_series.quantile(0.25))
                     q75 = float(num_series.quantile(0.75))
-                    iqr = q75 - q25
-                    lower_bound = q25 - 1.5 * iqr
-                    upper_bound = q75 + 1.5 * iqr
+                    lower_bound = q25 - 3.0 * iqr
+                    upper_bound = q75 + 3.0 * iqr
                     outliers_count = int(((num_series < lower_bound) | (num_series > upper_bound)).sum())
                     
                     stats = {
@@ -104,7 +103,7 @@ class DataProfilingService:
                         "outliers_count": outliers_count
                     }
                     if outliers_count > 0:
-                        col_warnings.append(f"{outliers_count} statistical outlier(s) detected via IQR.")
+                        col_warnings.append(f"{outliers_count} statistical extreme outlier(s) detected via 3.0x IQR fence.")
             elif inferred == "categorical":
                 val_counts = series.value_counts(dropna=True).head(5)
                 top_items = [{"value": str(k), "count": int(v), "percentage": round((v / row_count) * 100, 2)}

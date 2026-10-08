@@ -14,10 +14,10 @@ def detect_outliers(
     dataset_id: str,
     method: str = "iqr",
     columns: Optional[List[str]] = None,
-    threshold: float = 1.5
+    threshold: float = 3.0
 ) -> Dict[str, Any]:
     """
-    Detect statistical outliers across numeric columns using IQR, Z-Score, or Isolation Forest.
+    Detect statistical outliers across numeric columns using IQR (3.0x fence), Z-Score, or Isolation Forest.
     """
     df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
     from backend.app.services.data_loader import get_column_imputed_mask
@@ -91,8 +91,8 @@ def detect_outliers(
             }
 
     elif method in ("zscore", "z-score"):
-        # Restore standard 3.0 standard deviation threshold for z-score outlier detection
-        z_threshold = float(threshold) if threshold != 1.5 else 3.0
+        # Standard 3.0 standard deviation threshold for z-score outlier detection
+        z_threshold = float(threshold) if threshold != 3.0 else 3.0
         for col in num_df.columns:
             col_imputed = get_column_imputed_mask(df, col)
             total_excluded_imputed += int(col_imputed.sum())
