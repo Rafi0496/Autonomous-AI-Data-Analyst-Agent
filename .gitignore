@@ -67,3 +67,5 @@ data/*.db
 data/reports/*
 !data/reports/.gitkeep
 data/demo_outputs/
+data/eval/*
+!data/eval/summary_*.json
