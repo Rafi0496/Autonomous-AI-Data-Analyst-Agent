@@ -91,7 +91,8 @@ def validate_no_placeholders(text: str, context: str = "") -> str:
         "None vs None",
     ]
     for pattern in disallowed_exact:
-        if pattern.lower() in text.lower():
+        pattern_rx = rf"\b{re.escape(pattern.lower())}\b"
+        if re.search(pattern_rx, text.lower()):
             raise ValueError(f"Disallowed placeholder pattern '{pattern}' found in {context}: '{text}'")
 
     if re.search(r"\bNone\b", text):
