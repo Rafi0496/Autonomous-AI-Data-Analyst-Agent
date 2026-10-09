@@ -194,7 +194,7 @@ def generate_pdf_report(
         sampling_disclosure = f"random sample of {n_sample:,} of {n_pop:,} rows (seed {seed})"
     if sampling_disclosure:
         story.append(Spacer(1, 6))
-        story.append(Paragraph(f"<b>Scale Sampling Disclosure:</b> Analysis is conducted on a {sampling_disclosure}.", styles["ReportSubtitle"]))
+        story.append(Paragraph(f"<b>Scale Sampling Disclosure:</b> Analysis is conducted on a {sampling_disclosure}.", styles["ReportCoverSubtitle"]))
     
     story.append(Spacer(1, 15))
     

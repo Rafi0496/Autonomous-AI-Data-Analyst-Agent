@@ -192,16 +192,27 @@ class PlanActReflectOrchestrator:
         # Step 0: Ensure dataset is profiled
         self._emit_progress("Profiling dataset structure and quality...", 0, phase="profiling")
         df = get_dataset_dataframe(dataset_id, prefer_cleaned=True)
+        from backend.app.services.data_loader import get_dataset_cleaning_report
+        cleaning_report = df.attrs.get("cleaning_report") or get_dataset_cleaning_report(df, dataset_id)
+        if cleaning_report:
+            df.attrs["cleaning_report"] = cleaning_report
+            if cleaning_report.get("sampling_disclosure"):
+                df.attrs["sampling_disclosure"] = cleaning_report["sampling_disclosure"]
+            if cleaning_report.get("is_sampled"):
+                df.attrs["is_sampled"] = True
+
         profile_obj = profile_dataset(df, dataset_id=dataset_id)
         profile_dict = profile_obj.model_dump()
         profile_dict["cleaned_row_count"] = len(df)
         profile_dict["n_rows_used"] = len(df)
 
-        # Surface data quality findings (sentinels, invalid values, imputation rates)
-        from backend.app.services.data_loader import get_dataset_cleaning_report
-        cleaning_report = df.attrs.get("cleaning_report") or get_dataset_cleaning_report(df, dataset_id)
         if cleaning_report:
             profile_dict["cleaning_report"] = cleaning_report
+            profile_dict["is_sampled"] = cleaning_report.get("is_sampled", False)
+            profile_dict["sampling_disclosure"] = cleaning_report.get("sampling_disclosure")
+            profile_dict["sampling_seed"] = cleaning_report.get("sampling_seed", 42)
+            profile_dict["sample_row_count"] = cleaning_report.get("sample_row_count")
+            profile_dict["population_row_count"] = cleaning_report.get("original_row_count")
             profile_dict["sentinels_detected"] = cleaning_report.get("sentinels_detected", [])
             profile_dict["invalid_values_detected"] = cleaning_report.get("invalid_values_detected", [])
             profile_dict["column_imputation_stats"] = cleaning_report.get("column_imputation_stats", {})
@@ -585,7 +596,9 @@ class PlanActReflectOrchestrator:
             "verification": verification,
             "run_log": self.run_log,
             "rounds_table": rounds_table,
-            "rounds_summary": rounds_table
+            "rounds_summary": rounds_table,
+            "baseline_results": baseline_results,
+            "profile": profile_dict
         }
 
         # Update DB Job

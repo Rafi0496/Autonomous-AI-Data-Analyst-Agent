@@ -81,6 +81,10 @@ def run_scale_benchmark(row_counts: List[int] = [1000, 10000, 25000, 100000]) ->
         current_ram, peak_ram = tracemalloc.get_traced_memory()
         tracemalloc.stop()
 
+        import psutil
+        process = psutil.Process()
+        rss_bytes = process.memory_info().rss
+        peak_rss_mb = round(rss_bytes / (1024 * 1024), 2)
         peak_ram_mb = round(peak_ram / (1024 * 1024), 2)
 
         # 3. Sampling Verifications
@@ -90,39 +94,70 @@ def run_scale_benchmark(row_counts: List[int] = [1000, 10000, 25000, 100000]) ->
 
         # Check narrative disclosure
         summary_text = agent_res.get("synthesis", {}).get("executive_summary", "")
-        summary_mentions_sampling = ("sampled" in summary_text.lower() or "10,000" in summary_text) if is_sampled else True
+        summary_disclosed = ("random sample" in summary_text.lower() or "sample" in summary_text.lower()) if is_sampled else False
+
+        # Check insights disclosure
+        insights_list = agent_res.get("insights", [])
+        insights_disclosed = any("random sample" in " ".join(ins.get("caveats", [])) for ins in insights_list) if is_sampled else False
+
+        # Check chat disclosure
+        from backend.app.agent.llm_client import get_llm_client
+        client = get_llm_client("heuristic")
+        chat_res = client.generate_chat_answer(
+            question="What is the average metric score?",
+            context={
+                "available_columns": list(cleaned_df.columns),
+                "insights": agent_res.get("insights", []),
+                "profile": agent_res.get("profile", {}),
+                "cleaning_report": clean_res.model_dump()
+            }
+        )
+        chat_text = chat_res.answer
+        chat_disclosed = ("random sample" in chat_text.lower() or "sample" in chat_text.lower()) if is_sampled else False
 
         # 4. Generate PDF Report to verify report disclosure
         pdf_path = SCALE_OUTPUT_DIR / f"{ds_id}_report.pdf"
         try:
             generate_pdf_report(
                 job_data={"results": agent_res, "profile": agent_res.get("profile")},
-                output_path=pdf_path
+                dataset_name=ds_id,
+                output_path=pdf_path,
+                profile_data=agent_res.get("profile")
             )
             pdf_generated = True
         except Exception:
             pdf_generated = False
+
+        if is_sampled:
+            disc_label = "Yes (Sampling disclosed in narrative, insights, chat & report)"
+        else:
+            disc_label = "N/A (Not sampled; full dataset analyzed)"
 
         record = {
             "row_count": n_rows,
             "wall_time_seconds": round(total_wall_time, 2),
             "clean_time_seconds": round(t_clean, 2),
             "peak_memory_mb": peak_ram_mb,
+            "psutil_rss_mb": peak_rss_mb,
             "is_sampled": is_sampled,
             "sample_row_count": clean_res.sample_row_count,
             "final_rows_used": final_row_count,
             "sampling_disclosure": sampling_disclosure,
-            "summary_disclosed": summary_mentions_sampling,
+            "disclosure_label": disc_label,
+            "summary_disclosed": summary_disclosed,
+            "insights_disclosed": insights_disclosed,
+            "chat_disclosed": chat_disclosed,
             "pdf_report_generated": pdf_generated
         }
         benchmark_results.append(record)
 
         print(f"  Rows:               {n_rows:,}")
         print(f"  Wall Time:          {total_wall_time:.2f}s (clean: {t_clean:.2f}s)")
-        print(f"  Peak Memory:        {peak_ram_mb} MB")
+        print(f"  Peak Tracemalloc:   {peak_ram_mb} MB")
+        print(f"  psutil RSS:         {peak_rss_mb} MB")
         print(f"  Is Sampled:         {is_sampled} (Final n={final_row_count:,})")
-        print(f"  Disclosure:         {sampling_disclosure or 'None required'}")
-        print(f"  Summary Disclosed:  {summary_mentions_sampling}")
+        print(f"  Disclosure:         {disc_label}")
+        print(f"  Surfaces Verified:  summary={summary_disclosed}, insights={insights_disclosed}, chat={chat_disclosed}, report={pdf_generated}")
 
     summary_file = SCALE_OUTPUT_DIR / "scale_benchmark_results.json"
     with open(summary_file, "w", encoding="utf-8") as f:

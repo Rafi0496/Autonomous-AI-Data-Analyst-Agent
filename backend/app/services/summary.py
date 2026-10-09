@@ -244,6 +244,14 @@ def write_summary(
             sampling_disclosure = f"random sample of {n_sample:,} of {n_pop:,} rows (seed {seed})"
         if sampling_disclosure:
             parts.append(f"Analysis is based on a {sampling_disclosure}.")
+            for num in extract_numeric_tokens(sampling_disclosure):
+                claims.append({
+                    "text": f"Analysis is based on a {sampling_disclosure}.",
+                    "source_id": "profile",
+                    "metric_key": f"sampling_param_{int(num)}",
+                    "value": float(num),
+                    "unit": ""
+                })
 
         for a in analytical:
             parts.append(a["narrative"])

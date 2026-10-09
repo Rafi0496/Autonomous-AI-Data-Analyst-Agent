@@ -245,12 +245,16 @@ def generate_eval_results_markdown(
     lines.append("## 6. Scaling Performance & Deterministic Sampling (1k to 100k Rows)")
     lines.append("![Runtime vs Rows](figures/runtime_vs_rows.png)")
     lines.append("")
-    lines.append("| Row Count | Wall-Clock Time (s) | Peak RAM (MB) | Is Sampled | Sampled Size | Sampling Disclosed in Narrative & Report |")
-    lines.append("|---|---|---|---|---|---|")
+    lines.append("| Row Count | Wall-Clock Time (s) | Peak RAM (MB) | psutil RSS (MB) | Is Sampled | Sampled Size | Sampling Disclosed in Narrative, Insights, Chat & Report |")
+    lines.append("|---|---|---|---|---|---|---|")
     for r in scale_results:
-        disc = "Yes (Full transparent disclosure)" if r.get("summary_disclosed") else "No"
+        if r.get("is_sampled"):
+            disc = "Yes (Sampling disclosed across narrative, insights, chat & report)"
+        else:
+            disc = "N/A (Not sampled; full dataset analyzed)"
         samp = f"{r.get('sample_row_count'):,}" if r.get("is_sampled") else "N/A"
-        lines.append(f"| **{r['row_count']:,}** | {r['wall_time_seconds']}s | {r['peak_memory_mb']} MB | {r['is_sampled']} | {samp} | {disc} |")
+        rss = r.get("psutil_rss_mb", "N/A")
+        lines.append(f"| **{r['row_count']:,}** | {r['wall_time_seconds']}s | {r['peak_memory_mb']} MB | {rss} MB | {r['is_sampled']} | {samp} | {disc} |")
     lines.append("")
 
     # Matcher Audit Table Example

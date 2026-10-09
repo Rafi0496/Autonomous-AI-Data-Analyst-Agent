@@ -185,6 +185,12 @@ def build_source_index(
     if dataset_profile:
         prof_dict = dataset_profile.model_dump() if hasattr(dataset_profile, "model_dump") else dataset_profile
         prof_metrics = extract_flat_metrics(prof_dict)
+        disc_text = str(prof_dict.get("sampling_disclosure") or "")
+        for num in extract_numeric_tokens(disc_text):
+            prof_metrics[normalize_key(str(num))] = float(num)
+            prof_metrics[str(round(num, 2))] = float(num)
+            prof_metrics[str(int(num))] = float(num)
+            prof_metrics[f"sampling_param_{int(num)}"] = float(num)
         source_index["profile"] = prof_metrics
         source_index["dataset_profile"] = prof_metrics
         source_index["cleaning"] = prof_metrics
