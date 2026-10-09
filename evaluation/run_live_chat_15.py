@@ -13,9 +13,14 @@ Runs:
 - Captures verbatim answers, basis, sample size n, provider
 """
 import os
+import sys
+from pathlib import Path
 import json
 import time
 from typing import Dict, Any, List
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 from backend.app.core.database import SessionLocal
 from backend.app.core.config import settings
@@ -210,6 +215,8 @@ def run_live_eval():
             "sql_exec_status": sql_exec_status,
             "sql_rows_count": sql_rows_count,
             "provider": provider,
+            "model": res.get("model", "unknown"),
+            "fallback_to_heuristic": res.get("fallback_to_heuristic", False),
             "elapsed_seconds": round(elapsed, 2),
             "answer": answer,
             "tools_used": tools_used,

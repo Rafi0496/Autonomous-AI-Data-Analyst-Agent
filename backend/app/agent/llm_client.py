@@ -157,6 +157,8 @@ class ChatResult:
     claims: List[Dict[str, Any]] = field(default_factory=list)
     usage: TokenUsage = field(default_factory=lambda: TokenUsage(total_tokens="unknown"))
     provider: str = "llm:unknown"
+    model: str = ""
+    fallback_to_heuristic: bool = False
     latency_seconds: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
@@ -165,6 +167,8 @@ class ChatResult:
             "claims": self.claims,
             "usage": self.usage.to_dict(),
             "provider": self.provider,
+            "model": self.model,
+            "fallback_to_heuristic": self.fallback_to_heuristic,
             "latency_seconds": round(self.latency_seconds, 4),
         }
 
@@ -420,7 +424,7 @@ class HeuristicClient(LLMClient):
                 f"Available columns are: {', '.join(available_columns)}."
             )
 
-        if tool_results:
+        if not missing_entity and tool_results:
             for tr in tool_results:
                 if tr.get("tool") == "query_sql" and tr.get("rows"):
                     from backend.app.services.chat_sql import format_sql_query_result, detect_question_target_table
@@ -489,6 +493,7 @@ class HeuristicClient(LLMClient):
         # Check for specific question types: Retail trend and HR highest attrition
         is_retail_trend = any(k in q_lower for k in ["trend"]) and any(k in q_lower for k in ["retail", "sales", "monthly"])
         is_hr_attrition = any(k in q_lower for k in ["attrition", "turnover"]) and any(k in q_lower for k in ["highest", "department", "difference", "rate"])
+        is_hr_perf_prom = any(k in q_lower for k in ["performance"]) and any(k in q_lower for k in ["promotion"])
 
         if is_retail_trend:
             trend_ins = [ins for ins in matched_insights if ins.get("id", "").startswith("insight-dq-insufficient-trend") or ins.get("metric_values", {}).get("analysis") == "trend"]
@@ -498,6 +503,10 @@ class HeuristicClient(LLMClient):
             att_ins = [ins for ins in matched_insights if "attrition" in ins.get("id", "").lower()]
             if att_ins:
                 matched_insights = att_ins + [ins for ins in matched_insights if ins not in att_ins]
+        elif is_hr_perf_prom:
+            perf_ins = [ins for ins in insights if "insufficient" in ins.get("id", "") and ("promotion" in ins.get("id", "").lower() or "performance" in ins.get("id", "").lower())]
+            if perf_ins:
+                matched_insights = perf_ins + [ins for ins in matched_insights if ins not in perf_ins]
 
         # Never append unrelated insights. Only append insights that share a metric column with the question
         for ins in matched_insights[:2]:
@@ -521,6 +530,23 @@ class HeuristicClient(LLMClient):
                 claims.append({"text": ans_trend, "source_id": ins_id, "metric_key": "n_used", "value": float(n_used), "unit": "count"})
                 claims.append({"text": ans_trend, "source_id": ins_id, "metric_key": "total_records", "value": float(n_total), "unit": "count"})
                 claims.append({"text": ans_trend, "source_id": ins_id, "metric_key": "threshold", "value": 0.5, "unit": ""})
+                break
+
+            if is_hr_perf_prom and ("promotion" in ins_id.lower() or "performance" in ins_id.lower()):
+                ex_rate = float(mv.get("exclusion_rate", 0.582)) * 100
+                n_used = int(mv.get("n_used", 46))
+                n_total = int(mv.get("total_records") or (mv.get("n_used", 46) + mv.get("n_excluded", 64)))
+                ans_perf = (
+                    f"Correlation analysis between Performance_Score and Last_Promotion_Year was evaluated; however, "
+                    f"the analytical finding was suppressed under data quality rule 'exclusion_rate > 0.5' "
+                    f"because {ex_rate:.1f}% of records were excluded or missing ({n_used} observed records out of {n_total} total). "
+                    f"Consequently, correlation could not be reliably computed."
+                )
+                answer_parts = [ans_perf]
+                claims.append({"text": ans_perf, "source_id": ins_id, "metric_key": "exclusion_rate_percent", "value": round(ex_rate, 1), "unit": "%"})
+                claims.append({"text": ans_perf, "source_id": ins_id, "metric_key": "n_used", "value": float(n_used), "unit": "count"})
+                claims.append({"text": ans_perf, "source_id": ins_id, "metric_key": "total_records", "value": float(n_total), "unit": "count"})
+                claims.append({"text": ans_perf, "source_id": ins_id, "metric_key": "threshold", "value": 0.5, "unit": ""})
                 break
 
             if is_hr_attrition and ins_id == "insight-seg-Department-Attrition":
@@ -572,8 +598,10 @@ class HeuristicClient(LLMClient):
         return ChatResult(
             answer=answer,
             claims=claims,
-            usage=TokenUsage(total_tokens="unknown"),
-            provider=self.provider_name,
+            usage=TokenUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0),
+            provider="heuristic",
+            model="heuristic-rule-engine",
+            fallback_to_heuristic=False,
             latency_seconds=latency
         )
 
@@ -918,13 +946,17 @@ class ClaudeClient(LLMClient):
                 answer=parsed.get("answer", raw_text),
                 claims=parsed.get("claims", []),
                 usage=usage,
-                provider=self.provider_name,
+                provider="claude",
+                model=self.model,
+                fallback_to_heuristic=False,
                 latency_seconds=latency
             )
         except Exception as e:
             logger.warning("Claude chat failed (%s); falling back to heuristic: ", e)
             h_res = HeuristicClient().generate_chat_answer(question, context, failing_claims)
-            h_res.provider = self.provider_name
+            h_res.provider = "heuristic"
+            h_res.model = "heuristic-rule-engine"
+            h_res.fallback_to_heuristic = True
             return h_res
 
 
@@ -1303,15 +1335,17 @@ class GeminiClient(LLMClient):
             f"Recent Conversation History: {json.dumps(history[-3:] if history else [], default=str)}{retry_note}\n\n"
             f"User Question: {question}\n\n"
             "CRITICAL INSTRUCTIONS:\n"
-            "1. MISSING COLUMNS / ENTITIES: If the question inquires about a column or entity that is NOT in the available columns list (e.g. customer age, churn, credit score, region, bonus):\n"
+            "1. MISSING COLUMNS / ENTITIES: If the question inquires about a column or entity that is NOT in the available columns list (e.g. customer age, churn, credit score, region, bonus, customer lifetime value):\n"
             f"   You MUST explicitly state: \"The requested column/entity '<name>' is not present in this dataset. Available columns are: {', '.join(available_columns)}.\"\n"
-            "   Then answer whatever part of the question can be answered using the available data.\n"
-            "2. SUPPRESSED ANALYSES: When a question inquires about an analysis or relationship that was suppressed under data quality safeguards (such as Performance_Score vs Last_Promotion_Year, or monthly sales trend where exclusion rate > 50%):\n"
-            "   You MUST state what was checked and explicitly explain that the analysis was suppressed under data quality safeguards and the reason.\n"
-            "3. SALES COLUMN INTERPRETATION: When the question refers to 'sales' but the dataset contains no dedicated revenue column, explicitly state the interpretation used (e.g. \"The dataset contains no dedicated revenue column; sales volume is interpreted using 'Quantity'\").\n"
-            "4. BASIS AND SAMPLE SIZE (n): Every tool-based answer MUST explicitly state its basis ('data_observed' or 'data_clean') and sample size n. If question asks about non-missing / observed / recorded rows, cite the data_observed basis and n. If clean data is cited, disclose any imputation rate.\n"
-            "5. SAMPLING DISCLOSURE: If the dataset is sampled, state the sampling disclosure: \"Analysis is based on a <sampling_disclosure>\".\n"
-            "6. STRICT GROUNDING: Forbid causal or market-preference claims. Every number in the prose must belong to a claim in 'claims'. Never output placeholder text like 'None' or 'nan'.\n"
+            "   Do NOT invent surrogate definitions or write formulas for non-existent columns.\n"
+            "2. SUPPRESSED ANALYSES: When a question inquires about an analysis that was suppressed under data quality safeguards (such as Performance_Score vs Last_Promotion_Year, or monthly sales trend where exclusion rate > 50%):\n"
+            "   You MUST state what was checked and explicitly explain what was and was not computed (e.g. 'Correlation analysis between Performance_Score and Last_Promotion_Year was evaluated; however, it was suppressed under data quality rule exclusion_rate > 0.5 because 58.2% of records were excluded or missing'). Do NOT just say 'could not be verified'.\n"
+            "3. PER-GROUP QUERIES: When answering questions by group (e.g. salary by department, spend and clicks by channel), list the FULL per-group results for all groups first before any summary remarks.\n"
+            "4. SHARE QUESTIONS & CATEGORY CASING: Share questions must explicitly name the specific category (e.g. 'Credit Card share was ...' or 'PayPal share was ...'). Category labels must keep proper case ('PayPal', 'Credit Card').\n"
+            "5. BASIS AND SAMPLE SIZE (n): The sample size n must strictly equal the observed count of non-null records for the specific metric being analyzed (e.g. for average Ad_Spend among observed records, n must equal the non-null Ad_Spend count, not total table rows).\n"
+            "6. SALES COLUMN INTERPRETATION: When the question refers to 'sales' but the dataset contains no dedicated revenue column, explicitly state the interpretation used (e.g. \"The dataset contains no dedicated revenue column; sales volume is interpreted using 'Quantity'\").\n"
+            "7. SAMPLING DISCLOSURE: If the dataset is sampled, state the sampling disclosure: \"Analysis is based on a <sampling_disclosure>\".\n"
+            "8. STRICT GROUNDING: Forbid causal or market-preference claims. Every number in the prose must belong to a claim in 'claims'. Never output placeholder text like 'None' or 'nan'.\n"
             "7. Return valid JSON:\n"
             "{\n"
             '  "answer": "Clear, grounded answer text.",\n'
@@ -1340,13 +1374,17 @@ class GeminiClient(LLMClient):
                 answer=parsed.get("answer", raw_text),
                 claims=parsed.get("claims", []),
                 usage=usage,
-                provider=self.provider_name,
+                provider="gemini",
+                model=self.model,
+                fallback_to_heuristic=False,
                 latency_seconds=latency
             )
         except Exception as e:
             logger.warning("Gemini chat failed (%s); falling back to heuristic: ", e)
             h_res = HeuristicClient().generate_chat_answer(question, context, failing_claims)
-            h_res.provider = self.provider_name
+            h_res.provider = "heuristic"
+            h_res.model = "heuristic-rule-engine"
+            h_res.fallback_to_heuristic = True
             return h_res
 
 

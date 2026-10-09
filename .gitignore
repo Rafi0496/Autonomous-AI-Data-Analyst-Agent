@@ -69,3 +69,5 @@ data/reports/*
 data/demo_outputs/
 data/eval/*
 !data/eval/summary_*.json
+!data/eval/numeric_audit.csv
+!data/eval/chat_15_results.json

@@ -240,6 +240,11 @@ def generate_sql_for_question(
     if any(sig in q_lower for sig in ["statistically significant", "statistical significance", "is it significant", "is there a significant", "is the difference significant"]):
         return None
 
+    # Never generate SQL for questions about missing columns or entities
+    from backend.app.services.chat_service import detect_missing_column_or_entity
+    if detect_missing_column_or_entity(question, available_columns):
+        return None
+
     # 1. Map columns in question using word-boundary matching
     matched_cols = extract_question_columns(question, available_columns)
     if not matched_cols:
@@ -355,7 +360,7 @@ def generate_sql_for_question(
                 select_items.append(f"ROUND(AVG({m}), 2) as avg_{ml}")
             else:
                 select_items.append(f"ROUND(SUM({m}), 2) as total_{ml}")
-        select_items.append("COUNT(*) as n")
+        select_items.append(f"COUNT({metric_cols[0]}) as n")
         where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
         return f"SELECT {', '.join(select_items)} FROM {target_table} {where_sql}".strip()
 
@@ -367,10 +372,21 @@ def generate_sql_for_question(
 
 
 def format_label(val: Any) -> Any:
-    if isinstance(val, str) and val.islower():
-        if val.upper() in {"HR", "IT", "ID", "PR", "AI", "ML", "BI", "USA", "UK", "EU"}:
-            return val.upper()
-        return val.title()
+    if val is None:
+        return "unspecified"
+    if isinstance(val, str):
+        val_clean = val.strip()
+        if not val_clean:
+            return "unspecified"
+        if val_clean.lower() == "paypal":
+            return "PayPal"
+        if val_clean.lower() == "credit card":
+            return "Credit Card"
+        if val_clean.upper() in {"HR", "IT", "ID", "PR", "AI", "ML", "BI", "USA", "UK", "EU"}:
+            return val_clean.upper()
+        if val_clean.islower():
+            return val_clean.title()
+        return val_clean
     return val
 
 
@@ -506,6 +522,14 @@ def format_sql_query_result(
             if val is None:
                 continue
             clean_m_name = m.replace("_", " ").replace("avg ", "average ").replace("total ", "total ")
+            if "paypal" in clean_m_name.lower():
+                clean_m_name = re.sub(r"(?i)\bpaypal\b", "PayPal", clean_m_name)
+            if "credit card" in clean_m_name.lower():
+                clean_m_name = re.sub(r"(?i)\bcredit card\b", "Credit Card", clean_m_name)
+            elif clean_m_name.lower() in ("share", "share percent", "proportion") and "credit card" in q_lower:
+                clean_m_name = "Credit Card share"
+            elif clean_m_name.lower() in ("share", "share percent", "proportion") and "paypal" in q_lower:
+                clean_m_name = "PayPal share"
             if isinstance(val, float):
                 parts.append(f"{clean_m_name} was {val:,.2f}")
                 claims.append({"text": f"{grp_val or clean_m_name} {clean_m_name}: {val}", "source_id": "query_sql", "metric_key": f"{grp_val or ''}_{m}".strip('_'), "value": round(val, 2), "unit": None})
@@ -572,6 +596,11 @@ def llm_choose_sql_query(
     if any(sig in q_lower for sig in ["statistically significant", "statistical significance", "is it significant", "is there a significant", "is the difference significant"]):
         return None
 
+    # Never generate SQL for questions about missing columns or entities
+    from backend.app.services.chat_service import detect_missing_column_or_entity
+    if detect_missing_column_or_entity(question, available_columns):
+        return None
+
     matched_cols = extract_question_columns(question, available_columns)
     if not matched_cols:
         return None
@@ -584,7 +613,7 @@ def llm_choose_sql_query(
         f"CRITICAL RULES:\n"
         f"1. Return ONLY a single SELECT query querying directly from {target_table}.\n"
         f"2. Always include '{target_table}' as basis in the SELECT list (e.g. SELECT '{target_table}' as basis, ...).\n"
-        f"3. Always include COUNT(*) as n or sample size.\n"
+        f"3. When computing aggregate metrics (AVG, SUM, etc.) on a column, count the non-null metric values: COUNT(<metric_column>) as n (or include WHERE <metric_column> IS NOT NULL) so n strictly equals the observed non-null count.\n"
         f"4. Do NOT use any destructive statements (NO DROP, UPDATE, DELETE, INSERT, ALTER).\n"
         f"5. Return ONLY the raw SQL query string, no markdown fences, no explanation.\n"
     )
