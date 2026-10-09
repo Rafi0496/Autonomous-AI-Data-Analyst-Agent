@@ -206,6 +206,21 @@ def answer_heuristic_question(
         except Exception:
             pass
 
+    # 2.5 Check for inquiries about suppressed analyses
+    suppressed_matches = [
+        ins for ins in insights
+        if "insufficient" in str(ins.get("id", "")) and any(
+            w in (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower()
+            for w in re.findall(r"\b[a-zA-Z]{4,}\b", q_lower)
+            if w not in {"what", "which", "where", "when", "does", "have", "with", "from", "that", "this", "rate", "difference", "there", "between"}
+        )
+    ]
+    if suppressed_matches:
+        sup = suppressed_matches[0]
+        evidence.append({"type": "insight", "id": sup.get("id"), "title": sup.get("title")})
+        answer = f"The requested analysis was checked but suppressed under data quality safeguards: {sup.get('summary')}"
+        return answer, evidence, tool_results, tool_calls_count
+
     # 3. Match against ranked insights (only if sharing column with question)
     q_cols = extract_question_columns(question, available_cols)
     if q_cols:
@@ -273,13 +288,15 @@ def get_dataset_insights_fallback(db: Session, ds_id: str) -> List[Dict[str, Any
                 tools_res.append(segment_compare(clean_df, "Department", "Attrition"))
             if "Department" in cols and "Annual_Salary" in cols:
                 tools_res.append(segment_compare(clean_df, "Department", "Annual_Salary"))
+            if "Performance_Score" in cols and "Last_Promotion_Year" in cols:
+                tools_res.append(run_correlation(clean_df, ["Performance_Score", "Last_Promotion_Year"]))
         elif "market" in ds_id.lower():
             if "Channel" in cols and "Conversions" in cols:
                 tools_res.append(segment_compare(clean_df, "Channel", "Conversions"))
 
         num_cols = list(clean_df.select_dtypes(include=["number"]).columns)
         if len(num_cols) >= 2:
-            tools_res.append(run_correlation(clean_df, num_cols[:4]))
+            tools_res.append(run_correlation(clean_df, num_cols))
         if num_cols:
             tools_res.append(detect_outliers(clean_df, method="iqr", columns=num_cols[:3]))
 
@@ -356,7 +373,14 @@ def process_chat_question(
             available_columns = []
 
     provider = os.getenv("LLM_PROVIDER", settings.LLM_PROVIDER).lower()
-    has_api_key = bool(os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
+    gemini_key = os.getenv("GEMINI_API_KEY") or getattr(settings, "GEMINI_API_KEY", None)
+    claude_key = os.getenv("ANTHROPIC_API_KEY") or getattr(settings, "ANTHROPIC_API_KEY", None)
+    has_api_key = bool(gemini_key or claude_key)
+    if gemini_key and not os.getenv("GEMINI_API_KEY"):
+        os.environ["GEMINI_API_KEY"] = gemini_key
+    if claude_key and not os.getenv("ANTHROPIC_API_KEY"):
+        os.environ["ANTHROPIC_API_KEY"] = claude_key
+
     client_provider = provider if has_api_key else "heuristic"
     client = get_llm_client(client_provider, allow_heuristic_fallback=True)
 
@@ -447,7 +471,11 @@ def process_chat_question(
                 if tool_results and any(tr.get("tool") == "query_sql" for tr in tool_results):
                     sql_tr = next(tr for tr in tool_results if tr.get("tool") == "query_sql")
                     q_table = "data_observed" if "data_observed" in str(sql_tr.get("rows", [])) else "data_clean"
-                    cleaned_ans = f"The answer could not be verified. Query result from {q_table}: {sql_tr.get('rows', [])}."
+                    from backend.app.services.chat_sql import format_sql_query_result
+                    sampling_disc = profile.get("quality_summary", {}).get("sampling_disclosure") or profile.get("sampling_disclosure")
+                    imp_stats = cleaning_report.get("column_imputation_stats", {})
+                    ans_fmt, _ = format_sql_query_result(sql_tr.get("rows", []), question, q_table, sampling_disclosure=sampling_disc, imputation_stats=imp_stats)
+                    cleaned_ans = ans_fmt
                 else:
                     cleaned_ans = "The answer could not be verified against the dataset findings."
             chat_result.answer = cleaned_ans

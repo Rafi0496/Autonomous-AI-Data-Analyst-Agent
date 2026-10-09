@@ -6,8 +6,11 @@ Replaces question-specific hardcoding with a general flow:
 - Converts query result rows directly into natural language answer text and bound claims.
 - Assures every answer states its basis and n matching the queried table.
 """
+import logging
 import re
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 def detect_question_target_table(question: str) -> str:
@@ -592,7 +595,7 @@ def llm_choose_sql_query(
         if provider_name == "llm:gemini" and hasattr(client, "_get_client"):
             from google.genai import types
             genai_client = client._get_client()
-            config = client._build_generate_config(types, temperature=0.0)
+            config = client._build_generate_config(types)
             res = client._execute_with_retry(genai_client, contents=prompt, config=config)
             raw = getattr(res, "text", "") or ""
         elif provider_name == "llm:claude" and hasattr(client, "_get_client"):

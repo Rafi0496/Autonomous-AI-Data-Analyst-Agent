@@ -83,22 +83,32 @@ def build_source_index(
                             seg_name = (
                                 item.get("segment") or item.get("label") or item.get("category")
                                 or item.get("Payment_Method") or item.get("Department") or item.get("Channel")
-                                or next((v for k, v in item.items() if isinstance(v, str)), None)
+                                or item.get("Product_Category") or item.get("Region")
+                                or next((v for k, v in item.items() if isinstance(v, str) and k != "basis"), None)
                             )
-                            if seg_name:
-                                basis_pfx = f"{item.get('basis')}_" if item.get("basis") else ""
-                                for sub_k, sub_v in item.items():
-                                    if isinstance(sub_v, (int, float)) and not isinstance(sub_v, bool):
-                                        f_val = float(sub_v)
+                            basis_pfx = f"{item.get('basis')}_" if item.get("basis") else ""
+                            for sub_k, sub_v in item.items():
+                                if isinstance(sub_v, (int, float)) and not isinstance(sub_v, bool):
+                                    f_val = float(sub_v)
+                                    bare_k = normalize_key(sub_k)
+                                    metrics[bare_k] = f_val
+                                    metrics[f"{bare_k}_{round(f_val, 2)}"] = f_val
+                                    metrics[f"{bare_k}_{round(f_val, 1)}"] = f_val
+                                    metrics[normalize_key(str(round(f_val, 2)))] = f_val
+                                    metrics[normalize_key(str(int(f_val)))] = f_val
+                                    if seg_name:
                                         metrics[normalize_key(f"{basis_pfx}{seg_name}_{sub_k}")] = f_val
                                         metrics[normalize_key(f"{seg_name}_{sub_k}")] = f_val
                                         metrics[normalize_key(f"{seg_name}")] = f_val
-                                        bare_k = normalize_key(sub_k)
-                                        metrics[bare_k] = f_val
-                                        metrics[f"{bare_k}_{round(f_val, 2)}"] = f_val
-                                        metrics[f"{bare_k}_{round(f_val, 1)}"] = f_val
-                                        metrics[normalize_key(str(round(f_val, 2)))] = f_val
-                                        metrics[normalize_key(str(int(f_val)))] = f_val
+                                    # Index percentages for rate/share metrics
+                                    if 0.0 < f_val <= 1.0 or any(w in sub_k.lower() for w in ["rate", "share", "ratio", "pct"]):
+                                        pct_val = round(f_val * 100, 2) if f_val <= 1.0 else f_val
+                                        metrics[normalize_key(str(round(pct_val, 2)))] = pct_val
+                                        metrics[normalize_key(str(round(pct_val, 1)))] = pct_val
+                                        metrics[normalize_key(str(int(round(pct_val))))] = pct_val
+                                        if seg_name:
+                                            metrics[normalize_key(f"{seg_name}_{sub_k}_percent")] = pct_val
+                                            metrics[normalize_key(f"{seg_name}_{sub_k}_rate")] = pct_val
                             metrics.update(extract_flat_metrics(item, f"{p}_{idx}"))
                         elif isinstance(item, (int, float)) and not isinstance(item, bool):
                             metrics[normalize_key(f"{p}_{idx}")] = float(item)
