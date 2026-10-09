@@ -1,7 +1,7 @@
 # GROUND-TRUTH FACTS REPOSITORY
 ## Autonomous AI Data Analyst Agent
 
-- **Generated At:** `2026-10-09T11:31:25+0530`
+- **Generated At:** `2026-10-09T11:52:44+0530`
 - **Executing Python:** `C:\Users\Shaik Rafi\.venvs\autonomous-ai-data-analyst\Scripts\python.exe`
 - **Working Directory:** `D:\Projects\Autonomous AI Data Analyst Agent`
 
@@ -16,6 +16,8 @@
 
 ### 1.1 Recent Commits (`git log -n 20 --oneline`)
 ```text
+8f96275 backend-close-2: finalize test suite alignment with bh correction and insight capping
+4d61315 backend-close-2: 8 regenerate eval results facts and openapi documentation
 31aca05 backend-close-2: 7 live chat 15 questions evaluation with gemini
 1effba6 backend-close-2: 7 llm chosen sql chat with missing column suppression handling
 7df8ebc backend-close-2: 6 scale profiling optimization and rss memory tracking
@@ -34,18 +36,11 @@ a6130ba backend-close: B7 fix word boundary regex in placeholder validator to pr
 22a68df backend-close: A9 regression tests and stage a completion
 0c21f56 backend-close: A8 live verification and docs update
 03d685b backend-close: A7 docker ci safety verification
-5ed6b48 backend-close: A6 hr count check script and analysis
-c8a11ee backend-close: A5 raw score headline and post-cleaning completeness
 ```
 
 ### 1.2 Working Tree Status (`git status -s`)
 ```text
-M data/eval/summary_system_A.json
- M data/eval/summary_system_B.json
- M docs/EVAL_RESULTS.md
- M docs/figures/false_positives_by_system.png
- M docs/figures/runtime_vs_rows.png
- M docs/openapi.json
+<clean working tree>
 ```
 
 ### 1.3 Remote URL
@@ -229,15 +224,21 @@ scripts/verify_phase3.py
 | **Total Collected** | **166** |
 
 ### 3.2 Automated Test Execution (`pytest -m "not live" -q`)
-- **Exit Code:** `1`
-- **Passed Tests:** `159`
-- **Failed Tests:** `5`
+- **Exit Code:** `0`
+- **Passed Tests:** `164`
+- **Failed Tests:** `0`
 - **Skipped Tests:** `0`
 - **Deselected Tests (Live LLM tests):** `2`
-- **Execution Duration:** `479.03s`
+- **Execution Duration:** `130.95s`
 
 #### Verbatim Last 15 Lines:
 ```text
+    and field_name in cls.__fields__
+
+backend/tests/test_milestone3.py: 83 warnings
+  C:\Users\Shaik Rafi\.venvs\autonomous-ai-data-analyst\Lib\site-packages\reflex_base\utils\types.py:591: PydanticDeprecatedSince20: The `__fields__` attribute is deprecated, use the `model_fields` class property instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    and hasattr(cls.__fields__[field_name], "annotation")
+
 backend/tests/test_milestone3.py: 83 warnings
   C:\Users\Shaik Rafi\.venvs\autonomous-ai-data-analyst\Lib\site-packages\reflex_base\utils\types.py:592: PydanticDeprecatedSince20: The `__fields__` attribute is deprecated, use the `model_fields` class property instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
     and not isinstance(cls.__fields__[field_name].annotation, (str, ForwardRef))
@@ -247,12 +248,6 @@ backend/tests/test_milestone3.py: 83 warnings
     return cls.__fields__[field_name].annotation
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ===========================
-FAILED backend/tests/test_eval_matcher.py::test_audit_null_dataset_false_positive
-FAILED backend/tests/test_m2_chat_correctness.py::test_stripped_claims_fallback
-FAILED backend/tests/test_milestone1.py::test_sentinel_vs_suspected_repeated_extremes
-FAILED backend/tests/test_milestone4.py::test_grounded_answer - AssertionErro...
-FAILED backend/tests/test_offline_heuristic.py::test_offline_heuristic_full_flow
 ```
 
 
@@ -356,7 +351,9 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Invalid Domain Values Detected (0):**
   - *None detected*
 - **Suspected Returns / Repeated Extremes:**
+  - Extremes: `Clicks` count=19 (Repeated extreme value 300.0 (19 occurrences) in 'Clicks' outside 3x IQR fence [-150.00, 200.00] kept.)
   - Extremes: `Clicks` count=14 (Repeated extreme value 1200.0 (14 occurrences) in 'Clicks' outside 3x IQR fence [-890.00, 1192.50] kept.)
+  - Extremes: `Conversions` count=15 (Repeated extreme value 25.0 (15 occurrences) in 'Conversions' outside 3x IQR fence [-15.00, 20.00] kept.)
   - Extremes: `Conversions` count=7 (Repeated extreme value 90.0 (7 occurrences) in 'Conversions' outside 3x IQR fence [-12.00, 17.75] kept.)
 
 
@@ -370,7 +367,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Execution Status:** `budget_tripped`
 - **Total Steps Executed:** `4`
 - **Total Tokens Consumed:** `unknown`
-- **Total Execution Duration:** `1.901s`
+- **Total Execution Duration:** `1.787s`
 
 #### Multi-Round Execution Audit (`rounds_table`)
 | Round | Tools Executed | Reason / Trigger Status |
@@ -380,10 +377,10 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 #### Step-by-Step Tool Execution Log
 | Round | Step | Tool Name | Tool Arguments | Duration (ms) | LLM (ms) | Reflect (ms) | Rationale |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 | `detect_outliers` | `{"dataset_id": "5b90533a-ce7d-49b4-be96-643f4f15c5c7", "method": "iqr", "columns": ["Quantity", "Unit_Price"]}` | 20.4 | 0.1 | 0.0 | [Heuristic Template] Identify statistical anomalies and extreme values |
-| 1 | 1 | `run_correlation` | `{"dataset_id": "5b90533a-ce7d-49b4-be96-643f4f15c5c7", "columns": ["Quantity", "Unit_Price"], "threshold": 0.3}` | 7.9 | 0.0 | 0.0 | [Heuristic Template] Measure pairwise linear associations across quant |
-| 1 | 1 | `segment_compare` | `{"dataset_id": "5b90533a-ce7d-49b4-be96-643f4f15c5c7", "segment_column": "Region", "metric_column": "Quantity"}` | 8.8 | 0.0 | 0.0 | [Heuristic Template] Compare distribution of 'Quantity' across key seg |
-| 1 | 1 | `trend_analysis` | `{"dataset_id": "5b90533a-ce7d-49b4-be96-643f4f15c5c7", "date_column": "Date", "value_column": "Quantity"}` | 9.4 | 0.0 | 0.0 | [Heuristic Template] Evaluate rolling trajectory of 'Quantity' across  |
+| 1 | 1 | `detect_outliers` | `{"dataset_id": "60a81266-a7ad-40be-94d3-6e7a065e1beb", "method": "iqr", "columns": ["Quantity", "Unit_Price"]}` | 19.3 | 0.1 | 0.0 | [Heuristic Template] Identify statistical anomalies and extreme values |
+| 1 | 1 | `run_correlation` | `{"dataset_id": "60a81266-a7ad-40be-94d3-6e7a065e1beb", "columns": ["Quantity", "Unit_Price"], "threshold": 0.3}` | 7.4 | 0.0 | 0.0 | [Heuristic Template] Measure pairwise linear associations across quant |
+| 1 | 1 | `segment_compare` | `{"dataset_id": "60a81266-a7ad-40be-94d3-6e7a065e1beb", "segment_column": "Region", "metric_column": "Quantity"}` | 8.5 | 0.0 | 0.0 | [Heuristic Template] Compare distribution of 'Quantity' across key seg |
+| 1 | 1 | `trend_analysis` | `{"dataset_id": "60a81266-a7ad-40be-94d3-6e7a065e1beb", "date_column": "Date", "value_column": "Quantity"}` | 8.7 | 0.0 | 0.0 | [Heuristic Template] Evaluate rolling trajectory of 'Quantity' across  |
 
 #### Ranked Analytical Insights
 | ID | Title | Type | Confidence | n_used | n_excluded | n_total | Impact Score |
@@ -393,7 +390,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-seg-Product-Unit_Price` | No significant difference in Unit_Price across Product | `segment_difference` | `high` | 105 | 15 | 120 | 0.33 |
 | `insight-seg-Product-Quantity` | No significant difference in Quantity across Product | `segment_difference` | `medium` | 90 | 30 | 120 | 0.31 |
 | `insight-seg-Region-Quantity` | No significant difference in Quantity across Region | `segment_difference` | `medium` | 78 | 42 | 120 | 0.30 |
-| `insight-seg-Category-Unit_Price` | No significant difference in Unit_Price across Category | `segment_difference` | `high` | 105 | 15 | 120 | 0.20 |
 
 #### Data Quality Caveats
 | ID | Title | Confidence | n_used | n_excluded | n_total | Impact Score |
@@ -401,8 +397,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-dq-insufficient-trend-Quantity` | Insufficient data for trend on Quantity | `low` | 42 | 78 | 120 | 0.49 |
 | `insight-dq-sentinel-Quantity` | Sentinel values sanitized in Quantity | `high` | 105 | 15 | 120 | 0.47 |
 | `insight-dq-imputation-Unit_Price` | Elevated imputation rate in Unit_Price (12.5%) | `high` | 105 | 15 | 120 | 0.47 |
-| `insight-dq-returns-Quantity` | Suspected transaction returns in Quantity | `high` | 120 | 0 | 120 | 0.45 |
-| `insight-dq-imputation-Quantity` | Elevated imputation rate in Quantity (25.0%) | `medium` | 90 | 30 | 120 | 0.45 |
 
 #### Suppressed Insights (Analytical Suppression Rules)
 | ID | Analysis Target | Triggered Rule | Detail |
@@ -410,7 +404,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-dq-insufficient-trend-Quantity` | `trend on Quantity` | `exclusion_rate > 0.5` | exclusion_rate=65.0% > 50% |
 
 #### Executive Narrative (Verbatim)
-> Autonomous analysis concluded with validated analytical findings. Office Supplies recorded the highest Quantity (median 4.00) compared to Accessories (median 2.00), a 2.30x differential (p=0.0318) across 90 records. A correlation coefficient of r=-0.0711 was observed between Quantity and Unit_Price across 79 observations. no statistically significant difference detected (no significant difference detected; n per group: Keyboard: n=10, Webcam: n=20, Wireless Mouse: n=11, Headphones: n=16, Monitor: n=12, USB-C Cable: n=17, Laptop: n=19, p=0.2366) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: USB-C Cable: n=16, Webcam: n=13, Keyboard: n=10, Laptop: n=17, Headphones: n=14, Wireless Mouse: n=10, Monitor: n=10, p=0.4812) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: North: n=14, South: n=9, Central: n=32, East: n=11, West: n=12, p=0.5277) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: Accessories: n=34, Electronics: n=53, Office Supplies: n=18, p=0.7567) (limited statistical power due to small sample size in some groups, n < 30). Suppressed analyses: Analysis for trend on 'Quantity' was suppressed due to insufficient data for trend on 'Quantity' (n_used=42, exclusion_rate=65.0%).. Data quality caveats: Detected and sanitized 15 sentinel values (999.0) in column 'Quantity' prior to imputation. Column 'Unit_Price' required 12.5% imputation (15 missing entries imputed).
+> Autonomous analysis concluded with validated analytical findings. Office Supplies recorded the highest Quantity (median 4.00) compared to Accessories (median 2.00), a 2.30x differential (p=0.0318) across 90 records. A correlation coefficient of r=-0.0711 was observed between Quantity and Unit_Price across 79 observations. no statistically significant difference detected (no significant difference detected; n per group: Keyboard: n=10, Webcam: n=20, Wireless Mouse: n=11, Headphones: n=16, Monitor: n=12, USB-C Cable: n=17, Laptop: n=19, p=0.2366) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: USB-C Cable: n=16, Webcam: n=13, Keyboard: n=10, Laptop: n=17, Headphones: n=14, Wireless Mouse: n=10, Monitor: n=10, p=0.4812) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: North: n=14, South: n=9, Central: n=32, East: n=11, West: n=12, p=0.5277) (limited statistical power due to small sample size in some groups, n < 30). Suppressed analyses: Analysis for trend on 'Quantity' was suppressed due to insufficient data for trend on 'Quantity' (n_used=42, exclusion_rate=65.0%).. Data quality caveats: Detected and sanitized 15 sentinel values (999.0) in column 'Quantity' prior to imputation. Column 'Unit_Price' required 12.5% imputation (15 missing entries imputed).
 
 #### Claims with Source IDs
 | Claim Text | Metric Key | Numeric Value | Unit | Source ID |
@@ -447,11 +441,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | no statistically significant difference detected (no significant diffe | `12.0` | `12.0` | `None` | `insight-seg-Region-Quantity` |
 | no statistically significant difference detected (no significant diffe | `p_value` | `0.5277` | `p_value` | `insight-seg-Region-Quantity` |
 | no statistically significant difference detected (no significant diffe | `30.0` | `30.0` | `None` | `insight-seg-Region-Quantity` |
-| no statistically significant difference detected (no significant diffe | `34.0` | `34.0` | `None` | `insight-seg-Category-Unit_Price` |
-| no statistically significant difference detected (no significant diffe | `53.0` | `53.0` | `None` | `insight-seg-Category-Unit_Price` |
-| no statistically significant difference detected (no significant diffe | `18.0` | `18.0` | `None` | `insight-seg-Category-Unit_Price` |
-| no statistically significant difference detected (no significant diffe | `p_value` | `0.7567` | `p_value` | `insight-seg-Category-Unit_Price` |
-| no statistically significant difference detected (no significant diffe | `30.0` | `30.0` | `None` | `insight-seg-Category-Unit_Price` |
 | Analysis for trend on 'Quantity' was suppressed due to insufficient da | `n_used` | `42.0` | `None` | `insight-dq-insufficient-trend-Quantity` |
 | Analysis for trend on 'Quantity' was suppressed due to insufficient da | `exclusion_rate_percent` | `65.0` | `None` | `insight-dq-insufficient-trend-Quantity` |
 | Detected and sanitized 15 sentinel values (999.0) in column 'Quantity' | `n_excluded` | `15.0` | `None` | `insight-dq-sentinel-Quantity` |
@@ -459,10 +448,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | Column 'Unit_Price' required 12.5% imputation (15 missing entries impu | `12.5` | `12.5` | `None` | `insight-dq-imputation-Unit_Price` |
 | Column 'Unit_Price' required 12.5% imputation (15 missing entries impu | `12.5` | `12.5` | `None` | `insight-dq-imputation-Unit_Price` |
 | Column 'Unit_Price' required 12.5% imputation (15 missing entries impu | `n_excluded` | `15.0` | `None` | `insight-dq-imputation-Unit_Price` |
-| Identified 18 negative entries in 'Quantity' flagged as suspected cust | `count` | `18.0` | `None` | `insight-dq-returns-Quantity` |
-| Column 'Quantity' required 25.0% imputation (30 missing entries impute | `25.0` | `25.0` | `None` | `insight-dq-imputation-Quantity` |
-| Column 'Quantity' required 25.0% imputation (30 missing entries impute | `25.0` | `25.0` | `None` | `insight-dq-imputation-Quantity` |
-| Column 'Quantity' required 25.0% imputation (30 missing entries impute | `n_excluded` | `30.0` | `None` | `insight-dq-imputation-Quantity` |
 
 #### Citation Verification
 - **Verification Pass Rate:** `100.0%`
@@ -470,10 +455,10 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Stripped Sentences Count:** `0`
 
 #### Latency Accounting
-- **Total Tool Execution Latency:** `46.55 ms`
-- **Total LLM Orchestration Latency:** `2.67 ms`
-- **Synthesis LLM Latency:** `2.59 ms`
-- **Total Wall-Clock Time:** `1.901 s`
+- **Total Tool Execution Latency:** `43.99 ms`
+- **Total LLM Orchestration Latency:** `2.36 ms`
+- **Synthesis LLM Latency:** `2.25 ms`
+- **Total Wall-Clock Time:** `1.787 s`
 
 ### 5.2 Analysis Run: HR Workforce Attrition (`hr_attrition_messy.csv`)
 - **LLM Provider:** `llm:gemini`
@@ -481,7 +466,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Execution Status:** `completed`
 - **Total Steps Executed:** `3`
 - **Total Tokens Consumed:** `unknown`
-- **Total Execution Duration:** `6.111s`
+- **Total Execution Duration:** `3.8s`
 
 #### Multi-Round Execution Audit (`rounds_table`)
 | Round | Tools Executed | Reason / Trigger Status |
@@ -492,9 +477,9 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 #### Step-by-Step Tool Execution Log
 | Round | Step | Tool Name | Tool Arguments | Duration (ms) | LLM (ms) | Reflect (ms) | Rationale |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 | `detect_outliers` | `{"dataset_id": "0b488fd1-fd34-41fe-a631-f0d7873277ab", "method": "iqr", "columns": ["Age", "Annual_Salary", "Tenure_Years", "Performance_Score", "Last_Promotion_Year"]}` | 28.4 | 0.1 | 0.0 | [Heuristic Template] Identify statistical anomalies and extreme values |
-| 1 | 1 | `run_correlation` | `{"dataset_id": "0b488fd1-fd34-41fe-a631-f0d7873277ab", "columns": ["Age", "Annual_Salary", "Tenure_Years", "Performance_Score", "Last_Promotion_Year"], "threshold": 0.3}` | 42.0 | 0.0 | 0.0 | [Heuristic Template] Measure pairwise linear associations across quant |
-| 1 | 1 | `segment_compare` | `{"dataset_id": "0b488fd1-fd34-41fe-a631-f0d7873277ab", "segment_column": "Gender", "metric_column": "Age"}` | 8.4 | 0.0 | 0.0 | [Heuristic Template] Compare distribution of 'Age' across key segment  |
+| 1 | 1 | `detect_outliers` | `{"dataset_id": "803ad71d-194c-4659-8024-c7b7fbb8d228", "method": "iqr", "columns": ["Age", "Annual_Salary", "Tenure_Years", "Performance_Score", "Last_Promotion_Year"]}` | 34.5 | 0.1 | 0.0 | [Heuristic Template] Identify statistical anomalies and extreme values |
+| 1 | 1 | `run_correlation` | `{"dataset_id": "803ad71d-194c-4659-8024-c7b7fbb8d228", "columns": ["Age", "Annual_Salary", "Tenure_Years", "Performance_Score", "Last_Promotion_Year"], "threshold": 0.3}` | 44.5 | 0.0 | 0.0 | [Heuristic Template] Measure pairwise linear associations across quant |
+| 1 | 1 | `segment_compare` | `{"dataset_id": "803ad71d-194c-4659-8024-c7b7fbb8d228", "segment_column": "Gender", "metric_column": "Age"}` | 8.7 | 0.0 | 0.0 | [Heuristic Template] Compare distribution of 'Age' across key segment  |
 
 #### Ranked Analytical Insights
 | ID | Title | Type | Confidence | n_used | n_excluded | n_total | Impact Score |
@@ -509,9 +494,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-dq-insufficient-outliers-features` | Insufficient data for outliers on features | `low` | 30 | 80 | 110 | 0.50 |
 | `insight-dq-insufficient-correlation-Performance_Score_vs_Last_Promotion_Year` | Insufficient data for correlation on Performance_Score vs Last_Promotion_Year | `low` | 46 | 64 | 110 | 0.46 |
 | `insight-dq-insufficient-segment_difference-Gender_vs_Annual_Salary` | Insufficient data for segment_difference on Gender vs Annual_Salary | `low` | 51 | 59 | 110 | 0.44 |
-| `insight-dq-imputation-Performance_Score` | Elevated imputation rate in Performance_Score (19.1%) | `high` | 89 | 21 | 110 | 0.54 |
-| `insight-dq-imputation-Tenure_Years` | Elevated imputation rate in Tenure_Years (18.2%) | `high` | 90 | 20 | 110 | 0.53 |
-| `insight-dq-invalid-Age` | Invalid domain values sanitized in Age | `high` | 92 | 18 | 110 | 0.51 |
 
 #### Suppressed Insights (Analytical Suppression Rules)
 | ID | Analysis Target | Triggered Rule | Detail |
@@ -521,7 +503,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-dq-insufficient-segment_difference-Gender_vs_Annual_Salary` | `segment_difference on Gender vs Annual_Salary` | `exclusion_rate > 0.5` | exclusion_rate=53.6% > 50% |
 
 #### Executive Narrative (Verbatim)
-> Autonomous analysis concluded with validated analytical findings. no statistically significant difference detected (no significant difference detected; n per group: Engineering: n=16, Sales: n=28, HR: n=13, Marketing: n=19, p=0.7805) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: Marketing: n=17, Sales: n=14, HR: n=9, Engineering: n=15, p=0.1351) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: Other: n=16, Male: n=8, M: n=20, Female: n=13, F: n=7, p=0.7830) (limited statistical power due to small sample size in some groups, n < 30). Suppressed analyses: Analysis for outliers on 'features' was suppressed due to insufficient data for outliers on 'features' (n_used=30, exclusion_rate=72.7%).; Analysis for correlation on 'Performance_Score vs Last_Promotion_Year' was suppressed due to insufficient data for correlation on 'Performance_Score vs Last_Promotion_Year' (n_used=46, exclusion_rate=58.2%).; Analysis for segment_difference on 'Gender vs Annual_Salary' was suppressed due to insufficient data for segment_difference on 'Gender vs Annual_Salary' (n_used=51, exclusion_rate=53.6%).. Data quality caveats: Column 'Performance_Score' required 19.1% imputation (21 missing entries imputed). Column 'Tenure_Years' required 18.2% imputation (20 missing entries imputed).
+> Autonomous analysis concluded with validated analytical findings. no statistically significant difference detected (no significant difference detected; n per group: Engineering: n=16, Sales: n=28, HR: n=13, Marketing: n=19, p=0.7805) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: Marketing: n=17, Sales: n=14, HR: n=9, Engineering: n=15, p=0.1351) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: Other: n=16, Male: n=8, M: n=20, Female: n=13, F: n=7, p=0.7830) (limited statistical power due to small sample size in some groups, n < 30). Suppressed analyses: Analysis for outliers on 'features' was suppressed due to insufficient data for outliers on 'features' (n_used=30, exclusion_rate=72.7%).; Analysis for correlation on 'Performance_Score vs Last_Promotion_Year' was suppressed due to insufficient data for correlation on 'Performance_Score vs Last_Promotion_Year' (n_used=46, exclusion_rate=58.2%).; Analysis for segment_difference on 'Gender vs Annual_Salary' was suppressed due to insufficient data for segment_difference on 'Gender vs Annual_Salary' (n_used=51, exclusion_rate=53.6%)..
 
 #### Claims with Source IDs
 *No claims generated.*
@@ -532,10 +514,10 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Stripped Sentences Count:** `0`
 
 #### Latency Accounting
-- **Total Tool Execution Latency:** `78.89 ms`
-- **Total LLM Orchestration Latency:** `3335.45 ms`
-- **Synthesis LLM Latency:** `3335.38 ms`
-- **Total Wall-Clock Time:** `6.111 s`
+- **Total Tool Execution Latency:** `87.66 ms`
+- **Total LLM Orchestration Latency:** `1841.16 ms`
+- **Synthesis LLM Latency:** `1841.07 ms`
+- **Total Wall-Clock Time:** `3.800 s`
 
 ### 5.3 Analysis Run: Marketing Campaigns (`marketing_campaign_messy.csv`)
 - **LLM Provider:** `llm:gemini`
@@ -543,7 +525,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Execution Status:** `budget_tripped`
 - **Total Steps Executed:** `4`
 - **Total Tokens Consumed:** `unknown`
-- **Total Execution Duration:** `1.954s`
+- **Total Execution Duration:** `1.787s`
 
 #### Multi-Round Execution Audit (`rounds_table`)
 | Round | Tools Executed | Reason / Trigger Status |
@@ -553,10 +535,10 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 #### Step-by-Step Tool Execution Log
 | Round | Step | Tool Name | Tool Arguments | Duration (ms) | LLM (ms) | Reflect (ms) | Rationale |
 |---|---|---|---|---|---|---|---|
-| 1 | 1 | `detect_outliers` | `{"dataset_id": "31e22ae3-da8f-45a0-a927-202b1ec579d0", "method": "iqr", "columns": ["Ad_Spend", "Impressions", "Clicks", "Conversions"]}` | 27.4 | 0.1 | 0.0 | [Heuristic Template] Identify statistical anomalies and extreme values |
-| 1 | 1 | `run_correlation` | `{"dataset_id": "31e22ae3-da8f-45a0-a927-202b1ec579d0", "columns": ["Ad_Spend", "Impressions", "Clicks", "Conversions"], "threshold": 0.3}` | 23.1 | 0.0 | 0.0 | [Heuristic Template] Measure pairwise linear associations across quant |
-| 1 | 1 | `segment_compare` | `{"dataset_id": "31e22ae3-da8f-45a0-a927-202b1ec579d0", "segment_column": "Channel", "metric_column": "Ad_Spend"}` | 8.8 | 0.0 | 0.0 | [Heuristic Template] Compare distribution of 'Ad_Spend' across key seg |
-| 1 | 1 | `trend_analysis` | `{"dataset_id": "31e22ae3-da8f-45a0-a927-202b1ec579d0", "date_column": "Date", "value_column": "Ad_Spend"}` | 9.4 | 0.0 | 0.0 | [Heuristic Template] Evaluate rolling trajectory of 'Ad_Spend' across  |
+| 1 | 1 | `detect_outliers` | `{"dataset_id": "c7a8a1b3-1c2b-4ecf-a83c-a603293437cc", "method": "iqr", "columns": ["Ad_Spend", "Impressions", "Clicks", "Conversions"]}` | 33.7 | 0.1 | 0.0 | [Heuristic Template] Identify statistical anomalies and extreme values |
+| 1 | 1 | `run_correlation` | `{"dataset_id": "c7a8a1b3-1c2b-4ecf-a83c-a603293437cc", "columns": ["Ad_Spend", "Impressions", "Clicks", "Conversions"], "threshold": 0.3}` | 28.1 | 0.0 | 0.0 | [Heuristic Template] Measure pairwise linear associations across quant |
+| 1 | 1 | `segment_compare` | `{"dataset_id": "c7a8a1b3-1c2b-4ecf-a83c-a603293437cc", "segment_column": "Channel", "metric_column": "Ad_Spend"}` | 10.4 | 0.0 | 0.0 | [Heuristic Template] Compare distribution of 'Ad_Spend' across key seg |
+| 1 | 1 | `trend_analysis` | `{"dataset_id": "c7a8a1b3-1c2b-4ecf-a83c-a603293437cc", "date_column": "Date", "value_column": "Ad_Spend"}` | 11.4 | 0.0 | 0.0 | [Heuristic Template] Evaluate rolling trajectory of 'Ad_Spend' across  |
 
 #### Ranked Analytical Insights
 | ID | Title | Type | Confidence | n_used | n_excluded | n_total | Impact Score |
@@ -566,7 +548,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-corr-Ad_Spend-Clicks` | Weak negative relationship between Ad_Spend and Clicks | `correlation` | `low` | 58 | 42 | 100 | 0.27 |
 | `insight-seg-Target_Audience-Impressions` | No significant difference in Impressions across Target_Audience | `segment_difference` | `medium` | 72 | 28 | 100 | 0.14 |
 | `insight-seg-Target_Audience-Ad_Spend` | No significant difference in Ad_Spend across Target_Audience | `segment_difference` | `low` | 53 | 47 | 100 | 0.13 |
-| `insight-seg-Channel-Ad_Spend` | No significant difference in Ad_Spend across Channel | `segment_difference` | `low` | 54 | 46 | 100 | 0.10 |
 
 #### Data Quality Caveats
 | ID | Title | Confidence | n_used | n_excluded | n_total | Impact Score |
@@ -574,9 +555,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-dq-insufficient-trend-Ad_Spend` | Insufficient data for trend on Ad_Spend | `low` | 11 | 89 | 100 | 0.50 |
 | `insight-dq-imputation-Conversions` | Elevated imputation rate in Conversions (17.0%) | `high` | 83 | 17 | 100 | 0.52 |
 | `insight-dq-imputation-Ad_Spend` | Elevated imputation rate in Ad_Spend (34.0%) | `medium` | 66 | 34 | 100 | 0.51 |
-| `insight-dq-imputation-Clicks` | Elevated imputation rate in Clicks (16.0%) | `high` | 84 | 16 | 100 | 0.51 |
-| `insight-dq-imputation-Impressions` | Elevated imputation rate in Impressions (13.0%) | `high` | 87 | 13 | 100 | 0.48 |
-| `insight-dq-extremes-Clicks` | Repeated extreme values in Clicks | `high` | 100 | 0 | 100 | 0.42 |
 
 #### Suppressed Insights (Analytical Suppression Rules)
 | ID | Analysis Target | Triggered Rule | Detail |
@@ -584,7 +562,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | `insight-dq-insufficient-trend-Ad_Spend` | `trend on Ad_Spend` | `n_used < 20 and exclusion_rate > 0.5` | n_used=11 < 20 and exclusion_rate=89.0% > 50% |
 
 #### Executive Narrative (Verbatim)
-> Autonomous analysis concluded with validated analytical findings. Identified 29 anomalous rows (69.0% anomaly rate) across 87 records. no statistically significant difference detected (no significant difference detected; n per group: Email: n=12, LinkedIn: n=15, Google Ads: n=23, Facebook: n=13, Instagram: n=9, p=0.3691) (limited statistical power due to small sample size in some groups, n < 30). A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations. no statistically significant difference detected (no significant difference detected; n per group: B2B: n=17, B2C: n=41, Retargeting: n=14, p=0.9577) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: B2B: n=9, B2C: n=32, Retargeting: n=12, p=0.2578) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: Email: n=6, Instagram: n=6, Facebook: n=13, LinkedIn: n=10, Google Ads: n=19, p=0.8535) (limited statistical power due to small sample size in some groups, n < 30). Suppressed analyses: Analysis for trend on 'Ad_Spend' was suppressed due to insufficient data for trend on 'Ad_Spend' (n_used=11, exclusion_rate=89.0%).. Data quality caveats: Column 'Conversions' required 17.0% imputation (17 missing entries imputed). Column 'Ad_Spend' required 34.0% imputation (34 missing entries imputed).
+> Autonomous analysis concluded with validated analytical findings. Identified 29 anomalous rows (69.0% anomaly rate) across 87 records. no statistically significant difference detected (no significant difference detected; n per group: Email: n=12, LinkedIn: n=15, Google Ads: n=23, Facebook: n=13, Instagram: n=9, p=0.3691) (limited statistical power due to small sample size in some groups, n < 30). A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations. no statistically significant difference detected (no significant difference detected; n per group: B2B: n=17, B2C: n=41, Retargeting: n=14, p=0.9577) (limited statistical power due to small sample size in some groups, n < 30). no statistically significant difference detected (no significant difference detected; n per group: B2B: n=9, B2C: n=32, Retargeting: n=12, p=0.2578) (limited statistical power due to small sample size in some groups, n < 30). Suppressed analyses: Analysis for trend on 'Ad_Spend' was suppressed due to insufficient data for trend on 'Ad_Spend' (n_used=11, exclusion_rate=89.0%).. Data quality caveats: Column 'Conversions' required 17.0% imputation (17 missing entries imputed). Column 'Ad_Spend' required 34.0% imputation (34 missing entries imputed).
 
 #### Claims with Source IDs
 | Claim Text | Metric Key | Numeric Value | Unit | Source ID |
@@ -613,13 +591,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | no statistically significant difference detected (no significant diffe | `12.0` | `12.0` | `None` | `insight-seg-Target_Audience-Ad_Spend` |
 | no statistically significant difference detected (no significant diffe | `p_value` | `0.2578` | `p_value` | `insight-seg-Target_Audience-Ad_Spend` |
 | no statistically significant difference detected (no significant diffe | `30.0` | `30.0` | `None` | `insight-seg-Target_Audience-Ad_Spend` |
-| no statistically significant difference detected (no significant diffe | `6.0` | `6.0` | `None` | `insight-seg-Channel-Ad_Spend` |
-| no statistically significant difference detected (no significant diffe | `6.0` | `6.0` | `None` | `insight-seg-Channel-Ad_Spend` |
-| no statistically significant difference detected (no significant diffe | `13.0` | `13.0` | `None` | `insight-seg-Channel-Ad_Spend` |
-| no statistically significant difference detected (no significant diffe | `10.0` | `10.0` | `None` | `insight-seg-Channel-Ad_Spend` |
-| no statistically significant difference detected (no significant diffe | `19.0` | `19.0` | `None` | `insight-seg-Channel-Ad_Spend` |
-| no statistically significant difference detected (no significant diffe | `p_value` | `0.8535` | `p_value` | `insight-seg-Channel-Ad_Spend` |
-| no statistically significant difference detected (no significant diffe | `30.0` | `30.0` | `None` | `insight-seg-Channel-Ad_Spend` |
 | Analysis for trend on 'Ad_Spend' was suppressed due to insufficient da | `n_used` | `11.0` | `None` | `insight-dq-insufficient-trend-Ad_Spend` |
 | Analysis for trend on 'Ad_Spend' was suppressed due to insufficient da | `exclusion_rate_percent` | `89.0` | `None` | `insight-dq-insufficient-trend-Ad_Spend` |
 | Column 'Conversions' required 17.0% imputation (17 missing entries imp | `n_excluded` | `17.0` | `None` | `insight-dq-imputation-Conversions` |
@@ -628,14 +599,6 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 | Column 'Ad_Spend' required 34.0% imputation (34 missing entries impute | `n_excluded` | `34.0` | `None` | `insight-dq-imputation-Ad_Spend` |
 | Column 'Ad_Spend' required 34.0% imputation (34 missing entries impute | `n_excluded` | `34.0` | `None` | `insight-dq-imputation-Ad_Spend` |
 | Column 'Ad_Spend' required 34.0% imputation (34 missing entries impute | `n_excluded` | `34.0` | `None` | `insight-dq-imputation-Ad_Spend` |
-| Column 'Clicks' required 16.0% imputation (16 missing entries imputed) | `n_excluded` | `16.0` | `None` | `insight-dq-imputation-Clicks` |
-| Column 'Clicks' required 16.0% imputation (16 missing entries imputed) | `n_excluded` | `16.0` | `None` | `insight-dq-imputation-Clicks` |
-| Column 'Clicks' required 16.0% imputation (16 missing entries imputed) | `n_excluded` | `16.0` | `None` | `insight-dq-imputation-Clicks` |
-| Column 'Impressions' required 13.0% imputation (13 missing entries imp | `n_excluded` | `13.0` | `None` | `insight-dq-imputation-Impressions` |
-| Column 'Impressions' required 13.0% imputation (13 missing entries imp | `n_excluded` | `13.0` | `None` | `insight-dq-imputation-Impressions` |
-| Column 'Impressions' required 13.0% imputation (13 missing entries imp | `n_excluded` | `13.0` | `None` | `insight-dq-imputation-Impressions` |
-| Identified 14 occurrences of repeated value 1200.0 in column 'Clicks'  | `count` | `14.0` | `None` | `insight-dq-extremes-Clicks` |
-| Identified 14 occurrences of repeated value 1200.0 in column 'Clicks'  | `1200.0` | `1200.0` | `None` | `insight-dq-extremes-Clicks` |
 
 #### Citation Verification
 - **Verification Pass Rate:** `100.0%`
@@ -643,10 +606,10 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Stripped Sentences Count:** `0`
 
 #### Latency Accounting
-- **Total Tool Execution Latency:** `68.71 ms`
-- **Total LLM Orchestration Latency:** `2.42 ms`
-- **Synthesis LLM Latency:** `2.36 ms`
-- **Total Wall-Clock Time:** `1.954 s`
+- **Total Tool Execution Latency:** `83.54 ms`
+- **Total LLM Orchestration Latency:** `2.43 ms`
+- **Synthesis LLM Latency:** `2.38 ms`
+- **Total Wall-Clock Time:** `1.787 s`
 
 
 ---
@@ -680,7 +643,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_clean (n=98): East: transaction count was 16 (n=16); North: transaction count was 16 (n=16); Central: transaction count was 40 (n=40); West: transaction count was 14 (n=14); South: transaction count was 12 (n=12).
+> Based on data_clean (n=120): East: transaction count was 16; North: transaction count was 16; West: transaction count was 14; South: transaction count was 12; Central: transaction count was 40.
 
 ### 6.2 Dataset: HR Workforce Attrition (`hr_attrition_messy.csv`)
 #### Question 1: [Answerable from Insights (Old Demo)]
@@ -695,7 +658,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_observed (n=55): Marketing: average annual salary was 131,338.24 (n=17); HR: average annual salary was 112,830.67 (n=9); Engineering: average annual salary was 102,094.53 (n=15); Sales: average annual salary was 123,591.14 (n=14). No significant difference in Annual_Salary across Department: no statistically significant difference detected (n per group: Marketing: n=17, Sales: n=14, HR: n=9, Engineering: n=15, p=0.1351) (limited statistical power due to small sample size in some groups, n < 30). Insufficient data for segment_difference on Gender vs Annual_Salary: Analytical finding for segment_difference on 'Gender vs Annual_Salary' was suppressed due to insufficient data for segment_difference (exclusion_rate=53.6% > 50%).
+> Based on data_observed (n=55): Marketing: average annual salary was 131,338.24 (n=17); Sales: average annual salary was 123,591.14 (n=14); HR: average annual salary was 112,830.67 (n=9); Engineering: average annual salary was 102,094.53 (n=15). No significant difference in Annual_Salary across Department: no statistically significant difference detected (n per group: Marketing: n=17, Sales: n=14, HR: n=9, Engineering: n=15, p=0.1351) (limited statistical power due to small sample size in some groups, n < 30). Insufficient data for segment_difference on Gender vs Annual_Salary: Analytical finding for segment_difference on 'Gender vs Annual_Salary' was suppressed due to insufficient data for segment_difference (exclusion_rate=53.6% > 50%).
 
 #### Question 3: [Non-existent Column Query (Old Demo)]
 **User Question:** `How does customer churn correlate with employee satisfaction levels?`
@@ -716,7 +679,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_clean (n=103): Marketing: employee count was 25 (n=25); HR: employee count was 14 (n=14); Sales: employee count was 40 (n=40); Engineering: employee count was 24 (n=24).
+> Based on data_clean (n=103): Sales: employee count was 40 (n=40); Engineering: employee count was 24 (n=24); Marketing: employee count was 25 (n=25); HR: employee count was 14 (n=14).
 
 ### 6.3 Dataset: Marketing Campaigns (`marketing_campaign_messy.csv`)
 #### Question 1: [Answerable from Insights (Old Demo)]
@@ -731,7 +694,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_observed (n=48): Email: total ad spend was 18,540.37, total clicks was 2,520.00 (n=6); Google Ads: total ad spend was 35,427.07, total clicks was 2,680.00 (n=16); Instagram: total ad spend was 13,331.85, total clicks was 1,520.00 (n=5); LinkedIn: total ad spend was 22,348.86, total clicks was 2,170.00 (n=9); Facebook: total ad spend was 30,301.41, total clicks was 3,730.00 (n=12). Weak negative relationship between Ad_Spend and Clicks: A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations (exclusion rate 42.0%). No significant difference in Ad_Spend across Target_Audience: no statistically significant difference detected (n per group: B2B: n=9, B2C: n=32, Retargeting: n=12, p=0.2578) (limited statistical power due to small sample size in some groups, n < 30).
+> Based on data_observed (n=48): Email: total ad spend was 18,540.37, total clicks was 2,520.00 (n=6); Instagram: total ad spend was 13,331.85, total clicks was 1,520.00 (n=5); Facebook: total ad spend was 30,301.41, total clicks was 3,730.00 (n=12); LinkedIn: total ad spend was 22,348.86, total clicks was 2,170.00 (n=9); Google Ads: total ad spend was 35,427.07, total clicks was 2,680.00 (n=16). Weak negative relationship between Ad_Spend and Clicks: A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations (exclusion rate 42.0%). No significant difference in Ad_Spend across Target_Audience: no statistically significant difference detected (n per group: B2B: n=9, B2C: n=32, Retargeting: n=12, p=0.2578) (limited statistical power due to small sample size in some groups, n < 30).
 
 #### Question 3: [Non-existent Column Query (Old Demo)]
 **User Question:** `What is the average customer credit score across the different marketing channels?`
@@ -745,7 +708,7 @@ Computed strictly on RAW data (missingness, sentinels, invalid domain values, du
 - **Tools Used:** `['query_sql']`
 - **Verification:** `is_valid=True`, Pre-strip: `100.0%`, Post-strip: `100.0%`
 - **Verbatim Answer:**
-> Based on data_observed (n=48): LinkedIn: total ad spend was 22,348.86, total clicks was 2,170.00 (n=9); Email: total ad spend was 18,540.37, total clicks was 2,520.00 (n=6); Facebook: total ad spend was 30,301.41, total clicks was 3,730.00 (n=12); Instagram: total ad spend was 13,331.85, total clicks was 1,520.00 (n=5); Google Ads: total ad spend was 35,427.07, total clicks was 2,680.00 (n=16). Weak negative relationship between Ad_Spend and Clicks: A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations (exclusion rate 42.0%). No significant difference in Ad_Spend across Target_Audience: no statistically significant difference detected (n per group: B2B: n=9, B2C: n=32, Retargeting: n=12, p=0.2578) (limited statistical power due to small sample size in some groups, n < 30).
+> Based on data_observed (n=48): Email: total ad spend was 18,540.37, total clicks was 2,520.00 (n=6); Instagram: total ad spend was 13,331.85, total clicks was 1,520.00 (n=5); LinkedIn: total ad spend was 22,348.86, total clicks was 2,170.00 (n=9); Facebook: total ad spend was 30,301.41, total clicks was 3,730.00 (n=12); Google Ads: total ad spend was 35,427.07, total clicks was 2,680.00 (n=16). Weak negative relationship between Ad_Spend and Clicks: A correlation coefficient of r=-0.1591 was observed between Ad_Spend and Clicks across 58 observations (exclusion rate 42.0%). No significant difference in Ad_Spend across Target_Audience: no statistically significant difference detected (n per group: B2B: n=9, B2C: n=32, Retargeting: n=12, p=0.2578) (limited statistical power due to small sample size in some groups, n < 30).
 
 
 ---
