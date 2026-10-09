@@ -25,7 +25,7 @@ before it is shown.
 │              Celery + Redis (async job queue)         │
 ├─────────────────────────────────────────────────────┤
 │              Agent Engine (Plan-Act-Reflect)          │
-│  Claude API │ Tool Catalogue │ Sandbox │ Memory       │
+│  Configurable LLM (Gemini evaluated default, Claude supported) │ Tool Catalogue │ Sandbox │ Memory  │
 ├─────────────────────────────────────────────────────┤
 │              Data Layer                               │
 │  PostgreSQL │ Redis │ DuckDB │ File Storage           │
