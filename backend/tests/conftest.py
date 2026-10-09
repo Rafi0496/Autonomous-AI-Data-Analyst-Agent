@@ -32,6 +32,8 @@ settings.SAMPLES_DIR.mkdir(parents=True, exist_ok=True)
 # M5.a: ALLOW_ANONYMOUS=false by default (true only via env for tests and demo scripts)
 os.environ.setdefault("ALLOW_ANONYMOUS", "true")
 settings.ALLOW_ANONYMOUS = True
+os.environ.setdefault("LLM_PROVIDER", "heuristic")
+settings.LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "heuristic")
 
 import pytest
 from fastapi.testclient import TestClient
