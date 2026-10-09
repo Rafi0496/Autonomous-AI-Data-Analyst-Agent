@@ -454,17 +454,37 @@ class HeuristicClient(LLMClient):
         is_trend_q = any(k in q_lower for k in ["trend", "trajectory", "over time", "monthly"])
 
         if is_segment_q:
-            seg_ins = [ins for ins in matched_insights if ins.get("metric_values", {}).get("analysis") == "segment_difference" or ins.get("id", "").startswith("insight-seg")]
+            seg_ins = [
+                ins for ins in matched_insights
+                if ins.get("metric_values", {}).get("analysis") == "segment_difference"
+                or ins.get("type") in ("segment_difference", "segment_contrast")
+                or ins.get("id", "").startswith("insight-seg")
+            ]
             matched_insights = seg_ins
             if not matched_insights and not answer_parts:
                 target_str = ", ".join(question_cols) if question_cols else "metrics"
                 answer_parts.append(f"No statistically significant difference in {target_str} across segments was detected.")
         elif is_outlier_q:
-            matched_insights = [ins for ins in matched_insights if "outlier" in ins.get("id", "").lower() or ins.get("metric_values", {}).get("analysis") == "outlier"]
+            matched_insights = [
+                ins for ins in matched_insights
+                if "outlier" in ins.get("id", "").lower()
+                or ins.get("type") in ("outlier", "outliers")
+                or ins.get("metric_values", {}).get("analysis") == "outlier"
+            ]
         elif is_corr_q:
-            matched_insights = [ins for ins in matched_insights if "corr" in ins.get("id", "").lower() or ins.get("metric_values", {}).get("analysis") == "correlation"]
+            matched_insights = [
+                ins for ins in matched_insights
+                if "corr" in ins.get("id", "").lower()
+                or ins.get("type") == "correlation"
+                or ins.get("metric_values", {}).get("analysis") == "correlation"
+            ]
         elif is_trend_q:
-            matched_insights = [ins for ins in matched_insights if "trend" in ins.get("id", "").lower() or ins.get("metric_values", {}).get("analysis") == "trend"]
+            matched_insights = [
+                ins for ins in matched_insights
+                if "trend" in ins.get("id", "").lower()
+                or ins.get("type") == "trend"
+                or ins.get("metric_values", {}).get("analysis") == "trend"
+            ]
 
         # Check for specific question types: Retail trend and HR highest attrition
         is_retail_trend = any(k in q_lower for k in ["trend"]) and any(k in q_lower for k in ["retail", "sales", "monthly"])

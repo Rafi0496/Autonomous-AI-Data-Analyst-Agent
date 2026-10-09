@@ -475,7 +475,7 @@ def process_chat_question(
                     sampling_disc = profile.get("quality_summary", {}).get("sampling_disclosure") or profile.get("sampling_disclosure")
                     imp_stats = cleaning_report.get("column_imputation_stats", {})
                     ans_fmt, _ = format_sql_query_result(sql_tr.get("rows", []), question, q_table, sampling_disclosure=sampling_disc, imputation_stats=imp_stats)
-                    cleaned_ans = ans_fmt
+                    cleaned_ans = f"The answer could not be verified. {ans_fmt}"
                 else:
                     cleaned_ans = "The answer could not be verified against the dataset findings."
             chat_result.answer = cleaned_ans

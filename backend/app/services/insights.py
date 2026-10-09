@@ -947,11 +947,11 @@ def generate_insights(
     dq_list = [i for i in deduped if i.type == "data_quality"]
 
     analytical_list.sort(key=lambda x: -x.impact_score)
-    top_analytical = analytical_list[:6]
+    top_analytical = analytical_list[:5]
 
     suppressed_dq = [i for i in dq_list if "insufficient" in i.id]
     other_dq = [i for i in dq_list if "insufficient" not in i.id]
     other_dq.sort(key=lambda x: -x.impact_score)
-    top_dq = (suppressed_dq + other_dq)[:6]
+    top_dq = (suppressed_dq + other_dq)[:3]
 
-    return top_analytical + top_dq
+    return (top_analytical + top_dq)[:8]

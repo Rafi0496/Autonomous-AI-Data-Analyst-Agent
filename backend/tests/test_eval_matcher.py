@@ -119,7 +119,8 @@ def test_audit_null_dataset_false_positive():
         {
             "id": "fp-1",
             "type": "correlation",
-            "title": "Spurious correlation in white noise"
+            "title": "Spurious correlation in white noise",
+            "significance": 0.01
         }
     ]
     audit = audit_dataset_findings(manifest, insights)

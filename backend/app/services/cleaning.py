@@ -486,18 +486,14 @@ class DataCleaningService:
             q1_all = float(series.quantile(0.25))
             q3_all = float(series.quantile(0.75))
             iqr_all = q3_all - q1_all
-            if iqr_all <= 0:
-                continue
-
-            lower_rough = q1_all - 2.5 * iqr_all
-            upper_rough = q3_all + 2.5 * iqr_all
 
             for cand in candidates:
                 cand_val = float(cand)
                 is_known_pattern = (cand in KNOWN_SENTINEL_PATTERNS or cand_val in KNOWN_SENTINEL_PATTERNS)
-                # Quick filter: skip normal in-range values that are neither known sentinels nor outside rough fence
-                if not is_known_pattern and (lower_rough <= cand_val <= upper_rough):
-                    continue
+                # Quick filter: skip normal in-range values only when series is large (> 500) and candidate list is large (> 20)
+                if not is_known_pattern and len(series) > 500 and len(candidates) > 20:
+                    if iqr_all > 0 and (q1_all - 2.5 * iqr_all <= cand_val <= q3_all + 2.5 * iqr_all):
+                        continue
 
                 subset = series[series != cand]
                 if len(subset) < 5:
