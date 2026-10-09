@@ -273,12 +273,18 @@ def generate_eval_results_markdown(
     lines.append("When missingness exceeds 50% or when small group sizes drop below minimum sample thresholds ($n < 20$), suppression safeguards intentionally suppress the finding to prevent false claims.")
     lines.append("")
 
-    # Limitations Section
-    lines.append("## 9. Limitations & Benchmark Bounds")
-    lines.append("1. **Synthetic Data Realism:** Planted findings use idealized parametric noise (Gaussian, Gamma) which may not fully reflect real-world multi-modal data corruptions.")
-    lines.append("2. **Sample Size Scope ($n=2,000$):** Standard evaluation seeds use $n=2,000$ rows per run to remain within API rate limit windows.")
-    lines.append("3. **Single LLM Family:** Live evaluation currently leverages Google Gemini (`gemini-3.1-flash-lite`); Claude was not run due to lack of an active Anthropic API key.")
-    lines.append("4. **Tool Surface Area:** The autonomous planner utilizes 5 primary statistical tools (`segment_compare`, `run_correlation`, `trend_analysis`, `detect_outliers`, `query_sql`). Broader machine-learning tools (clustering, causal inference) remain outside current scope.")
+    # Section: What this benchmark can and cannot show
+    lines.append("## 9. What This Benchmark Can and Cannot Show")
+    lines.append("### What this benchmark can show:")
+    lines.append("1. **Planted Ground-Truth Signal Recovery:** Precision and recall on synthetic datasets with known planted mathematical ground truth (Pearson correlations $r \\approx 0.6$, linear trends, outlier spikes, domain sentinel flags).")
+    lines.append("2. **Independent Numeric Grounding:** 100% of numeric claims in generated text can be independently verified from the underlying dataset via external pandas recomputation.")
+    lines.append("3. **False Positive Behavior Under White Noise:** Spurious discovery rates on NULL datasets when applying standard Benjamini-Hochberg FDR control and $3.0\\times$ IQR fences.")
+    lines.append("4. **Scalability Bounds:** Empirical execution latency and Process RSS memory across dataset scales from 1,000 to 100,000 rows.")
+    lines.append("")
+    lines.append("### What this benchmark cannot show:")
+    lines.append("1. **Complex Domain Semantics:** Performance on real-world multi-table joins, relational schemas, or ambiguous colloquial domain jargon.")
+    lines.append("2. **Comparative Model Performance Beyond Gemini:** Comparative head-to-head metrics against Claude models (Claude was not run due to lack of an active Anthropic API key during evaluation).")
+    lines.append("3. **Adversarial Prompt Injections Outside Benchmark Scope:** Security robustness against adversarial attacks beyond the standard tested guardrail rejection test suite.")
     lines.append("")
 
     out_file = DOCS_DIR / "EVAL_RESULTS.md"
