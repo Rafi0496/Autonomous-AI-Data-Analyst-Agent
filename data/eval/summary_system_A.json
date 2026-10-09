@@ -961,11 +961,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-metric_score-decoy_num2",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -976,8 +971,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 101 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 101 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1023,11 +1029,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-record_id-var_y",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -1038,8 +1039,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 102 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-record_id-var_y`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 102 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-record_id-var_y`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1085,11 +1097,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-activity_index-decoy_num2",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -1100,8 +1107,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 103 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-activity_index-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 103 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-activity_index-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1147,11 +1165,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-var_y-decoy_num1",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -1162,8 +1175,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 104 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-var_y-decoy_num1`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 104 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-var_y-decoy_num1`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1214,18 +1238,24 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-salary-decoy_num2",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 105 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-salary-decoy_num2`: Signal claimed on NULL dataset (type: correlation)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 105 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-salary-decoy_num2`: Signal claimed on NULL dataset (type: correlation)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1271,11 +1301,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-trend_metric-volume",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -1286,8 +1311,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 106 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-trend_metric-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 106 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-trend_metric-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1333,11 +1369,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-trend_metric-volume",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -1348,8 +1379,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 107 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-trend_metric-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 107 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-trend_metric-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1395,11 +1437,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-metric_score-trend_metric",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -1410,8 +1447,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 108 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-trend_metric`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 108 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-trend_metric`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1457,11 +1505,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-var_x-activity_index",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -1472,8 +1515,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 109 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-var_x-activity_index`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 109 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-var_x-activity_index`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -1519,11 +1573,6 @@
             "reason": "Signal claimed on NULL dataset (type: trend)"
           },
           {
-            "insight_id": "insight-outlier-volume",
-            "type": "outlier",
-            "reason": "Signal claimed on NULL dataset (type: outlier)"
-          },
-          {
             "insight_id": "insight-corr-metric_score-volume",
             "type": "correlation",
             "reason": "Signal claimed on NULL dataset (type: correlation)"
@@ -1534,8 +1583,19 @@
             "reason": "Signal claimed on NULL dataset (type: segment_difference)"
           }
         ],
-        "false_positive_count": 4,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 110 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)"
+        "false_positive_count": 3,
+        "audit_table_markdown": "### Matcher Audit Table: Seed 110 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 4\n  - [trend] `insight-trend-record_id`: Signal claimed on NULL dataset (type: trend)\n  - [outlier] `insight-outlier-volume`: Signal claimed on NULL dataset (type: outlier)\n  - [correlation] `insight-corr-metric_score-volume`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-record_id`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [
+          {
+            "insight_id": "insight-outlier-volume",
+            "type": "outlier",
+            "reason": "Signal claimed on NULL dataset (type: outlier)"
+          }
+        ],
+        "outlier_flag_count": 1,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     }
   ]

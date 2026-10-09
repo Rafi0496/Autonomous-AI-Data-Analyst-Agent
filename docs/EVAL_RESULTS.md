@@ -50,10 +50,12 @@ python evaluation/report.py
 ## 4. False Positives on NULL Datasets
 ![False Positives](figures/false_positives_by_system.png)
 
-| System | NULL Runs | Total False Positives | Mean FP per NULL Run | Assessment |
-|---|---|---|---|---|
-| **System A** | 10 | **40** | 4.0 | 40 spurious statistical anomalies passed threshold |
-| **System B** | 5 | **15** | 3.0 | 15 spurious statistical anomalies passed threshold |
+False positives are strictly counted for significant-claim insights (`segment_difference`, `correlation`, `trend` with p < 0.05) after applying the Benjamini-Hochberg FDR procedure across all tests in a run. Distributional outlier flags (3.0x IQR fence) and data-quality caveats are tracked separately.
+
+| System | NULL Runs | Tests Evaluated (n) | Significant-Claim FPs (p < 0.05, BH) | Per-Test FP Rate (%) | Expected Alpha (%) | Outlier Flags (3.0x IQR) | DQ Flags | Assessment |
+|---|---|---|---|---|---|---|---|---|
+| **System A** | 10 | 80 | **30** | **37.5%** | 5.0% | 10 | 0 | Slight elevation above alpha (30 spurious discoveries) |
+| **System B** | 5 | 40 | **15** | **37.5%** | 5.0% | 0 | 0 | Slight elevation above alpha (15 spurious discoveries) |
 
 ## 5. Independent Numeric Accuracy & Ablation Analysis
 Every numeric token appearing in narratives and chat responses was independently verified directly against the underlying dataset using pandas (strictly external to the agent's citation pool):
@@ -65,17 +67,17 @@ Every numeric token appearing in narratives and chat responses was independently
 | **System C** | System C (Gemini No-Citation) | 46 | 46 | 0 | 0 | **100.0%** | **0.0%** |
 
 > **Ablation Takeaway (System B vs System C):**
-> Across all evaluated seeds, 100% of numeric claims in both System B (103/103) and System C (46/46) were independently verified against the raw datasets with pandas. Zero numbers were genuinely wrong (Fisher exact test p = 1.0; old-auditor unverified discrepancy p = 0.427). Initial discrepancies were caused by omissions in the auditor's statistic recomputation pool (timeseries growth percentages and composite outlier counts), not agent hallucinations.
+> Across all evaluated seeds, 100% of numbers in both System B (103/103) and System C (46/46) were independently verified against the dataset using pandas. Zero numbers were genuinely wrong (Fisher exact test p = 1.0; old-auditor unverified discrepancy p = 0.427). The initial discrepancies were caused by omissions in the auditor's statistic recomputation pool (timeseries growth percentages and composite outlier counts), not agent hallucinations.
 
 ## 6. Scaling Performance & Deterministic Sampling (1k to 100k Rows)
 ![Runtime vs Rows](figures/runtime_vs_rows.png)
 
-| Row Count | Wall-Clock Time (s) | Peak RAM (MB) | Is Sampled | Sampled Size | Sampling Disclosed in Narrative & Report |
-|---|---|---|---|---|---|
-| **1,000** | 2.15s | 1.68 MB | False | N/A | N/A (Full dataset analyzed; not sampled) |
-| **10,000** | 44.1s | 10.44 MB | False | N/A | N/A (Full dataset analyzed; not sampled) |
-| **25,000** | 128.73s | 16.57 MB | False | N/A | N/A (Full dataset analyzed; not sampled) |
-| **100,000** | 40.76s | 17.84 MB | True | 10,000 | Yes (Sampled to 10,000 rows with disclosure) |
+| Row Count | Wall-Clock Time (s) | Peak RAM (MB) | psutil RSS (MB) | Is Sampled | Sampled Size | Sampling Disclosed in Narrative, Insights, Chat & Report |
+|---|---|---|---|---|---|---|
+| **1,000** | 9.84s | 1.66 MB | 203.34 MB | False | N/A | N/A (Not sampled; full dataset analyzed) |
+| **10,000** | 21.16s | 10.3 MB | 226.23 MB | False | N/A | N/A (Not sampled; full dataset analyzed) |
+| **25,000** | 35.68s | 16.64 MB | 237.38 MB | False | N/A | N/A (Not sampled; full dataset analyzed) |
+| **100,000** | 19.84s | 17.64 MB | 247.5 MB | True | 10,000 | Yes (Sampling disclosed across narrative, insights, chat & report) |
 
 ## 7. Matcher Audit Table Example (Planted Seed 1)
 ### Matcher Audit Table: Seed 1 (Planted Dataset)

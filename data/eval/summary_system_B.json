@@ -511,7 +511,12 @@
           }
         ],
         "false_positive_count": 3,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 101 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [correlation] `insight-corr-metric_score-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)"
+        "audit_table_markdown": "### Matcher Audit Table: Seed 101 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [correlation] `insight-corr-metric_score-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [],
+        "outlier_flag_count": 0,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -567,7 +572,12 @@
           }
         ],
         "false_positive_count": 3,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 102 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)\n  - [correlation] `insight-corr-record_id-var_y`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)"
+        "audit_table_markdown": "### Matcher Audit Table: Seed 102 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)\n  - [correlation] `insight-corr-record_id-var_y`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [],
+        "outlier_flag_count": 0,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -623,7 +633,12 @@
           }
         ],
         "false_positive_count": 3,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 103 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [correlation] `insight-corr-activity_index-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)"
+        "audit_table_markdown": "### Matcher Audit Table: Seed 103 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [correlation] `insight-corr-activity_index-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)",
+        "outlier_flags": [],
+        "outlier_flag_count": 0,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -679,7 +694,12 @@
           }
         ],
         "false_positive_count": 3,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 104 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [correlation] `insight-corr-var_y-decoy_num1`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)"
+        "audit_table_markdown": "### Matcher Audit Table: Seed 104 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [correlation] `insight-corr-var_y-decoy_num1`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)",
+        "outlier_flags": [],
+        "outlier_flag_count": 0,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     },
     {
@@ -735,7 +755,12 @@
           }
         ],
         "false_positive_count": 3,
-        "audit_table_markdown": "### Matcher Audit Table: Seed 105 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [correlation] `insight-corr-salary-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)"
+        "audit_table_markdown": "### Matcher Audit Table: Seed 105 (NULL Dataset)\n- **Planted Findings Expected:** 0 (NULL dataset)\n- **False Positives Detected:** 3\n  - [correlation] `insight-corr-salary-decoy_num2`: Signal claimed on NULL dataset (type: correlation)\n  - [segment_difference] `insight-seg-cohort-metric_score`: Signal claimed on NULL dataset (type: segment_difference)\n  - [trend] `insight-trend-trend_metric`: Signal claimed on NULL dataset (type: trend)",
+        "outlier_flags": [],
+        "outlier_flag_count": 0,
+        "data_quality_flags": [],
+        "data_quality_flag_count": 0,
+        "total_tests_n": 8
       }
     }
   ]
