@@ -543,7 +543,6 @@ def profile_results_view() -> rx.Component:
 
 
 def upload_page() -> rx.Component:
-    AppState.active_tab = "upload"
     return app_layout(
         "Data Ingestion & Profiling",
         rx.vstack(

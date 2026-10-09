@@ -122,7 +122,6 @@ def render_message_bubble(msg: ChatMessageModel) -> rx.Component:
     )
 
 def chat_page() -> rx.Component:
-    AppState.active_tab = "chat"
     return app_layout(
         "Autonomous Analyst Chat",
         rx.vstack(

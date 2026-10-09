@@ -4,7 +4,6 @@ from frontend.components.layout import app_layout
 from frontend.state import AppState
 
 def settings_page() -> rx.Component:
-    AppState.active_tab = "settings"
     return app_layout(
         "System Configuration",
         rx.vstack(

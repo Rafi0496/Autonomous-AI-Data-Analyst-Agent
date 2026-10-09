@@ -21,9 +21,9 @@ app = rx.App(
 )
 
 # Register routes
-app.add_page(upload_page, route="/", title="AutoAnalyst | Upload & Profiling", on_load=AppState.fetch_datasets)
-app.add_page(upload_page, route="/upload", title="AutoAnalyst | Upload & Profiling", on_load=AppState.fetch_datasets)
-app.add_page(dashboard_page, route="/dashboard", title="AutoAnalyst | Dashboard", on_load=AppState.on_load_dashboard)
-app.add_page(chat_page, route="/chat", title="AutoAnalyst | Chat", on_load=AppState.on_load_dashboard)
-app.add_page(reports_page, route="/reports", title="AutoAnalyst | Reports", on_load=AppState.on_load_reports)
-app.add_page(settings_page, route="/settings", title="AutoAnalyst | Settings")
+app.add_page(upload_page, route="/", title="AutoAnalyst | Upload & Profiling", on_load=[AppState.select_tab("upload"), AppState.fetch_datasets])
+app.add_page(upload_page, route="/upload", title="AutoAnalyst | Upload & Profiling", on_load=[AppState.select_tab("upload"), AppState.fetch_datasets])
+app.add_page(dashboard_page, route="/dashboard", title="AutoAnalyst | Dashboard", on_load=[AppState.select_tab("dashboard"), AppState.on_load_dashboard])
+app.add_page(chat_page, route="/chat", title="AutoAnalyst | Chat", on_load=[AppState.select_tab("chat"), AppState.on_load_dashboard])
+app.add_page(reports_page, route="/reports", title="AutoAnalyst | Reports", on_load=[AppState.select_tab("reports"), AppState.on_load_reports])
+app.add_page(settings_page, route="/settings", title="AutoAnalyst | Settings", on_load=AppState.select_tab("settings"))

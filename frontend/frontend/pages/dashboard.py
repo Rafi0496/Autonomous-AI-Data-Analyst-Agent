@@ -479,7 +479,6 @@ def render_data_quality_panel() -> rx.Component:
     )
 
 def dashboard_page() -> rx.Component:
-    AppState.active_tab = "dashboard"
     return app_layout(
         "Analytics Dashboard",
         rx.vstack(

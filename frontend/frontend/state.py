@@ -84,6 +84,9 @@ class AppState(rx.State):
     
     # Navigation
     active_tab: str = "upload"
+
+    def select_tab(self, tab: str):
+        self.active_tab = tab
     
     # Dataset Registry
     datasets: List[Dict[str, Any]] = []

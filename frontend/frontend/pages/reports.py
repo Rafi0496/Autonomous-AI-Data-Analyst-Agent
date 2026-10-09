@@ -4,7 +4,6 @@ from frontend.components.layout import app_layout
 from frontend.state import AppState, ReportItemModel
 
 def reports_page() -> rx.Component:
-    AppState.active_tab = "reports"
     return app_layout(
         "Report Generation & Export",
         rx.vstack(

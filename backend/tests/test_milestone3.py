@@ -27,6 +27,8 @@ def test_frontend_import_and_compilation():
     from frontend.pages.dashboard import dashboard_page
     from frontend.pages.upload import upload_page
     from frontend.pages.settings import settings_page
+    from frontend.pages.chat import chat_page
+    from frontend.pages.reports import reports_page
     
     assert ff.app is not None
     dash = dashboard_page()
@@ -35,3 +37,7 @@ def test_frontend_import_and_compilation():
     assert up is not None
     st = settings_page()
     assert st is not None
+    ch = chat_page()
+    assert ch is not None
+    rep = reports_page()
+    assert rep is not None
