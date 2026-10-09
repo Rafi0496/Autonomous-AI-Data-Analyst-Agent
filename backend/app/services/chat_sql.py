@@ -80,10 +80,17 @@ def extract_question_columns(question: str, available_columns: List[str]) -> Lis
         if conv_c and conv_c not in matched_cols:
             matched_cols.append(conv_c)
 
-    if any(k in q_lower for k in ["transaction", "transactions", "orders", "sales"]):
+    if any(k in q_lower for k in ["transaction", "transactions", "orders"]):
         tx_c = next((c for c in available_columns if "transaction" in c.lower() or "order" in c.lower()), None)
         if tx_c and tx_c not in matched_cols:
             matched_cols.append(tx_c)
+
+    if any(k in q_lower for k in ["sales", "sale", "revenue"]):
+        sales_c = next((c for c in available_columns if any(k in c.lower() for k in ["sales", "revenue", "total_amount", "amount"])), None)
+        if not sales_c:
+            sales_c = next((c for c in available_columns if "quantity" in c.lower()), None)
+        if sales_c and sales_c not in matched_cols:
+            matched_cols.append(sales_c)
 
     if any(k in q_lower for k in ["employee", "employees", "staff", "headcount"]):
         emp_c = next((c for c in available_columns if "employee" in c.lower()), None)
@@ -456,8 +463,24 @@ def format_sql_query_result(
         return ans, claims
 
     # General Group-By Table formatting
-    group_col = next((k for k in first_row.keys() if k not in ["basis", "n", "n_total"]), None)
-    metric_cols = [k for k in first_row.keys() if k not in ["basis", "n", "n_total", group_col]]
+    group_col = None
+    metric_cols = []
+    candidate_cols = [k for k in first_row.keys() if k not in ["basis", "n", "n_total"]]
+
+    for k in candidate_cols:
+        kl = k.lower()
+        if any(kl.startswith(p) for p in ["avg", "total", "sum", "min", "max", "count", "share", "rate", "std", "mean", "median"]) or (
+            len(candidate_cols) == 1 and isinstance(first_row[k], (int, float)) and not isinstance(first_row[k], bool)
+        ):
+            metric_cols.append(k)
+        elif group_col is None:
+            group_col = k
+        else:
+            metric_cols.append(k)
+
+    if not metric_cols and group_col and any(isinstance(r.get(group_col), (int, float)) for r in rows):
+        metric_cols = [group_col]
+        group_col = None
 
     impute_note = ""
     if basis == "data_clean" and imputation_stats:
@@ -473,7 +496,7 @@ def format_sql_query_result(
 
     row_sentences = []
     for r in rows:
-        grp_val = format_label(r.get(group_col))
+        grp_val = format_label(r.get(group_col)) if group_col else None
         parts = []
         for m in metric_cols:
             val = r.get(m)
@@ -482,10 +505,10 @@ def format_sql_query_result(
             clean_m_name = m.replace("_", " ").replace("avg ", "average ").replace("total ", "total ")
             if isinstance(val, float):
                 parts.append(f"{clean_m_name} was {val:,.2f}")
-                claims.append({"text": f"{grp_val} {clean_m_name}: {val}", "source_id": "query_sql", "metric_key": f"{grp_val}_{m}", "value": round(val, 2), "unit": None})
+                claims.append({"text": f"{grp_val or clean_m_name} {clean_m_name}: {val}", "source_id": "query_sql", "metric_key": f"{grp_val or ''}_{m}".strip('_'), "value": round(val, 2), "unit": None})
             elif isinstance(val, int):
                 parts.append(f"{clean_m_name} was {val:,}")
-                claims.append({"text": f"{grp_val} {clean_m_name}: {val}", "source_id": "query_sql", "metric_key": f"{grp_val}_{m}", "value": float(val), "unit": "count"})
+                claims.append({"text": f"{grp_val or clean_m_name} {clean_m_name}: {val}", "source_id": "query_sql", "metric_key": f"{grp_val or ''}_{m}".strip('_'), "value": float(val), "unit": "count"})
             else:
                 parts.append(f"{clean_m_name} was {val}")
 
@@ -500,8 +523,13 @@ def format_sql_query_result(
         elif grp_val is not None:
             count_val = r.get("transaction_count") or r.get("employee_count") or r.get("count") or r.get("n")
             if count_val is not None:
-                row_sentences.append(f"{grp_val}: transaction count was {count_val}" if "transaction" in q_lower else (f"{grp_val}: employee count was {count_val}" if "employee" in q_lower else f"{grp_val}: count was {count_val}"))
-                claims.append({"text": f"{grp_val}: {count_val}", "source_id": "query_sql", "metric_key": f"{grp_val}_count", "value": float(count_val), "unit": "count"})
+                if isinstance(grp_val, (int, float)):
+                    col_name = group_col.replace('_', ' ') if group_col else 'value'
+                    row_sentences.append(f"{col_name} was {grp_val} (count={count_val})")
+                    claims.append({"text": f"{col_name}: {grp_val}", "source_id": "query_sql", "metric_key": f"{col_name}", "value": float(grp_val), "unit": None})
+                else:
+                    row_sentences.append(f"{grp_val}: transaction count was {count_val}" if "transaction" in q_lower else (f"{grp_val}: employee count was {count_val}" if "employee" in q_lower else f"{grp_val}: count was {count_val}"))
+                    claims.append({"text": f"{grp_val}: {count_val}", "source_id": "query_sql", "metric_key": f"{grp_val}_count", "value": float(count_val), "unit": "count"})
             else:
                 row_sentences.append(f"{grp_val}")
 
@@ -520,3 +548,86 @@ def format_sql_query_result(
             })
 
     return ans, claims
+
+
+def llm_choose_sql_query(
+    question: str,
+    available_columns: List[str],
+    target_table: str = "data_clean",
+    client: Optional[Any] = None
+) -> Optional[str]:
+    """
+    Allow the LLM to choose a read-only SELECT query against target_table.
+    Enforces safe read-only SQL, ensures target_table and available_columns are used,
+    and returns None if query generation fails or violates safety constraints.
+    """
+    if not client:
+        return None
+
+    # Hypotheses or significance checks require statistical test insights, not plain SQL
+    q_lower = question.lower()
+    if any(sig in q_lower for sig in ["statistically significant", "statistical significance", "is it significant", "is there a significant", "is the difference significant"]):
+        return None
+
+    matched_cols = extract_question_columns(question, available_columns)
+    if not matched_cols:
+        return None
+
+    prompt = (
+        f"You are a SQL expert. Write a single SQLite read-only SELECT query to answer the user question.\n"
+        f"Target Table: {target_table}\n"
+        f"Available Columns: {', '.join(available_columns)}\n"
+        f"Question: {question}\n\n"
+        f"CRITICAL RULES:\n"
+        f"1. Return ONLY a single SELECT query querying directly from {target_table}.\n"
+        f"2. Always include '{target_table}' as basis in the SELECT list (e.g. SELECT '{target_table}' as basis, ...).\n"
+        f"3. Always include COUNT(*) as n or sample size.\n"
+        f"4. Do NOT use any destructive statements (NO DROP, UPDATE, DELETE, INSERT, ALTER).\n"
+        f"5. Return ONLY the raw SQL query string, no markdown fences, no explanation.\n"
+    )
+
+    try:
+        provider_name = getattr(client, "provider_name", "")
+        raw = ""
+        if provider_name == "llm:gemini" and hasattr(client, "_get_client"):
+            from google.genai import types
+            genai_client = client._get_client()
+            config = client._build_generate_config(types, temperature=0.0)
+            res = client._execute_with_retry(genai_client, contents=prompt, config=config)
+            raw = getattr(res, "text", "") or ""
+        elif provider_name == "llm:claude" and hasattr(client, "_get_client"):
+            anthropic_client = client._get_client()
+            res = anthropic_client.messages.create(
+                model=client.model,
+                max_tokens=200,
+                temperature=0.0,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            raw = "".join(b.text for b in res.content if b.type == "text")
+        else:
+            return None
+
+        # Clean SQL
+        sql = raw.strip()
+        if "```sql" in sql:
+            sql = sql.split("```sql")[1].split("```")[0].strip()
+        elif "```" in sql:
+            sql = sql.split("```")[1].split("```")[0].strip()
+        sql = sql.strip().strip(";")
+
+        # Strict Validation
+        clean_upper = sql.upper().strip()
+        if not clean_upper.startswith("SELECT"):
+            return None
+        dangerous_tokens = {"DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "TRUNCATE", "EXEC", "ATTACH", "DETACH"}
+        tokens = set(re.findall(r"\b[A-Z]+\b", clean_upper))
+        if any(dt in tokens for dt in dangerous_tokens):
+            return None
+        if target_table.lower() not in sql.lower():
+            return None
+
+        return sql
+    except Exception as e:
+        logger.debug("llm_choose_sql_query failed (%s); fallback will be used", e)
+        return None
+

@@ -75,6 +75,9 @@ def detect_missing_column_or_entity(question: str, available_columns: List[str])
     col_words = {w.lower() for c in available_columns for w in re.split(r"[_\s]+", c) if len(w) > 2}
 
     candidate_entities = [
+        ("region", ["region", "store region", "store regions", "regions"]),
+        ("bonus", ["bonus", "employee bonus", "bonuses"]),
+        ("lifetime value", ["lifetime value", "lifetimevalue", "customer lifetime value", "clv", "ltv"]),
         ("customer age", ["customer age", "customerage"]),
         ("age", ["age"]),
         ("customer churn", ["customer churn", "customerchurn"]),
@@ -83,7 +86,6 @@ def detect_missing_column_or_entity(question: str, available_columns: List[str])
         ("customer satisfaction", ["customer satisfaction", "customersatisfaction", "csat", "nps"]),
         ("household income", ["household income", "householdincome"]),
         ("profit margin", ["profit margin", "profitmargin"]),
-        ("lifetime value", ["lifetime value", "lifetimevalue", "clv", "ltv"]),
     ]
 
     for entity_name, aliases in candidate_entities:
@@ -97,20 +99,32 @@ def detect_missing_column_or_entity(question: str, available_columns: List[str])
 def determine_chat_tool_call(
     question: str,
     dataset_id: str,
-    available_columns: List[str]
+    available_columns: List[str],
+    client: Optional[Any] = None
 ) -> Optional[Tuple[str, Dict[str, Any]]]:
     """Determine if a chat question requires a read-only tool call (e.g. query_sql).
     - Questions containing 'non-missing', 'observed' or 'recorded' query data_observed; otherwise data_clean.
     - Every tool-based answer states its basis and n.
+    - Allows the LLM to choose a read-only query_sql query, falling back to rule-based SQL generator.
     """
     q_lower = question.lower()
 
     if "correlation" in q_lower and dataset_id:
         return "run_correlation", {"dataset_id": dataset_id, "threshold": 0.4}
 
-    from backend.app.services.chat_sql import generate_sql_for_question, detect_question_target_table
+    from backend.app.services.chat_sql import (
+        generate_sql_for_question,
+        detect_question_target_table,
+        llm_choose_sql_query
+    )
     target_table = detect_question_target_table(question)
-    sql = generate_sql_for_question(question, available_columns, target_table=target_table)
+
+    sql = None
+    if client and getattr(client, "provider_name", "") in ["llm:gemini", "llm:claude"]:
+        sql = llm_choose_sql_query(question, available_columns, target_table=target_table, client=client)
+    if not sql:
+        sql = generate_sql_for_question(question, available_columns, target_table=target_table)
+
     if sql and dataset_id:
         return "query_sql", {"dataset_id": dataset_id, "sql": sql}
 
@@ -343,6 +357,8 @@ def process_chat_question(
 
     provider = os.getenv("LLM_PROVIDER", settings.LLM_PROVIDER).lower()
     has_api_key = bool(os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
+    client_provider = provider if has_api_key else "heuristic"
+    client = get_llm_client(client_provider, allow_heuristic_fallback=True)
 
     # Cap tool calls to max 3
     tool_results: List[Dict[str, Any]] = []
@@ -350,7 +366,7 @@ def process_chat_question(
     evidence: List[Dict[str, Any]] = []
 
     # 3. Check if question requires a tool call (e.g. query_sql on Credit Card payment share)
-    tool_plan = determine_chat_tool_call(question, ds_id, available_columns)
+    tool_plan = determine_chat_tool_call(question, ds_id, available_columns, client=client)
     if tool_plan:
         tool_name, tool_args = tool_plan
         try:
@@ -364,21 +380,30 @@ def process_chat_question(
     # 4. Detect missing column / entity
     missing_entity = detect_missing_column_or_entity(question, available_columns)
 
-    # 5. Link evidence to relevant insights (strictly sharing a column with question)
+    # 5. Link evidence to relevant insights (strictly sharing a column with question or suppressed finding)
     if not missing_entity:
         from backend.app.services.chat_sql import extract_question_columns, insight_shares_column
         q_cols = extract_question_columns(question, available_columns)
         for ins in insights:
+            ins_id = str(ins.get("id", ""))
+            ins_text = (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower()
+            if "insufficient" in ins_id or ins.get("type") == "data_quality":
+                # Check if question terms relate to this suppressed analysis
+                q_words = set(re.findall(r"\b[a-zA-Z]{4,}\b", question.lower())) - {
+                    "what", "which", "where", "when", "does", "have", "with", "from",
+                    "that", "this", "rate", "difference", "there", "between"
+                }
+                if any(w in ins_text for w in q_words):
+                    evidence.append({"type": "insight", "id": ins.get("id"), "title": ins.get("title")})
+                    continue
             if q_cols and insight_shares_column(ins, q_cols, question=question):
                 evidence.append({"type": "insight", "id": ins.get("id"), "title": ins.get("title")})
             elif not q_cols:
                 q_words = set(re.findall(r"\b[a-zA-Z]{4,}\b", question.lower())) - {"what", "which", "where", "when", "does", "have", "with", "from", "that", "this", "rate", "difference"}
-                if any(w in (str(ins.get("title", "")) + " " + str(ins.get("summary", ""))).lower() for w in q_words):
+                if any(w in ins_text for w in q_words):
                     evidence.append({"type": "insight", "id": ins.get("id"), "title": ins.get("title")})
 
     # 6. Generate structured chat response
-    client_provider = provider if has_api_key else "heuristic"
-    client = get_llm_client(client_provider, allow_heuristic_fallback=True)
 
     chat_context = {
         "available_columns": available_columns,

@@ -942,14 +942,16 @@ def generate_insights(
             seen_keys.add(key)
             deduped.append(ins)
 
-    # 5. Rank analytical insights first (top 6), then data_quality insights in a separate list (max 4)
+    # 5. Rank analytical insights first (top 6), then data_quality insights (preserve suppressions + top general dq)
     analytical_list = [i for i in deduped if i.type != "data_quality"]
     dq_list = [i for i in deduped if i.type == "data_quality"]
 
     analytical_list.sort(key=lambda x: -x.impact_score)
     top_analytical = analytical_list[:6]
 
-    dq_list.sort(key=lambda x: -x.impact_score)
-    top_dq = dq_list[:4]
+    suppressed_dq = [i for i in dq_list if "insufficient" in i.id]
+    other_dq = [i for i in dq_list if "insufficient" not in i.id]
+    other_dq.sort(key=lambda x: -x.impact_score)
+    top_dq = (suppressed_dq + other_dq)[:6]
 
     return top_analytical + top_dq

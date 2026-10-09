@@ -408,6 +408,10 @@ class HeuristicClient(LLMClient):
         claims: List[Dict[str, Any]] = []
         answer_parts: List[str] = []
 
+        sampling_disc = profile.get("quality_summary", {}).get("sampling_disclosure") or profile.get("sampling_disclosure")
+        if sampling_disc and (profile.get("is_sampled") or "sample" in str(sampling_disc).lower()):
+            answer_parts.append(f"Analysis is based on a {sampling_disc}.")
+
         from backend.app.services.chat_service import detect_missing_column_or_entity
         missing_entity = detect_missing_column_or_entity(question, available_columns)
         if missing_entity:
@@ -852,17 +856,16 @@ class ClaudeClient(LLMClient):
             f"Recent Conversation History: {json.dumps(history[-3:] if history else [], default=str)}{retry_note}\n\n"
             f"User Question: {question}\n\n"
             "CRITICAL INSTRUCTIONS:\n"
-            "1. MISSING COLUMNS / ENTITIES: If the question inquires about a column or entity that is NOT in the available columns list (e.g. customer age, churn, credit score):\n"
-            f"   You MUST explicitly start your response with:\n"
-            f"   \"The requested column/entity '<name>' is not present in this dataset. Available columns are: {', '.join(available_columns)}.\"\n"
+            "1. MISSING COLUMNS / ENTITIES: If the question inquires about a column or entity that is NOT in the available columns list (e.g. customer age, churn, credit score, region, bonus):\n"
+            f"   You MUST explicitly state: \"The requested column/entity '<name>' is not present in this dataset. Available columns are: {', '.join(available_columns)}.\"\n"
             "   Then answer whatever part of the question can be answered using the available data.\n"
-            "2. BASIS AND SAMPLE SIZE (n): Every tool-based answer MUST explicitly state its basis ('data_observed' or 'data_clean') and sample size n. If question asks about non-missing / observed / recorded rows, cite the data_observed basis and n.\n"
-            "3. CREDIT CARD PAYMENTS: When answering share of Credit Card payments among non-missing Payment_Method rows, state BOTH the observed value (48.96%, n=96) and data_clean value (59.17%, n=120) and explain that 24 imputed rows caused the difference.\n"
-            "4. CHANNEL CONVERSION RATE: When answering which channel has the highest conversion rate, identify Email (8.97% conversion rate, 394 conversions, 4,390 clicks) on data_observed basis, and cite other observed channel rates.\n"
-            "5. RETAIL SALES TREND: When answering the monthly retail sales trend question, say what was checked (monthly sales trend on Quantity over Date) and why no trend is available (finding was suppressed under data quality rule exclusion_rate > 0.5 with 65.0% of records excluded or imputed, leaving 42 of 120 observed records). Cite source_id: insight-dq-insufficient-trend-Quantity.\n"
-            "6. HR HIGHEST ATTRITION: When answering which department has the highest employee attrition rate, name Marketing as the highest department with rate 68.18% and n=22, state other department rates (Sales 48.28% n=29, Engineering 47.37% n=19, HR 36.36% n=11), and state the significance caveat that the difference is not statistically significant (p=0.2947) due to small sample size. Cite source_id: insight-seg-Department-Attrition.\n"
-            "7. STRICT GROUNDING: Forbid causal or market-preference claims. Every number in the prose must belong to a claim in 'claims'. Never output placeholder text like 'None' or 'nan'.\n"
-            "8. Return valid JSON:\n"
+            "2. SUPPRESSED ANALYSES: When a question inquires about an analysis or relationship that was suppressed under data quality safeguards (such as Performance_Score vs Last_Promotion_Year, or monthly sales trend where exclusion rate > 50%):\n"
+            "   You MUST state what was checked and explicitly explain that the analysis was suppressed under data quality safeguards and the reason.\n"
+            "3. SALES COLUMN INTERPRETATION: When the question refers to 'sales' but the dataset contains no dedicated revenue column, explicitly state the interpretation used (e.g. \"The dataset contains no dedicated revenue column; sales volume is interpreted using 'Quantity'\").\n"
+            "4. BASIS AND SAMPLE SIZE (n): Every tool-based answer MUST explicitly state its basis ('data_observed' or 'data_clean') and sample size n. If question asks about non-missing / observed / recorded rows, cite the data_observed basis and n. If clean data is cited, disclose any imputation rate.\n"
+            "5. SAMPLING DISCLOSURE: If the dataset is sampled, state the sampling disclosure: \"Analysis is based on a <sampling_disclosure>\".\n"
+            "6. STRICT GROUNDING: Forbid causal or market-preference claims. Every number in the prose must belong to a claim in 'claims'. Never output placeholder text like 'None' or 'nan'.\n"
+            "7. Return valid JSON:\n"
             "{\n"
             '  "answer": "Clear, grounded answer text.",\n'
             '  "claims": [\n'
@@ -1280,17 +1283,16 @@ class GeminiClient(LLMClient):
             f"Recent Conversation History: {json.dumps(history[-3:] if history else [], default=str)}{retry_note}\n\n"
             f"User Question: {question}\n\n"
             "CRITICAL INSTRUCTIONS:\n"
-            "1. MISSING COLUMNS / ENTITIES: If the question inquires about a column or entity that is NOT in the available columns list (e.g. customer age, churn, credit score):\n"
-            f"   You MUST explicitly start your response with:\n"
-            f"   \"The requested column/entity '<name>' is not present in this dataset. Available columns are: {', '.join(available_columns)}.\"\n"
+            "1. MISSING COLUMNS / ENTITIES: If the question inquires about a column or entity that is NOT in the available columns list (e.g. customer age, churn, credit score, region, bonus):\n"
+            f"   You MUST explicitly state: \"The requested column/entity '<name>' is not present in this dataset. Available columns are: {', '.join(available_columns)}.\"\n"
             "   Then answer whatever part of the question can be answered using the available data.\n"
-            "2. BASIS AND SAMPLE SIZE (n): Every tool-based answer MUST explicitly state its basis ('data_observed' or 'data_clean') and sample size n. If question asks about non-missing / observed / recorded rows, cite the data_observed basis and n.\n"
-            "3. CREDIT CARD PAYMENTS: When answering share of Credit Card payments among non-missing Payment_Method rows, state BOTH the observed value (48.96%, n=96) and data_clean value (59.17%, n=120) and explain that 24 imputed rows caused the difference.\n"
-            "4. CHANNEL CONVERSION RATE: When answering which channel has the highest conversion rate, identify Email (8.97% conversion rate, 394 conversions, 4,390 clicks) on data_observed basis, and cite other observed channel rates.\n"
-            "5. RETAIL SALES TREND: When answering the monthly retail sales trend question, say what was checked (monthly sales trend on Quantity over Date) and why no trend is available (finding was suppressed under data quality rule exclusion_rate > 0.5 with 65.0% of records excluded or imputed, leaving 42 of 120 observed records). Cite source_id: insight-dq-insufficient-trend-Quantity.\n"
-            "6. HR HIGHEST ATTRITION: When answering which department has the highest employee attrition rate, name Marketing as the highest department with rate 68.18% and n=22, state other department rates (Sales 48.28% n=29, Engineering 47.37% n=19, HR 36.36% n=11), and state the significance caveat that the difference is not statistically significant (p=0.2947) due to small sample size. Cite source_id: insight-seg-Department-Attrition.\n"
-            "7. STRICT GROUNDING: Forbid causal or market-preference claims. Every number in the prose must belong to a claim in 'claims'. Never output placeholder text like 'None' or 'nan'.\n"
-            "8. Return valid JSON:\n"
+            "2. SUPPRESSED ANALYSES: When a question inquires about an analysis or relationship that was suppressed under data quality safeguards (such as Performance_Score vs Last_Promotion_Year, or monthly sales trend where exclusion rate > 50%):\n"
+            "   You MUST state what was checked and explicitly explain that the analysis was suppressed under data quality safeguards and the reason.\n"
+            "3. SALES COLUMN INTERPRETATION: When the question refers to 'sales' but the dataset contains no dedicated revenue column, explicitly state the interpretation used (e.g. \"The dataset contains no dedicated revenue column; sales volume is interpreted using 'Quantity'\").\n"
+            "4. BASIS AND SAMPLE SIZE (n): Every tool-based answer MUST explicitly state its basis ('data_observed' or 'data_clean') and sample size n. If question asks about non-missing / observed / recorded rows, cite the data_observed basis and n. If clean data is cited, disclose any imputation rate.\n"
+            "5. SAMPLING DISCLOSURE: If the dataset is sampled, state the sampling disclosure: \"Analysis is based on a <sampling_disclosure>\".\n"
+            "6. STRICT GROUNDING: Forbid causal or market-preference claims. Every number in the prose must belong to a claim in 'claims'. Never output placeholder text like 'None' or 'nan'.\n"
+            "7. Return valid JSON:\n"
             "{\n"
             '  "answer": "Clear, grounded answer text.",\n'
             '  "claims": [\n'
