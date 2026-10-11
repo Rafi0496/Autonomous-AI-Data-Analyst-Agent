@@ -1,0 +1,10 @@
+**/.git
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/.web
+**/.states
+**/uploaded_files
+**/data
+*.log

@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY frontend/requirements.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY frontend /app/frontend
@@ -23,6 +23,5 @@ COPY shared /app/shared
 WORKDIR /app/frontend
 
 EXPOSE 3000
-EXPOSE 8001
 
-CMD ["reflex", "run", "--env", "prod", "--backend-host", "0.0.0.0", "--frontend-port", "3000"]
+CMD ["sh", "-c", "reflex run --env prod --backend-host 0.0.0.0 --backend-port ${PORT:-3000} --frontend-port ${PORT:-3000}"]
