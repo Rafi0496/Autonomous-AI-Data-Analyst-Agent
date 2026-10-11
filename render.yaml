@@ -37,6 +37,8 @@ services:
     envVars:
       - key: PORT
         value: 3000
+      - key: WEB_CONCURRENCY
+        value: "1"
       - key: API_URL
         fromService:
           type: web
