@@ -22,6 +22,10 @@ COPY shared /app/shared
 
 WORKDIR /app/frontend
 
+# Pre-compile production frontend bundle at build time so runtime container boots instantly
+RUN reflex export --frontend-only --no-zip
+
 EXPOSE 3000
+EXPOSE 10000
 
 CMD ["sh", "-c", "reflex run --env prod --backend-host 0.0.0.0 --backend-port ${PORT:-3000} --frontend-port ${PORT:-3000}"]
