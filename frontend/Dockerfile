@@ -3,15 +3,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Force single worker and tight memory limits to fit comfortably within Render's 512MB RAM free tier
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    WEB_CONCURRENCY=1 \
-    UVICORN_CONCURRENCY=1 \
-    MALLOC_ARENA_MAX=2 \
-    NODE_OPTIONS="--max-old-space-size=256"
+    PYTHONDONTWRITEBYTECODE=1
 
-# Install nodejs & curl for Reflex's frontend compilation
+# Install nodejs & curl ONLY for building frontend assets during docker build
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
@@ -27,10 +22,10 @@ COPY shared /app/shared
 
 WORKDIR /app/frontend
 
-# Pre-compile production frontend bundle at build time so runtime container boots instantly
+# Pre-compile production static frontend bundle at Docker build time
 RUN reflex export --frontend-only --no-zip
 
 EXPOSE 3000
-EXPOSE 10000
 
-CMD ["sh", "-c", "reflex run --env prod --backend-host 0.0.0.0 --backend-port ${PORT:-3000} --frontend-port ${PORT:-3000}"]
+# Start ultra-lightweight Uvicorn server (~45MB RAM, NO Node.js running at runtime!)
+CMD ["python", "server.py"]
