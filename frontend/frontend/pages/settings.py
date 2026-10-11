@@ -1,137 +1,312 @@
-"""System Configuration & Settings page for Autonomous AI Data Analyst Agent (Milestone 3)."""
+"""System Configuration & Settings page for Autonomous AI Data Analyst Agent.
+Neo-morphism 60% + Minimalism 40% with user profile session, theme mode switcher,
+and verified backend orchestration parameters.
+"""
+from typing import Any, Dict
 import reflex as rx
 from frontend.components.layout import app_layout
+from frontend.components.neu_components import (
+    neu_button,
+    neu_card,
+    neu_inset_card,
+    neu_toggle,
+    status_pill,
+)
 from frontend.state import AppState
+from frontend.theme import (
+    ACCENT_COLOR,
+    ACCENT_HOVER,
+    ACCENT_SUBTLE,
+    FONT_SERIF,
+    RADIUS_FULL,
+    RADIUS_LG,
+    RADIUS_MD,
+    RADIUS_SM,
+    RADIUS_XL,
+    SHADOW_INSET,
+    SHADOW_INSET_DEEP,
+    SHADOW_RAISED,
+    SHADOW_RAISED_SM,
+    SURFACE_COLOR,
+    TEXT_COLOR,
+    TEXT_MUTED,
+)
+
+
+def config_item(title: str, badge_text: Any, description: str, icon: str) -> rx.Component:
+    """Card item displaying an active runtime parameter."""
+    return neu_card(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(tag=icon, size=15, color=ACCENT_COLOR),
+                    padding="0.45rem",
+                    border_radius=RADIUS_FULL,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_INSET,
+                ),
+                rx.text(title, font_size="0.825rem", font_weight="600", color=TEXT_COLOR),
+                rx.spacer(),
+                rx.box(
+                    rx.text(badge_text, font_size="0.75rem", font_weight="700", color=ACCENT_COLOR),
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_INSET,
+                    padding="0.2rem 0.55rem",
+                    border_radius=RADIUS_SM,
+                ),
+                spacing="2",
+                align_items="center",
+                width="100%",
+            ),
+            rx.text(description, font_size="0.78rem", color=TEXT_MUTED, line_height="1.45"),
+            spacing="2",
+            align_items="flex-start",
+            width="100%",
+        ),
+        sm=True,
+        width="100%",
+    )
+
 
 def settings_page() -> rx.Component:
+    """Settings & System Parameters page."""
     return app_layout(
-        "System Configuration",
+        "Settings",
         rx.vstack(
-            rx.box(
+            # 1. User Profile & Session Card
+            neu_card(
                 rx.vstack(
                     rx.hstack(
-                        rx.icon(tag="sliders-horizontal", size=20, color="#818cf8"),
-                        rx.text("Active LLM & Execution Configuration", font_size="1.1rem", font_weight="700", color="#ffffff"),
-                        spacing="2",
-                        align_items="center"
-                    ),
-                    rx.text(
-                        "Runtime orchestration parameters, active provider models, and safety budget guardrails.",
-                        font_size="0.85rem",
-                        color="#94a3b8"
-                    ),
-                    rx.divider(border_color="rgba(255, 255, 255, 0.08)"),
-                    
-                    # LLM Provider info
-                    rx.grid(
-                        rx.box(
+                        rx.hstack(
+                            rx.box(
+                                rx.text(AppState.user_initial, font_weight="700", font_size="1rem", color="#ffffff"),
+                                width="40px",
+                                height="40px",
+                                border_radius=RADIUS_FULL,
+                                background_color=ACCENT_COLOR,
+                                box_shadow=SHADOW_RAISED_SM,
+                                display="flex",
+                                align_items="center",
+                                justify_content="center",
+                            ),
                             rx.vstack(
-                                rx.text("Active LLM Provider", font_size="0.8rem", font_weight="600", color="#94a3b8"),
-                                rx.hstack(
-                                    rx.badge(AppState.active_provider.upper(), color_scheme="indigo", variant="solid", size="2"),
-                                    rx.text("Provider-Agnostic Interface", font_size="0.75rem", color="#64748b"),
-                                    spacing="2",
-                                    align_items="center"
+                                rx.text(
+                                    rx.cond(AppState.is_authenticated, AppState.current_user_name, "Guest Analyst"),
+                                    font_size="1.05rem",
+                                    font_weight="600",
+                                    color=TEXT_COLOR,
                                 ),
-                                rx.text("Configured via LLM_PROVIDER in .env (gemini | claude | heuristic).", font_size="0.75rem", color="#64748b"),
-                                spacing="2",
-                                align_items="flex-start"
-                            ),
-                            padding="1.25rem",
-                            border_radius="0.5rem",
-                            background_color="rgba(30, 41, 59, 0.4)",
-                            border="1px solid rgba(255, 255, 255, 0.05)"
-                        ),
-                        rx.box(
-                            rx.vstack(
-                                rx.text("Active Model", font_size="0.8rem", font_weight="600", color="#94a3b8"),
-                                rx.badge(AppState.active_model, color_scheme="blue", variant="surface", size="2"),
-                                rx.text("Used for Plan-Act-Reflect orchestration and synthesis.", font_size="0.75rem", color="#64748b"),
-                                spacing="2",
-                                align_items="flex-start"
-                            ),
-                            padding="1.25rem",
-                            border_radius="0.5rem",
-                            background_color="rgba(30, 41, 59, 0.4)",
-                            border="1px solid rgba(255, 255, 255, 0.05)"
-                        ),
-                        columns=rx.breakpoints(initial="1", sm="2"),
-                        spacing="3",
-                        width="100%"
-                    ),
-
-                    # Safety Budgets
-                    rx.grid(
-                        rx.box(
-                            rx.vstack(
-                                rx.text("Step Budget Cap", font_size="0.8rem", font_weight="600", color="#94a3b8"),
-                                rx.hstack(
-                                    rx.badge(f"{AppState.step_budget_setting} Max Steps", color_scheme="amber", variant="solid", size="2"),
-                                    rx.text("Guardrail limit", font_size="0.75rem", color="#64748b"),
-                                    spacing="2",
-                                    align_items="center"
+                                rx.text(
+                                    rx.cond(AppState.is_authenticated, AppState.current_user_email, "Anonymous session (Local tenant)"),
+                                    font_size="0.8rem",
+                                    color=TEXT_MUTED,
                                 ),
-                                rx.text("Hard limit preventing infinite autonomous tool call loops.", font_size="0.75rem", color="#64748b"),
-                                spacing="2",
-                                align_items="flex-start"
+                                spacing="0",
+                                align_items="flex-start",
                             ),
-                            padding="1.25rem",
-                            border_radius="0.5rem",
-                            background_color="rgba(30, 41, 59, 0.4)",
-                            border="1px solid rgba(255, 255, 255, 0.05)"
+                            spacing="3",
+                            align_items="center",
                         ),
-                        rx.box(
-                            rx.vstack(
-                                rx.text("Token Budget Cap", font_size="0.8rem", font_weight="600", color="#94a3b8"),
+                        rx.spacer(),
+                        rx.cond(
+                            AppState.is_authenticated,
+                            neu_button(
                                 rx.hstack(
-                                    rx.badge(f"{AppState.token_budget_setting} Tokens", color_scheme="purple", variant="solid", size="2"),
-                                    rx.text("Cost protection", font_size="0.75rem", color="#64748b"),
-                                    spacing="2",
-                                    align_items="center"
+                                    rx.icon(tag="log-out", size=14),
+                                    rx.text("Sign Out"),
+                                    spacing="1",
+                                    align_items="center",
                                 ),
-                                rx.text("Strict safety guardrail halting execution if token usage exceeds cap.", font_size="0.75rem", color="#64748b"),
-                                spacing="2",
-                                align_items="flex-start"
+                                variant="secondary",
+                                on_click=AppState.logout,
                             ),
-                            padding="1.25rem",
-                            border_radius="0.5rem",
-                            background_color="rgba(30, 41, 59, 0.4)",
-                            border="1px solid rgba(255, 255, 255, 0.05)"
+                            neu_button(
+                                rx.hstack(
+                                    rx.icon(tag="log-in", size=14),
+                                    rx.text("Sign In / Register"),
+                                    spacing="1",
+                                    align_items="center",
+                                ),
+                                variant="primary",
+                                on_click=AppState.toggle_auth_dialog,
+                            ),
                         ),
-                        columns=rx.breakpoints(initial="1", sm="2"),
-                        spacing="3",
-                        width="100%"
+                        width="100%",
+                        align_items="center",
                     ),
-
-                    # Stack info
-                    rx.box(
-                        rx.vstack(
-                            rx.text("Stack Architecture", font_size="0.85rem", font_weight="600", color="#f1f5f9"),
-                            rx.text("Backend: FastAPI + Celery Async Task Queue with Redis / In-memory backend", font_size="0.8rem", color="#94a3b8"),
-                            rx.text("Frontend: Pure Python Reflex Reactive Web App", font_size="0.8rem", color="#94a3b8"),
-                            rx.text("Reporting: ReportLab (PDF) & python-docx (Word) headless generators", font_size="0.8rem", color="#94a3b8"),
-                            rx.text("Visualization: Headless Matplotlib + Reflex Recharts", font_size="0.8rem", color="#94a3b8"),
-                            spacing="1",
-                            align_items="flex-start"
-                        ),
-                        padding="1.25rem",
-                        border_radius="0.5rem",
-                        background_color="rgba(15, 23, 42, 0.4)",
-                        border="1px solid rgba(255, 255, 255, 0.05)",
-                        width="100%"
-                    ),
-
-                    spacing="4",
+                    spacing="3",
                     align_items="flex-start",
-                    width="100%"
+                    width="100%",
                 ),
-                padding="1.5rem",
-                border_radius="0.75rem",
-                background_color="rgba(15, 23, 42, 0.6)",
-                border="1px solid rgba(255, 255, 255, 0.08)",
-                width="100%"
+                width="100%",
             ),
-            spacing="5",
-            width="100%"
-        )
+
+            # 2. Appearance & Interface Theme
+            neu_card(
+                rx.vstack(
+                    rx.hstack(
+                        rx.box(
+                            rx.icon(tag="palette", size=16, color=ACCENT_COLOR),
+                            padding="0.5rem",
+                            border_radius=RADIUS_FULL,
+                            background_color=SURFACE_COLOR,
+                            box_shadow=SHADOW_INSET,
+                        ),
+                        rx.vstack(
+                            rx.text("Visual Theme & Aesthetics", font_size="0.95rem", font_weight="600", color=TEXT_COLOR),
+                            rx.text("Neo-morphism 60% + Minimalism 40% with dual tonal shadows and single terracotta accent.", font_size="0.78rem", color=TEXT_MUTED),
+                            spacing="0",
+                            align_items="flex-start",
+                        ),
+                        rx.spacer(),
+                        # Toggle Switch between dark and light
+                        neu_button(
+                            rx.hstack(
+                                rx.icon(
+                                    tag=rx.cond(AppState.theme_mode == "dark", "moon", "sun"),
+                                    size=14,
+                                    color=ACCENT_COLOR,
+                                ),
+                                rx.text(
+                                    rx.cond(AppState.theme_mode == "dark", "Dark Mode", "Light Mode"),
+                                    font_size="0.8rem",
+                                    color=TEXT_COLOR,
+                                ),
+                                spacing="2",
+                                align_items="center",
+                            ),
+                            variant="secondary",
+                            on_click=AppState.toggle_theme,
+                        ),
+                        spacing="3",
+                        align_items="center",
+                        width="100%",
+                    ),
+                    spacing="2",
+                    align_items="flex-start",
+                    width="100%",
+                ),
+                width="100%",
+            ),
+
+            # 3. Active Backend & LLM Configuration (Real parameters only)
+            neu_card(
+                rx.vstack(
+                    rx.hstack(
+                        rx.hstack(
+                            rx.box(
+                                rx.icon(tag="sliders-horizontal", size=16, color=ACCENT_COLOR),
+                                padding="0.5rem",
+                                border_radius=RADIUS_FULL,
+                                background_color=SURFACE_COLOR,
+                                box_shadow=SHADOW_INSET,
+                            ),
+                            rx.vstack(
+                                rx.text("Active Orchestration Parameters", font_size="1rem", font_weight="600", color=TEXT_COLOR),
+                                rx.text("Verified against FastAPI backend environment variables and health status.", font_size="0.78rem", color=TEXT_MUTED),
+                                spacing="0",
+                                align_items="flex-start",
+                            ),
+                            spacing="3",
+                            align_items="center",
+                        ),
+                        rx.spacer(),
+                        status_pill(AppState.api_health_status, icon="shield-check", status="success"),
+                        width="100%",
+                        align_items="center",
+                    ),
+
+                    # Grid of verified parameters
+                    rx.grid(
+                        config_item(
+                            title="LLM Provider",
+                            badge_text=AppState.active_provider.upper(),
+                            description="Configured via LLM_PROVIDER in .env. Provider-agnostic engine (gemini | claude | heuristic).",
+                            icon="bot",
+                        ),
+                        config_item(
+                            title="Active Model",
+                            badge_text=AppState.active_model,
+                            description="Core language model used for autonomous hypothesis formulation and synthesis.",
+                            icon="cpu",
+                        ),
+                        config_item(
+                            title="Step Limit Cap",
+                            badge_text=f"{AppState.step_budget_setting} Steps",
+                            description="Maximum Plan-Act-Reflect cycles allowed per analysis job before concluding.",
+                            icon="layers",
+                        ),
+                        config_item(
+                            title="Token Safety Cap",
+                            badge_text=f"{AppState.token_budget_setting} Tokens",
+                            description="Hard spending guardrail. If breached, job gracefully falls back to deterministic heuristic synthesis.",
+                            icon="coins",
+                        ),
+                        columns=rx.breakpoints(initial="1", sm="2"),
+                        spacing="3",
+                        width="100%",
+                    ),
+                    spacing="3",
+                    align_items="flex-start",
+                    width="100%",
+                ),
+                width="100%",
+            ),
+
+            # 4. Verified Stack Architecture
+            neu_card(
+                rx.vstack(
+                    rx.hstack(
+                        rx.icon(tag="boxes", size=16, color=ACCENT_COLOR),
+                        rx.text("System Architecture & Verification", font_size="0.95rem", font_weight="600", color=TEXT_COLOR),
+                        spacing="2",
+                        align_items="center",
+                    ),
+                    rx.grid(
+                        neu_inset_card(
+                            rx.vstack(
+                                rx.text("Core API Backend", font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
+                                rx.text("FastAPI 0.115 + Celery asynchronous task queue with SQLite/Postgres persistence.", font_size="0.72rem", color=TEXT_MUTED),
+                                spacing="1",
+                            ),
+                            padding="0.7rem 0.85rem",
+                        ),
+                        neu_inset_card(
+                            rx.vstack(
+                                rx.text("Reflex Frontend", font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
+                                rx.text("Pure Python fullstack framework with real-time reactive event loops and LocalStorage auth.", font_size="0.72rem", color=TEXT_MUTED),
+                                spacing="1",
+                            ),
+                            padding="0.7rem 0.85rem",
+                        ),
+                        neu_inset_card(
+                            rx.vstack(
+                                rx.text("Grounded Reporting", font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
+                                rx.text("ReportLab (PDF) & python-docx (Word) headless generators with strict citation audits.", font_size="0.72rem", color=TEXT_MUTED),
+                                spacing="1",
+                            ),
+                            padding="0.7rem 0.85rem",
+                        ),
+                        neu_inset_card(
+                            rx.vstack(
+                                rx.text("Statistical Analytics", font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
+                                rx.text("Pandas, NumPy & SciPy for deterministic profiling, segment tests, and Cohen's d effect sizes.", font_size="0.72rem", color=TEXT_MUTED),
+                                spacing="1",
+                            ),
+                            padding="0.7rem 0.85rem",
+                        ),
+                        columns=rx.breakpoints(initial="1", sm="2"),
+                        spacing="3",
+                        width="100%",
+                    ),
+                    spacing="3",
+                    align_items="flex-start",
+                    width="100%",
+                ),
+                width="100%",
+            ),
+
+            spacing="4",
+            width="100%",
+        ),
     )

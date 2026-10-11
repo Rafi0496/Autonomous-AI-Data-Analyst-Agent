@@ -79,6 +79,16 @@ class ReportItemModel(BaseModel):
     created_at: str = ""
     download_url: str = ""
 
+class RecentJobModel(BaseModel):
+    job_id: str = ""
+    dataset_id: str = ""
+    dataset_name: str = ""
+    status: str = "completed"
+    goal: str = ""
+    created_at: str = ""
+    time_group: str = "Today"
+    is_pinned: bool = False
+
 class AppState(rx.State):
     """Global reactive state managing datasets, profiling, agent execution, dashboard, and chat."""
     
@@ -177,7 +187,7 @@ class AppState(rx.State):
     past_reports: List[ReportItemModel] = []
 
     # Phase 4: Authentication State & Multi-User Isolation
-    auth_token: str = ""
+    auth_token: str = rx.LocalStorage("")
     current_user_email: str = ""
     current_user_name: str = ""
     is_authenticated: bool = False
@@ -190,6 +200,17 @@ class AppState(rx.State):
 
     # Phase 4: Insight Feedback (Plan §8.6)
     insight_feedback_map: Dict[str, str] = {}  # insight_id -> "helpful" | "not_relevant"
+
+    # Layout, Sidebar & Neumorphic Shell
+    sidebar_collapsed: bool = False
+    sidebar_search_query: str = ""
+    theme_mode: str = "dark"  # "dark" | "light"
+    pinned_job_ids: List[str] = []
+    recent_jobs: List[RecentJobModel] = []
+    hero_prompt: str = ""
+    hero_mode: str = "autonomous"
+    api_health_status: str = "Healthy"
+    api_service_version: str = "0.1.0"
 
     @property
     def auth_headers(self) -> Dict[str, str]:
@@ -214,13 +235,48 @@ class AppState(rx.State):
     def set_auth_name(self, val: str):
         self.auth_name_input = val
 
+    async def handle_unauthorized(self):
+        """Handle 401 response: reset token and redirect to /login."""
+        self.auth_token = ""
+        self.is_authenticated = False
+        self.current_user_email = ""
+        self.current_user_name = ""
+        self.auth_error = "Authentication required or session expired. Please sign in."
+        return rx.redirect("/login")
+
+    async def fetch_me(self):
+        """Fetch current user profile via /auth/me."""
+        if not self.auth_token:
+            return
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.get(f"{API_BASE_URL}/auth/me", headers=self.auth_headers)
+                if res.status_code == 200:
+                    u = res.json()
+                    self.current_user_email = u.get("email", "")
+                    self.current_user_name = u.get("full_name") or u.get("email", "")
+                    self.is_authenticated = True
+                elif res.status_code == 401:
+                    await self.handle_unauthorized()
+        except Exception:
+            pass
+
+    async def check_auth_or_redirect(self):
+        """Guard for protected routes."""
+        if self.auth_token:
+            if not self.current_user_email:
+                await self.fetch_me()
+        else:
+            return rx.redirect("/login")
+
     async def login(self):
         self.auth_error = ""
+        self.is_loading = True
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.post(
                     f"{API_BASE_URL}/auth/login",
-                    json={"email": self.auth_email_input, "password": self.auth_password_input}
+                    json={"email": self.auth_email_input.strip(), "password": self.auth_password_input}
                 )
                 if res.status_code == 200:
                     data = res.json()
@@ -232,22 +288,30 @@ class AppState(rx.State):
                     self.show_auth_dialog = False
                     self.auth_password_input = ""
                     await self.fetch_datasets()
+                    await self.fetch_recent_jobs()
+                    return rx.redirect("/")
                 else:
                     err = res.json()
-                    self.auth_error = err.get("detail", "Login failed.")
+                    self.auth_error = err.get("detail", "Invalid email or password.")
         except Exception as e:
-            self.auth_error = f"Login error: {str(e)}"
+            self.auth_error = f"Login connection error: {str(e)}"
+        finally:
+            self.is_loading = False
 
     async def register(self):
         self.auth_error = ""
+        if len(self.auth_password_input) < 8:
+            self.auth_error = "Password must be at least 8 characters long."
+            return
+        self.is_loading = True
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.post(
                     f"{API_BASE_URL}/auth/register",
                     json={
-                        "email": self.auth_email_input,
+                        "email": self.auth_email_input.strip(),
                         "password": self.auth_password_input,
-                        "full_name": self.auth_name_input or None
+                        "full_name": self.auth_name_input.strip() or None
                     }
                 )
                 if res.status_code == 201:
@@ -260,11 +324,15 @@ class AppState(rx.State):
                     self.show_auth_dialog = False
                     self.auth_password_input = ""
                     await self.fetch_datasets()
+                    await self.fetch_recent_jobs()
+                    return rx.redirect("/")
                 else:
                     err = res.json()
                     self.auth_error = err.get("detail", "Registration failed.")
         except Exception as e:
-            self.auth_error = f"Registration error: {str(e)}"
+            self.auth_error = f"Registration connection error: {str(e)}"
+        finally:
+            self.is_loading = False
 
     def logout(self):
         self.auth_token = ""
@@ -274,6 +342,7 @@ class AppState(rx.State):
         self.auth_email_input = ""
         self.auth_password_input = ""
         self.auth_name_input = ""
+        return rx.redirect("/login")
 
     async def submit_insight_feedback(self, insight_id: str, rating: str):
         """Submit helpful / not_relevant rating for an insight (Plan §8.6)."""
@@ -343,11 +412,13 @@ class AppState(rx.State):
         self.is_loading = True
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.get(f"{API_BASE_URL}/datasets")
+                res = await client.get(f"{API_BASE_URL}/datasets", headers=self.auth_headers)
                 if res.status_code == 200:
                     self.datasets = res.json()
                     if self.datasets and not self.selected_dataset_id:
                         await self.select_dataset(self.datasets[0]["id"])
+                elif res.status_code == 401:
+                    await self.handle_unauthorized()
         except Exception as e:
             self.error_message = f"Unable to reach backend: {str(e)}"
         finally:
@@ -364,7 +435,7 @@ class AppState(rx.State):
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 # 1. Preview
-                p_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/preview?rows=8")
+                p_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/preview?rows=8", headers=self.auth_headers)
                 if p_res.status_code == 200:
                     data = p_res.json()
                     self.preview_columns = data.get("columns", [])
@@ -373,14 +444,14 @@ class AppState(rx.State):
                     self.column_count = data.get("total_columns", 0)
 
                 # 2. Profile
-                prof_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/profile")
+                prof_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/profile", headers=self.auth_headers)
                 if prof_res.status_code == 200:
                     self._parse_profile(prof_res.json())
                 else:
                     self.has_profile = False
 
                 # 3. Cleaning Report
-                cl_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/cleaning-report")
+                cl_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/cleaning-report", headers=self.auth_headers)
                 if cl_res.status_code == 200 and cl_res.json():
                     self._parse_cleaning_report(cl_res.json())
                 else:
@@ -510,7 +581,7 @@ class AppState(rx.State):
             try:
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     files_payload = {"file": (filename, upload_data, "multipart/form-data")}
-                    res = await client.post(f"{API_BASE_URL}/upload", files=files_payload)
+                    res = await client.post(f"{API_BASE_URL}/upload", files=files_payload, headers=self.auth_headers)
                     
                     if res.status_code == 201:
                         data = res.json()
@@ -518,14 +589,16 @@ class AppState(rx.State):
                         self.status_message = f"Uploaded {filename}! Running profiling & cleaning..."
                         
                         # Clean and profile
-                        await client.post(f"{API_BASE_URL}/datasets/{dataset_id}/clean")
-                        prof_res = await client.post(f"{API_BASE_URL}/datasets/{dataset_id}/profile")
+                        await client.post(f"{API_BASE_URL}/datasets/{dataset_id}/clean", headers=self.auth_headers)
+                        prof_res = await client.post(f"{API_BASE_URL}/datasets/{dataset_id}/profile", headers=self.auth_headers)
                         if prof_res.status_code == 200:
                             self._parse_profile(prof_res.json())
                             
                         self.status_message = f"Dataset {filename} ready for analysis!"
                         await self.fetch_datasets()
                         await self.select_dataset(dataset_id)
+                    elif res.status_code == 401:
+                        return await self.handle_unauthorized()
                     else:
                         err = res.json().get("detail", "Upload failed.")
                         self.error_message = f"Upload error: {err}"
@@ -593,12 +666,14 @@ class AppState(rx.State):
                     "max_steps": self.step_budget_setting,
                     "token_budget": self.token_budget_setting
                 }
-                res = await client.post(f"{API_BASE_URL}/jobs", json=payload)
+                res = await client.post(f"{API_BASE_URL}/jobs", json=payload, headers=self.auth_headers)
                 if res.status_code in (200, 202):
                     data = res.json()
                     self.active_job_id = data["job_id"]
                     self.job_current_step_name = data.get("current_step_name", "Planning analysis")
                     return [AppState.poll_job_progress, rx.redirect("/dashboard")]
+                elif res.status_code == 401:
+                    return await self.handle_unauthorized()
                 else:
                     self.error_message = f"Failed to start analysis: {res.text}"
                     self.is_analyzing = False
@@ -720,67 +795,210 @@ class AppState(rx.State):
             except Exception:
                 pass
 
+    async def load_job(self, job_id: str):
+        """Load an existing job's status, progress, logs, insights, and synthesis."""
+        if not job_id:
+            return
+        self.active_job_id = job_id
+        self.is_loading = True
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                res = await client.get(f"{API_BASE_URL}/jobs/{job_id}", headers=self.auth_headers)
+                if res.status_code == 200:
+                    data = res.json()
+                    self.selected_dataset_id = data.get("dataset_id", "")
+                    self.job_status = data.get("status", "completed")
+                    self.job_phase = data.get("phase", "synthesis")
+                    self.job_current_step = data.get("current_step", 0)
+                    self.job_current_step_name = data.get("current_step_name", "Completed")
+                    self.job_total_steps = data.get("total_steps", 0)
+                    self.job_step_limit = data.get("step_limit", 5)
+                    self.job_elapsed_seconds = data.get("execution_time_seconds", 0.0)
+                    self.job_tokens_used = str(data.get("tokens_used", 0))
+                    self.job_token_budget = data.get("token_budget", 15000)
+
+                    # Parse results
+                    res_obj = data.get("results") or {}
+                    synth = res_obj.get("synthesis") or {}
+                    self.job_synthesis = synth
+                    self.job_executive_summary = synth.get("executive_summary", "")
+                    self.job_key_findings = synth.get("key_findings", [])
+                    self.job_recommendations = synth.get("recommendations", [])
+                    
+                    raw_insights = res_obj.get("insights") or []
+                    parsed_insights = []
+                    for ins in raw_insights:
+                        cs = ins.get("chart_spec")
+                        cs_obj = None
+                        if cs and isinstance(cs, dict):
+                            cs_obj = ChartSpecModel(
+                                chart_type=str(cs.get("chart_type", "bar")),
+                                title=str(cs.get("title", "")),
+                                x_label=str(cs.get("x_label", "")),
+                                y_label=str(cs.get("y_label", "")),
+                                x_key=str(cs.get("x_key", "category")),
+                                y_key=str(cs.get("y_key", "value")),
+                                data=normalize_chart_data(cs.get("data", []))
+                            )
+                        parsed_insights.append(InsightModel(
+                            id=str(ins.get("id", "")),
+                            type=str(ins.get("type", "insight")),
+                            title=str(ins.get("title", "")),
+                            summary=str(ins.get("summary", "")),
+                            significance=ins.get("significance"),
+                            effect_size=ins.get("effect_size"),
+                            n_used=int(ins.get("n_used", 0)),
+                            n_excluded=int(ins.get("n_excluded", 0)),
+                            exclusion_rate=float(ins.get("exclusion_rate", 0.0)),
+                            confidence=str(ins.get("confidence", "high")),
+                            caveats=ins.get("caveats", []) or [],
+                            impact_score=float(ins.get("impact_score", 0.0)),
+                            chart_spec=cs_obj
+                        ))
+                    self.job_insights = parsed_insights
+                    self.job_analytical_insights = [i for i in parsed_insights if i.type != "data_quality"][:6]
+                    self.job_data_quality_insights = [i for i in parsed_insights if i.type == "data_quality"][:4]
+                    self.job_chart_specs = res_obj.get("chart_specifications") or []
+
+                    ver = data.get("verification") or {}
+                    self.job_verification = ver
+                    self.verification_verified_count = ver.get("verified_claims_count", 0)
+                    self.verification_total_count = ver.get("total_claims_checked", 0)
+                    self.verification_rate = ver.get("verification_rate_percent", 100.0)
+                    self.verification_is_valid = ver.get("is_valid", True)
+
+                # Fetch run log
+                log_res = await client.get(f"{API_BASE_URL}/jobs/{job_id}/logs", headers=self.auth_headers)
+                if log_res.status_code == 200:
+                    raw_log = log_res.json().get("run_log", [])
+                    parsed_log = []
+                    for entry in raw_log:
+                        parsed_log.append(RunLogStepModel(
+                            step=int(entry.get("step", 0)),
+                            tool=str(entry.get("tool", "")),
+                            rationale=str(entry.get("rationale", "")),
+                            model=str(entry.get("model", "")),
+                            tool_time_ms=float(entry.get("tool_time_ms", 0.0)),
+                            llm_latency_ms=float(entry.get("llm_latency_ms", 0.0)),
+                            tokens=int(entry.get("tokens", 0))
+                        ))
+                    self.job_run_log = parsed_log
+
+                # Sync dataset name
+                if self.selected_dataset_id:
+                    for d in self.datasets:
+                        if d.get("id") == self.selected_dataset_id:
+                            self.selected_dataset_name = d.get("filename", "Dataset")
+                            break
+        except Exception as e:
+            self.error_message = f"Failed loading job: {str(e)}"
+        finally:
+            self.is_loading = False
+
+    async def retry_job(self):
+        """Retry analysis for active dataset."""
+        if self.selected_dataset_id:
+            return await self.start_analysis()
+
+    @rx.var
+    def job_progress_pct(self) -> int:
+        if self.job_status in ("completed", "budget_tripped"):
+            return 100
+        if self.job_status == "failed":
+            return 100
+        phase_map = {
+            "queued": 10,
+            "profiling": 20,
+            "planning": 40,
+            "executing": 60,
+            "execution": 60,
+            "reflection": 80,
+            "synthesis": 95,
+        }
+        return phase_map.get(self.job_phase, 20)
+
+    @rx.var
+    def is_perceive_done(self) -> bool:
+        return self.job_phase in ("planning", "executing", "execution", "reflection", "synthesis", "completed") or self.job_status in ("completed", "budget_tripped")
+
+    @rx.var
+    def is_perceive_active(self) -> bool:
+        return self.job_status == "running" and self.job_phase in ("queued", "profiling")
+
+    @rx.var
+    def is_plan_done(self) -> bool:
+        return self.job_phase in ("executing", "execution", "reflection", "synthesis", "completed") or self.job_status in ("completed", "budget_tripped")
+
+    @rx.var
+    def is_plan_active(self) -> bool:
+        return self.job_status == "running" and self.job_phase == "planning"
+
+    @rx.var
+    def is_act_done(self) -> bool:
+        return self.job_phase in ("reflection", "synthesis", "completed") or self.job_status in ("completed", "budget_tripped")
+
+    @rx.var
+    def is_act_active(self) -> bool:
+        return self.job_status == "running" and self.job_phase in ("executing", "execution")
+
+    @rx.var
+    def is_reflect_done(self) -> bool:
+        return self.job_phase in ("synthesis", "completed") or self.job_status in ("completed", "budget_tripped")
+
+    @rx.var
+    def is_reflect_active(self) -> bool:
+        return self.job_status == "running" and self.job_phase == "reflection"
+
+    @rx.var
+    def is_synth_done(self) -> bool:
+        return self.job_status in ("completed", "budget_tripped")
+
+    @rx.var
+    def is_synth_active(self) -> bool:
+        return self.job_status == "running" and self.job_phase == "synthesis"
+
+    @rx.var
+    def is_budget_tripped(self) -> bool:
+        return self.job_status == "budget_tripped"
+
+    @rx.var
+    def token_budget_pct(self) -> int:
+        try:
+            used = int(self.job_tokens_used)
+            budget = max(int(self.job_token_budget), 1)
+            return min(int((used / budget) * 100), 100)
+        except Exception:
+            return 0
+
+    @rx.var
+    def quality_score_text(self) -> str:
+        return f"{self.quality_score:.1f}/100"
+
+    @rx.var
+    def verification_rate_text(self) -> str:
+        return f"{self.verification_rate:.0f}%"
+
+    @rx.var
+    def verification_badge_text(self) -> str:
+        return f"{self.verification_verified_count}/{self.verification_total_count} Verified ({self.verification_rate:.0f}%)"
+
+    @rx.var
+    def running_status_text(self) -> str:
+        return f"Phase: {self.job_phase} | Step {self.job_current_step}: {self.job_current_step_name}"
+
     async def ensure_dashboard_data(self):
         """Ensure dashboard has populated data by loading latest completed job or insights if empty."""
         if self.job_insights:
             return
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                res = await client.get(f"{API_BASE_URL}/jobs?limit=5")
+                res = await client.get(f"{API_BASE_URL}/jobs?limit=5", headers=self.auth_headers)
                 if res.status_code == 200:
                     jobs = res.json()
                     completed_jobs = [j for j in jobs if j.get("status") in ("completed", "budget_tripped") and j.get("results")]
                     if completed_jobs:
-                        latest = completed_jobs[0]
-                        self.active_job_id = latest["job_id"]
-                        self.selected_dataset_id = latest["dataset_id"]
-                        res_obj = latest.get("results") or {}
-                        raw_insights = res_obj.get("insights") or []
-                        parsed_insights = []
-                        for ins in raw_insights:
-                            cs = ins.get("chart_spec")
-                            cs_obj = None
-                            if cs and isinstance(cs, dict):
-                                cs_obj = ChartSpecModel(
-                                    chart_type=str(cs.get("chart_type", "bar")),
-                                    title=str(cs.get("title", "")),
-                                    x_label=str(cs.get("x_label", "")),
-                                    y_label=str(cs.get("y_label", "")),
-                                    x_key=str(cs.get("x_key", "category")),
-                                    y_key=str(cs.get("y_key", "value")),
-                                    data=normalize_chart_data(cs.get("data", []))
-                                )
-                            parsed_insights.append(InsightModel(
-                                id=str(ins.get("id", "")),
-                                type=str(ins.get("type", "insight")),
-                                title=str(ins.get("title", "")),
-                                summary=str(ins.get("summary", "")),
-                                significance=ins.get("significance"),
-                                effect_size=ins.get("effect_size"),
-                                n_used=int(ins.get("n_used", 0)),
-                                n_excluded=int(ins.get("n_excluded", 0)),
-                                exclusion_rate=float(ins.get("exclusion_rate", 0.0)),
-                                confidence=str(ins.get("confidence", "high")),
-                                caveats=ins.get("caveats", []) or [],
-                                impact_score=float(ins.get("impact_score", 0.0)),
-                                chart_spec=cs_obj
-                            ))
-                        self.job_insights = parsed_insights
-                        self.job_analytical_insights = [i for i in parsed_insights if i.type != "data_quality"][:6]
-                        self.job_data_quality_insights = [i for i in parsed_insights if i.type == "data_quality"][:4]
-                        self.job_chart_specs = res_obj.get("chart_specifications") or []
-                        synth = res_obj.get("synthesis") or {}
-                        self.job_synthesis = synth
-                        self.job_executive_summary = synth.get("executive_summary", "")
-                        self.job_key_findings = synth.get("key_findings", [])
-                        self.job_recommendations = synth.get("recommendations", [])
-                        ver = latest.get("verification") or {}
-                        self.job_verification = ver
-                        self.verification_verified_count = ver.get("verified_claims_count", 0)
-                        self.verification_total_count = ver.get("total_claims_checked", 0)
-                        self.verification_rate = ver.get("verification_rate_percent", 100.0)
-                        self.verification_is_valid = ver.get("is_valid", True)
-                        self.job_status = "completed"
+                        latest_job_id = completed_jobs[0]["job_id"]
+                        await self.load_job(latest_job_id)
         except Exception as e:
             print("ensure_dashboard_data error:", e)
 
@@ -788,6 +1006,17 @@ class AppState(rx.State):
         """Unified on_load event for dashboard and chat."""
         await self.fetch_datasets()
         await self.ensure_dashboard_data()
+
+    async def on_load_run(self):
+        """On load handler for /run page."""
+        self.active_tab = "run"
+        await self.fetch_datasets()
+        if self.active_job_id:
+            await self.load_job(self.active_job_id)
+        elif self.recent_jobs:
+            await self.load_job(self.recent_jobs[0].job_id)
+        else:
+            await self.ensure_dashboard_data()
 
     async def on_load_reports(self):
         """Unified on_load event for reports."""
@@ -866,3 +1095,174 @@ class AppState(rx.State):
             ))
         finally:
             self.is_chatting = False
+
+    # -------------------------------------------------------------
+    # Neumorphic Layout & Sidebar Methods
+    # -------------------------------------------------------------
+    def toggle_sidebar(self):
+        self.sidebar_collapsed = not self.sidebar_collapsed
+
+    def set_sidebar_search(self, query: str):
+        self.sidebar_search_query = query
+
+    def toggle_theme(self):
+        self.theme_mode = "light" if self.theme_mode == "dark" else "dark"
+
+    def toggle_pin_job(self, job_id: str):
+        if job_id in self.pinned_job_ids:
+            self.pinned_job_ids = [j for j in self.pinned_job_ids if j != job_id]
+        else:
+            self.pinned_job_ids = self.pinned_job_ids + [job_id]
+
+    def set_hero_prompt(self, val: str):
+        self.hero_prompt = val
+
+    def set_hero_mode(self, val: str):
+        self.hero_mode = val
+
+    @rx.var
+    def greeting_message(self) -> str:
+        from datetime import datetime
+        hour = datetime.now().hour
+        if hour < 12:
+            period = "Good morning"
+        elif hour < 17:
+            period = "Good afternoon"
+        else:
+            period = "Good evening"
+        name = self.current_user_name or "Analyst"
+        return f"{period}, {name}"
+
+    @rx.var
+    def user_initial(self) -> str:
+        name = self.current_user_name or self.current_user_email or "A"
+        return name[0].upper() if name else "A"
+
+    @rx.var
+    def filtered_recent_jobs(self) -> List[RecentJobModel]:
+        q = self.sidebar_search_query.strip().lower()
+        if not q:
+            return self.recent_jobs
+        return [
+            j for j in self.recent_jobs
+            if q in j.dataset_name.lower()
+            or q in j.goal.lower()
+            or q in j.job_id.lower()
+        ]
+
+    @rx.var
+    def today_jobs(self) -> List[RecentJobModel]:
+        return [j for j in self.filtered_recent_jobs if j.time_group == "Today"]
+
+    @rx.var
+    def yesterday_jobs(self) -> List[RecentJobModel]:
+        return [j for j in self.filtered_recent_jobs if j.time_group == "Yesterday"]
+
+    @rx.var
+    def older_jobs(self) -> List[RecentJobModel]:
+        return [j for j in self.filtered_recent_jobs if j.time_group == "Older"]
+
+    @rx.var
+    def top_recent_jobs(self) -> List[RecentJobModel]:
+        return self.recent_jobs[:3]
+
+    @rx.var
+    def dataset_options(self) -> List[str]:
+        return [str(d.get("filename", "")) for d in self.datasets if d.get("filename")]
+
+    def select_dataset_by_name(self, name: str):
+        for d in self.datasets:
+            if d.get("filename") == name:
+                return self.select_dataset(d.get("id", ""))
+
+    @rx.var
+    def pinned_jobs(self) -> List[RecentJobModel]:
+        return [j for j in self.recent_jobs if j.job_id in self.pinned_job_ids]
+
+    async def fetch_recent_jobs(self):
+        """Fetch list of recent jobs from backend and categorize by time group."""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                res = await client.get(f"{API_BASE_URL}/jobs?limit=15", headers=self.auth_headers)
+                if res.status_code == 200:
+                    raw_jobs = res.json()
+                    from datetime import datetime, timezone, timedelta
+                    now = datetime.now(timezone.utc)
+                    today_date = now.date()
+                    yesterday_date = today_date - timedelta(days=1)
+                    
+                    ds_names = {d.get("id"): d.get("filename", "Dataset") for d in self.datasets}
+                    
+                    parsed = []
+                    for j in raw_jobs:
+                        jid = str(j.get("job_id", ""))
+                        created_str = str(j.get("created_at", ""))
+                        ds_id = str(j.get("dataset_id", ""))
+                        ds_name = ds_names.get(ds_id, "Dataset")
+                        
+                        time_group = "Older"
+                        try:
+                            clean_dt = created_str.replace("Z", "+00:00")
+                            job_dt = datetime.fromisoformat(clean_dt)
+                            if job_dt.date() == today_date:
+                                time_group = "Today"
+                            elif job_dt.date() == yesterday_date:
+                                time_group = "Yesterday"
+                            else:
+                                time_group = "Older"
+                        except Exception:
+                            time_group = "Older"
+
+                        parsed.append(RecentJobModel(
+                            job_id=jid,
+                            dataset_id=ds_id,
+                            dataset_name=ds_name,
+                            status=str(j.get("status", "completed")),
+                            goal=str(j.get("goal") or "Autonomous Analysis"),
+                            created_at=created_str,
+                            time_group=time_group,
+                            is_pinned=jid in self.pinned_job_ids,
+                        ))
+                    self.recent_jobs = parsed
+        except Exception:
+            pass
+
+    async def check_api_health(self):
+        """Check live backend health status and LLM configuration."""
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                res = await client.get(f"{API_BASE_URL}/health")
+                if res.status_code == 200:
+                    data = res.json()
+                    self.api_health_status = str(data.get("status", "healthy")).capitalize()
+                    self.api_service_version = str(data.get("version", "0.1.0"))
+        except Exception:
+            self.api_health_status = "Offline"
+
+    async def on_load_home(self):
+        """Initialize home / new analysis screen with datasets, recent runs and health."""
+        self.active_tab = "home"
+        await self.check_api_health()
+        await self.fetch_datasets()
+        await self.fetch_recent_jobs()
+        if not self.active_job_id and self.recent_jobs:
+            self.active_job_id = self.recent_jobs[0].job_id
+
+    async def handle_hero_submit(self):
+        """Handle submit from the hero input box on the Home screen."""
+        prompt = self.hero_prompt.strip()
+        if not prompt:
+            return
+            
+        is_question = prompt.endswith("?") or prompt.lower().startswith((
+            "what", "why", "how", "which", "where", "who", "when", "is", "are", "can", "show", "tell"
+        ))
+        
+        if is_question and self.active_job_id:
+            self.chat_input = prompt
+            self.hero_prompt = ""
+            return [AppState.select_tab("chat"), rx.redirect("/chat"), AppState.send_chat_message]
+        else:
+            self.analysis_goal = prompt
+            self.hero_prompt = ""
+            return await self.start_analysis()

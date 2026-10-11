@@ -1,647 +1,706 @@
-"""Interactive Analytics Dashboard page for Autonomous AI Data Analyst Agent (Milestone 3)."""
+"""Interactive Analytics Dashboard page for Autonomous AI Data Analyst Agent.
+Neo-morphism 60% + Minimalism 40% design with ranked findings, Recharts visualizations,
+executive summary, citation verification, and human-in-the-loop feedback.
+"""
+from typing import Any, Dict
 import reflex as rx
 from frontend.components.layout import app_layout
-from frontend.components.stats_card import stat_card
+from frontend.components.neu_components import (
+    citation_chip,
+    empty_state,
+    neu_button,
+    neu_card,
+    neu_inset_card,
+    progress_track,
+    status_pill,
+)
 from frontend.state import AppState, InsightModel, RunLogStepModel
+from frontend.theme import (
+    ACCENT_COLOR,
+    ACCENT_HOVER,
+    ACCENT_SUBTLE,
+    FONT_SERIF,
+    RADIUS_FULL,
+    RADIUS_LG,
+    RADIUS_MD,
+    RADIUS_SM,
+    RADIUS_XL,
+    SHADOW_INSET,
+    SHADOW_INSET_DEEP,
+    SHADOW_RAISED,
+    SHADOW_RAISED_SM,
+    SURFACE_COLOR,
+    TEXT_COLOR,
+    TEXT_MUTED,
+)
+
+
+def kpi_card(title: str, value: Any, subtitle: str, icon: str, status: str = "info") -> rx.Component:
+    """Minimalist Neumorphic KPI stat card."""
+    color_map = {
+        "success": "var(--status-success)",
+        "warn": "var(--status-warning)",
+        "error": "var(--status-error)",
+        "info": ACCENT_COLOR,
+    }
+    icon_color = color_map.get(status, ACCENT_COLOR)
+
+    return neu_card(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(tag=icon, size=16, color=icon_color),
+                    padding="0.5rem",
+                    border_radius=RADIUS_FULL,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_INSET,
+                ),
+                rx.spacer(),
+                rx.text(title, font_size="0.75rem", font_weight="500", color=TEXT_MUTED),
+                width="100%",
+                align_items="center",
+            ),
+            rx.text(
+                value,
+                font_size="1.45rem",
+                font_weight="700",
+                color=TEXT_COLOR,
+                letter_spacing="-0.02em",
+            ),
+            rx.text(
+                subtitle,
+                font_size="0.72rem",
+                color=TEXT_MUTED,
+            ),
+            spacing="1",
+            align_items="flex-start",
+            width="100%",
+        ),
+        sm=True,
+        width="100%",
+    )
+
 
 def render_insight_chart(ins: InsightModel) -> rx.Component:
-    """Render recharts visualization from embedded insight chart_spec."""
+    """Render recharts visualization from embedded insight chart_spec with terracotta accent."""
     return rx.cond(
         ins.chart_spec,
         rx.box(
             rx.vstack(
-                rx.text(ins.chart_spec.title, font_size="0.8rem", font_weight="600", color="#cbd5e1"),
+                rx.text(
+                    ins.chart_spec.title,
+                    font_size="0.78rem",
+                    font_weight="600",
+                    color=TEXT_COLOR,
+                ),
                 rx.cond(
                     ins.chart_spec.chart_type == "line",
                     rx.recharts.line_chart(
-                        rx.recharts.line(data_key=ins.chart_spec.y_key, stroke="#6366f1", stroke_width=2),
-                        rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke="#94a3b8", font_size="0.7rem"),
-                        rx.recharts.y_axis(stroke="#94a3b8", font_size="0.7rem"),
-                        rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.08)"),
+                        rx.recharts.line(
+                            data_key=ins.chart_spec.y_key,
+                            stroke=ACCENT_COLOR,
+                            stroke_width=2,
+                            dot={"r": 3, "fill": ACCENT_COLOR},
+                        ),
+                        rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
+                        rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
+                        rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.05)"),
                         rx.recharts.graphing_tooltip(),
                         data=ins.chart_spec.data,
-                        height=200,
-                        width="100%"
+                        height=180,
+                        width="100%",
                     ),
                     rx.cond(
                         ins.chart_spec.chart_type == "scatter",
                         rx.recharts.scatter_chart(
-                            rx.recharts.scatter(data_key=ins.chart_spec.y_key, fill="#818cf8"),
-                            rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke="#94a3b8", font_size="0.7rem"),
-                            rx.recharts.y_axis(stroke="#94a3b8", font_size="0.7rem"),
-                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.08)"),
+                            rx.recharts.scatter(data_key=ins.chart_spec.y_key, fill=ACCENT_COLOR),
+                            rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
+                            rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
+                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.05)"),
                             rx.recharts.graphing_tooltip(),
                             data=ins.chart_spec.data,
-                            height=200,
-                            width="100%"
+                            height=180,
+                            width="100%",
                         ),
                         rx.recharts.bar_chart(
-                            rx.recharts.bar(data_key=ins.chart_spec.y_key, fill="#6366f1", radius=[4, 4, 0, 0]),
-                            rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke="#94a3b8", font_size="0.7rem"),
-                            rx.recharts.y_axis(stroke="#94a3b8", font_size="0.7rem"),
-                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.08)"),
+                            rx.recharts.bar(data_key=ins.chart_spec.y_key, fill=ACCENT_COLOR, radius=[4, 4, 0, 0]),
+                            rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
+                            rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
+                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.05)"),
                             rx.recharts.graphing_tooltip(),
                             data=ins.chart_spec.data,
-                            height=200,
-                            width="100%"
-                        )
-                    )
+                            height=180,
+                            width="100%",
+                        ),
+                    ),
                 ),
                 spacing="2",
-                width="100%"
+                width="100%",
             ),
-            padding="1rem",
-            background_color="rgba(15, 23, 42, 0.4)",
-            border_radius="0.5rem",
-            border="1px solid rgba(255, 255, 255, 0.05)",
-            margin_top="0.75rem",
-            width="100%"
-        )
+            class_name="neu-chart-container",
+            padding="0.85rem",
+            background_color=SURFACE_COLOR,
+            box_shadow=SHADOW_INSET,
+            border_radius=RADIUS_MD,
+            margin_top="0.65rem",
+            width="100%",
+        ),
     )
 
+
 def render_insight_card(ins: InsightModel) -> rx.Component:
-    """Render a single ranked insight card with confidence badge, metrics, caveats, and chart."""
-    return rx.box(
+    """Render a single ranked insight card with confidence badge, metrics, caveats, and feedback."""
+    confidence_badge = rx.cond(
+        ins.confidence == "high",
+        rx.box(
+            rx.text("HIGH CONFIDENCE", font_size="0.68rem", font_weight="700", color="var(--status-success)"),
+            padding="0.15rem 0.45rem",
+            border_radius=RADIUS_SM,
+            background_color=SURFACE_COLOR,
+            box_shadow=SHADOW_INSET,
+        ),
+        rx.cond(
+            ins.confidence == "medium",
+            rx.box(
+                rx.text("MEDIUM CONFIDENCE", font_size="0.68rem", font_weight="700", color="var(--status-warning)"),
+                padding="0.15rem 0.45rem",
+                border_radius=RADIUS_SM,
+                background_color=SURFACE_COLOR,
+                box_shadow=SHADOW_INSET,
+            ),
+            rx.box(
+                rx.text("LOW CONFIDENCE", font_size="0.68rem", font_weight="700", color="var(--status-error)"),
+                padding="0.15rem 0.45rem",
+                border_radius=RADIUS_SM,
+                background_color=SURFACE_COLOR,
+                box_shadow=SHADOW_INSET,
+            ),
+        ),
+    )
+
+    return neu_card(
         rx.vstack(
-            # Top row: title, type badge, confidence badge, impact score
+            # Top row: Type badge, confidence, impact score
             rx.hstack(
-                rx.vstack(
-                    rx.hstack(
-                        rx.badge(ins.type, color_scheme="indigo", variant="soft", size="1"),
-                        rx.cond(
-                            ins.confidence == "high",
-                            rx.badge("HIGH CONFIDENCE", color_scheme="green", variant="solid", size="1"),
-                            rx.cond(
-                                ins.confidence == "medium",
-                                rx.badge("MEDIUM CONFIDENCE", color_scheme="amber", variant="solid", size="1"),
-                                rx.badge("LOW CONFIDENCE", color_scheme="red", variant="solid", size="1")
-                            )
-                        ),
-                        rx.badge(f"Impact: {ins.impact_score}", color_scheme="purple", variant="surface", size="1"),
-                        spacing="2",
-                        align_items="center"
-                    ),
-                    rx.text(ins.title, font_weight="700", font_size="1rem", color="#f8fafc"),
-                    spacing="1",
-                    align_items="flex-start"
+                rx.box(
+                    rx.text(ins.type, font_size="0.7rem", font_weight="600", color=ACCENT_COLOR),
+                    padding="0.15rem 0.5rem",
+                    border_radius=RADIUS_SM,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_RAISED_SM,
                 ),
+                confidence_badge,
                 rx.spacer(),
-                spacing="3",
-                align_items="flex-start",
-                width="100%"
+                rx.box(
+                    rx.text(f"Impact: {ins.impact_score:.2f}", font_size="0.7rem", color=TEXT_MUTED, font_weight="500"),
+                    padding="0.15rem 0.45rem",
+                    border_radius=RADIUS_SM,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_INSET,
+                ),
+                width="100%",
+                align_items="center",
             ),
 
+            # Title
+            rx.text(ins.title, font_weight="600", font_size="0.95rem", color=TEXT_COLOR, line_height="1.3"),
+
             # Narrative Summary
-            rx.text(ins.summary, font_size="0.875rem", color="#cbd5e1", line_height="1.5"),
+            rx.text(ins.summary, font_size="0.825rem", color=TEXT_MUTED, line_height="1.5"),
 
             # Coverage & Exclusion stats
             rx.hstack(
-                rx.badge(f"Used: {ins.n_used} rows", variant="outline", color_scheme="gray", size="1"),
-                rx.badge(f"Excluded: {ins.n_excluded} rows", variant="outline", color_scheme="gray", size="1"),
-                rx.badge(f"Exclusion Rate: {ins.exclusion_rate * 100}%", variant="outline", color_scheme="amber", size="1"),
+                rx.box(
+                    rx.text(f"Used: {ins.n_used} rows", font_size="0.7rem", color=TEXT_MUTED),
+                    padding="0.15rem 0.45rem",
+                    border_radius=RADIUS_SM,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_INSET,
+                ),
+                rx.box(
+                    rx.text(f"Excluded: {ins.n_excluded} rows", font_size="0.7rem", color=TEXT_MUTED),
+                    padding="0.15rem 0.45rem",
+                    border_radius=RADIUS_SM,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_INSET,
+                ),
+                rx.box(
+                    rx.text(f"Exclusion: {ins.exclusion_rate * 100:.1f}%", font_size="0.7rem", color="var(--status-warning)"),
+                    padding="0.15rem 0.45rem",
+                    border_radius=RADIUS_SM,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_INSET,
+                ),
                 spacing="2",
-                align_items="center"
+                align_items="center",
+                wrap="wrap",
             ),
 
             # Caveats
             rx.cond(
                 ins.caveats.length() > 0,
-                rx.vstack(
-                    rx.text("Caveats & Limitations:", font_size="0.75rem", font_weight="600", color="#fbbf24"),
-                    rx.foreach(
-                        ins.caveats,
-                        lambda c: rx.hstack(
-                            rx.icon(tag="triangle-alert", size=12, color="#fbbf24"),
-                            rx.text(c, font_size="0.75rem", color="#f1f5f9"),
+                neu_inset_card(
+                    rx.vstack(
+                        rx.hstack(
+                            rx.icon(tag="triangle-alert", size=12, color="var(--status-warning)"),
+                            rx.text("Caveats & Limitations:", font_size="0.72rem", font_weight="600", color="var(--status-warning)"),
                             spacing="1",
-                            align_items="center"
-                        )
+                            align_items="center",
+                        ),
+                        rx.foreach(
+                            ins.caveats,
+                            lambda c: rx.text(f"• {c}", font_size="0.75rem", color=TEXT_MUTED),
+                        ),
+                        spacing="1",
+                        align_items="flex-start",
+                        width="100%",
                     ),
-                    spacing="1",
-                    padding="0.5rem 0.75rem",
-                    background_color="rgba(245, 158, 11, 0.08)",
-                    border_radius="0.375rem",
-                    border="1px solid rgba(245, 158, 11, 0.2)",
-                    width="100%"
-                )
+                    padding="0.6rem 0.85rem",
+                    width="100%",
+                ),
             ),
 
             # Embedded visualization
             render_insight_chart(ins),
 
-            # Feedback Row (Plan §8.6 Human-in-the-loop)
+            # Human-in-the-Loop Feedback Row (Plan §8.6)
             rx.hstack(
-                rx.text("Was this insight helpful?", font_size="0.75rem", color="#94a3b8"),
+                rx.text("Was this insight helpful?", font_size="0.72rem", color=TEXT_MUTED),
+                rx.spacer(),
                 rx.button(
                     rx.hstack(
                         rx.icon(tag="thumbs-up", size=12),
-                        rx.text("Helpful", font_size="0.75rem"),
+                        rx.text("Helpful", font_size="0.72rem"),
                         spacing="1",
-                        align_items="center"
+                        align_items="center",
                     ),
-                    size="1",
-                    variant="soft",
-                    color_scheme="green",
-                    on_click=AppState.submit_insight_feedback(ins.id, "helpful")
+                    on_click=AppState.submit_insight_feedback(ins.id, "helpful"),
+                    background_color=SURFACE_COLOR,
+                    box_shadow=rx.cond(
+                        AppState.insight_feedback_map[ins.id] == "helpful",
+                        SHADOW_INSET,
+                        SHADOW_RAISED_SM,
+                    ),
+                    color=rx.cond(
+                        AppState.insight_feedback_map[ins.id] == "helpful",
+                        "var(--status-success)",
+                        TEXT_MUTED,
+                    ),
+                    border="none",
+                    border_radius=RADIUS_SM,
+                    padding="0.3rem 0.65rem",
+                    cursor="pointer",
+                    transition="all 150ms ease",
                 ),
                 rx.button(
                     rx.hstack(
                         rx.icon(tag="thumbs-down", size=12),
-                        rx.text("Not Relevant", font_size="0.75rem"),
+                        rx.text("Not Relevant", font_size="0.72rem"),
                         spacing="1",
-                        align_items="center"
+                        align_items="center",
                     ),
-                    size="1",
-                    variant="soft",
-                    color_scheme="gray",
-                    on_click=AppState.submit_insight_feedback(ins.id, "not_relevant")
+                    on_click=AppState.submit_insight_feedback(ins.id, "not_relevant"),
+                    background_color=SURFACE_COLOR,
+                    box_shadow=rx.cond(
+                        AppState.insight_feedback_map[ins.id] == "not_relevant",
+                        SHADOW_INSET,
+                        SHADOW_RAISED_SM,
+                    ),
+                    color=rx.cond(
+                        AppState.insight_feedback_map[ins.id] == "not_relevant",
+                        "var(--status-error)",
+                        TEXT_MUTED,
+                    ),
+                    border="none",
+                    border_radius=RADIUS_SM,
+                    padding="0.3rem 0.65rem",
+                    cursor="pointer",
+                    transition="all 150ms ease",
                 ),
                 spacing="2",
                 align_items="center",
-                margin_top="0.5rem"
+                width="100%",
+                margin_top="0.4rem",
             ),
 
             spacing="3",
             align_items="flex-start",
-            width="100%"
+            width="100%",
         ),
-        padding="1.25rem",
-        border_radius="0.75rem",
-        background_color="rgba(30, 41, 59, 0.4)",
-        border="1px solid rgba(255, 255, 255, 0.08)",
-        width="100%"
+        width="100%",
     )
 
-def render_progress_panel() -> rx.Component:
-    """Render background progress timeline and execution status during running jobs."""
-    return rx.box(
-        rx.vstack(
-            rx.hstack(
-                rx.spinner(size="2", color="#6366f1"),
-                rx.vstack(
-                    rx.text("Autonomous Agent Executing...", font_weight="700", font_size="1rem", color="#ffffff"),
-                    rx.hstack(
-                        rx.badge(f"Phase: {AppState.job_phase.upper()}", color_scheme="indigo", variant="solid", size="1"),
-                        rx.text(f"Step {AppState.job_current_step} of {AppState.job_total_steps}: {AppState.job_current_step_name}", font_size="0.8rem", color="#94a3b8"),
-                        rx.badge(f"{AppState.job_elapsed_seconds}s elapsed", color_scheme="gray", variant="surface", size="1"),
-                        spacing="2",
-                        align_items="center"
-                    ),
-                    spacing="1",
-                    align_items="flex-start"
-                ),
-                rx.spacer(),
-                spacing="3",
-                align_items="center",
-                width="100%"
-            ),
-            rx.progress(
-                value=AppState.job_current_step * 20,
-                max=100,
-                width="100%",
-                color_scheme="indigo",
-                radius="full"
-            ),
-            rx.text(
-                "Polling execution status every 2 seconds via Reflex background event. Results will refresh immediately upon completion.",
-                font_size="0.75rem",
-                color="#64748b"
-            ),
-            spacing="3",
-            width="100%"
-        ),
-        padding="1.25rem",
-        border_radius="0.75rem",
-        background_color="rgba(99, 102, 241, 0.1)",
-        border="1px solid rgba(99, 102, 241, 0.3)",
-        width="100%"
-    )
 
-def render_executive_summary() -> rx.Component:
-    """Render the verified executive summary narrative and citation verification badge."""
-    return rx.box(
+def executive_summary_panel() -> rx.Component:
+    """Render executive summary narrative with verified citation badge and strategic recommendations."""
+    return neu_card(
         rx.vstack(
             rx.hstack(
                 rx.hstack(
-                    rx.icon(tag="sparkles", size=18, color="#818cf8"),
-                    rx.text("Executive Summary Narrative", font_weight="700", font_size="1.1rem", color="#ffffff"),
+                    rx.icon(tag="sparkles", size=18, color=ACCENT_COLOR),
+                    rx.text("Executive Narrative Summary", font_size="1.05rem", font_weight="600", color=TEXT_COLOR),
                     spacing="2",
-                    align_items="center"
+                    align_items="center",
                 ),
                 rx.spacer(),
-                # Citation audit badge
-                rx.badge(
-                    f"Citation Audit: {AppState.verification_verified_count}/{AppState.verification_total_count} Verified ({AppState.verification_rate}%)",
-                    color_scheme=rx.cond(AppState.verification_is_valid, "green", "amber"),
-                    variant="solid",
-                    size="2"
+                # Verified citations status pill
+                status_pill(
+                    AppState.verification_badge_text,
+                    icon="shield-check",
+                    status=rx.cond(AppState.verification_is_valid, "success", "warn"),
                 ),
-                spacing="3",
+                width="100%",
                 align_items="center",
-                width="100%"
             ),
-            rx.divider(border_color="rgba(255, 255, 255, 0.08)"),
+
+            # Narrative body
             rx.text(
                 AppState.job_executive_summary,
-                font_size="0.925rem",
-                color="#e2e8f0",
-                line_height="1.6"
+                font_size="0.875rem",
+                color=TEXT_COLOR,
+                line_height="1.6",
             ),
+
+            # Strategic Recommendations
             rx.cond(
                 AppState.job_recommendations.length() > 0,
-                rx.vstack(
-                    rx.text("Strategic Recommendations:", font_weight="600", font_size="0.875rem", color="#93c5fd"),
-                    rx.foreach(
-                        AppState.job_recommendations,
-                        lambda rec: rx.hstack(
-                            rx.icon(tag="circle-check", size=14, color="#60a5fa"),
-                            rx.text(rec, font_size="0.85rem", color="#cbd5e1"),
+                neu_inset_card(
+                    rx.vstack(
+                        rx.hstack(
+                            rx.icon(tag="compass", size=14, color=ACCENT_COLOR),
+                            rx.text("Strategic Recommendations", font_size="0.825rem", font_weight="600", color=TEXT_COLOR),
                             spacing="2",
-                            align_items="flex-start"
-                        )
+                            align_items="center",
+                        ),
+                        rx.foreach(
+                            AppState.job_recommendations,
+                            lambda rec: rx.hstack(
+                                rx.icon(tag="check", size=13, color=ACCENT_COLOR),
+                                rx.text(rec, font_size="0.8rem", color=TEXT_MUTED, line_height="1.45"),
+                                spacing="2",
+                                align_items="flex-start",
+                            ),
+                        ),
+                        spacing="2",
+                        align_items="flex-start",
+                        width="100%",
                     ),
-                    spacing="2",
-                    margin_top="0.5rem",
-                    width="100%"
-                )
+                    padding="0.85rem 1rem",
+                    width="100%",
+                ),
             ),
+
             spacing="3",
             align_items="flex-start",
-            width="100%"
+            width="100%",
         ),
-        padding="1.5rem",
-        border_radius="0.75rem",
-        background_color="rgba(15, 23, 42, 0.6)",
-        border="1px solid rgba(255, 255, 255, 0.08)",
-        width="100%"
+        width="100%",
     )
 
-def render_explainability_panel() -> rx.Component:
-    """Render the 'How the agent decided' run log audit trail."""
-    return rx.box(
+
+def data_quality_panel() -> rx.Component:
+    """Render sanitization audit: sentinels, domain invalid values, returns kept, and imputation."""
+    return neu_card(
         rx.vstack(
             rx.hstack(
                 rx.hstack(
-                    rx.icon(tag="bot", size=18, color="#38bdf8"),
-                    rx.text("How the Agent Decided (Explainability & Audit Trail)", font_weight="700", font_size="1rem", color="#ffffff"),
+                    rx.icon(tag="shield-alert", size=18, color=ACCENT_COLOR),
+                    rx.text("Data Quality & Cleaning Audit", font_size="1rem", font_weight="600", color=TEXT_COLOR),
                     spacing="2",
-                    align_items="center"
+                    align_items="center",
                 ),
                 rx.spacer(),
-                rx.badge(f"{AppState.job_run_log.length()} Execution Steps", color_scheme="gray", variant="surface"),
-                spacing="3",
+                status_pill(AppState.quality_score_text, icon="award", status="info"),
+                width="100%",
                 align_items="center",
-                width="100%"
             ),
-            rx.text(
-                "Inspect every autonomous decision, LLM rationale, tool call, latency breakdown, and token usage.",
-                font_size="0.8rem",
-                color="#94a3b8"
-            ),
-            rx.box(
-                rx.table.root(
-                    rx.table.header(
-                        rx.table.row(
-                            rx.table.column_header_cell("Step"),
-                            rx.table.column_header_cell("Tool"),
-                            rx.table.column_header_cell("Model Rationale"),
-                            rx.table.column_header_cell("Model"),
-                            rx.table.column_header_cell("Tool Time"),
-                            rx.table.column_header_cell("LLM Latency"),
-                            rx.table.column_header_cell("Tokens")
-                        )
-                    ),
-                    rx.table.body(
-                        rx.foreach(
-                            AppState.job_run_log,
-                            lambda step: rx.table.row(
-                                rx.table.cell(rx.badge(f"#{step.step}", color_scheme="gray", variant="surface")),
-                                rx.table.cell(rx.badge(step.tool, color_scheme="indigo", variant="soft")),
-                                rx.table.cell(rx.text(step.rationale, font_size="0.8rem", color="#cbd5e1", max_width="380px")),
-                                rx.table.cell(rx.text(step.model, font_size="0.75rem", color="#94a3b8")),
-                                rx.table.cell(rx.text(f"{step.tool_time_ms} ms", font_size="0.75rem", color="#94a3b8")),
-                                rx.table.cell(rx.text(f"{step.llm_latency_ms} ms", font_size="0.75rem", color="#38bdf8")),
-                                rx.table.cell(rx.text(step.tokens, font_size="0.75rem", color="#a855f7"))
-                            )
-                        )
-                    ),
-                    variant="surface",
-                    width="100%"
-                ),
-                overflow_x="auto",
-                width="100%"
-            ),
-            spacing="3",
-            width="100%"
-        ),
-        padding="1.5rem",
-        border_radius="0.75rem",
-        background_color="rgba(15, 23, 42, 0.6)",
-        border="1px solid rgba(255, 255, 255, 0.08)",
-        width="100%"
-    )
 
-def render_data_quality_panel() -> rx.Component:
-    """Render comprehensive data quality panel with sentinels, domain invalids, suspected returns, and imputation."""
-    return rx.box(
-        rx.vstack(
-            rx.hstack(
-                rx.hstack(
-                    rx.icon(tag="shield-alert", size=18, color="#f59e0b"),
-                    rx.text("Data Quality & Cleaning Audit", font_weight="700", font_size="1rem", color="#ffffff"),
-                    spacing="2",
-                    align_items="center"
-                ),
-                rx.spacer(),
-                rx.badge(f"Quality: {AppState.quality_score}/100", color_scheme="amber", variant="surface"),
-                spacing="3",
-                align_items="center",
-                width="100%"
-            ),
+            # 3-column cards
             rx.grid(
-                rx.box(
+                neu_inset_card(
                     rx.vstack(
-                        rx.text("Sentinels Sanitized (>=3 repeats outside 3x IQR)", font_size="0.75rem", font_weight="600", color="#94a3b8"),
+                        rx.text("Sentinels Sanitized", font_size="0.75rem", font_weight="600", color=TEXT_MUTED),
                         rx.cond(
                             AppState.sentinels_list.length() > 0,
                             rx.foreach(
                                 AppState.sentinels_list,
                                 lambda s: rx.hstack(
-                                    rx.badge(s["column"].to_string(), color_scheme="gray", variant="soft"),
-                                    rx.text(f"Value {s['value'].to_string()} ({s['count'].to_string()} rows)", font_size="0.75rem", color="#cbd5e1"),
-                                    spacing="1"
-                                )
+                                    rx.text(s["column"].to_string(), font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
+                                    rx.text(f"val: {s['value'].to_string()} ({s['count'].to_string()} rows)", font_size="0.7rem", color=TEXT_MUTED),
+                                    spacing="1",
+                                ),
                             ),
-                            rx.text("None detected", font_size="0.75rem", color="#64748b")
+                            rx.text("None detected", font_size="0.75rem", color=TEXT_MUTED, font_style="italic"),
                         ),
-                        spacing="2",
-                        width="100%"
+                        spacing="1",
+                        align_items="flex-start",
+                        width="100%",
                     ),
-                    padding="1rem",
-                    border_radius="0.5rem",
-                    background_color="rgba(30, 41, 59, 0.3)",
-                    border="1px solid rgba(255, 255, 255, 0.05)"
+                    padding="0.75rem 0.9rem",
                 ),
-                rx.box(
+                neu_inset_card(
                     rx.vstack(
-                        rx.text("Domain Invalids Sanitized (Rule Violation)", font_size="0.75rem", font_weight="600", color="#94a3b8"),
+                        rx.text("Domain Invalids Sanitized", font_size="0.75rem", font_weight="600", color=TEXT_MUTED),
                         rx.cond(
                             AppState.invalid_values_list.length() > 0,
                             rx.foreach(
                                 AppState.invalid_values_list,
                                 lambda iv: rx.hstack(
-                                    rx.badge(iv["column"].to_string(), color_scheme="red", variant="soft"),
-                                    rx.text(f"{iv['rule'].to_string()} ({iv['count'].to_string()} rows)", font_size="0.75rem", color="#cbd5e1"),
-                                    spacing="1"
-                                )
+                                    rx.text(iv["column"].to_string(), font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
+                                    rx.text(f"{iv['rule'].to_string()} ({iv['count'].to_string()} rows)", font_size="0.7rem", color=TEXT_MUTED),
+                                    spacing="1",
+                                ),
                             ),
-                            rx.text("None detected", font_size="0.75rem", color="#64748b")
+                            rx.text("None detected", font_size="0.75rem", color=TEXT_MUTED, font_style="italic"),
                         ),
-                        spacing="2",
-                        width="100%"
+                        spacing="1",
+                        align_items="flex-start",
+                        width="100%",
                     ),
-                    padding="1rem",
-                    border_radius="0.5rem",
-                    background_color="rgba(30, 41, 59, 0.3)",
-                    border="1px solid rgba(255, 255, 255, 0.05)"
+                    padding="0.75rem 0.9rem",
                 ),
-                rx.box(
+                neu_inset_card(
                     rx.vstack(
-                        rx.text("Suspected Returns (Kept in Dataset)", font_size="0.75rem", font_weight="600", color="#94a3b8"),
+                        rx.text("Suspected Returns (Kept)", font_size="0.75rem", font_weight="600", color=TEXT_MUTED),
                         rx.cond(
                             AppState.suspected_returns_list.length() > 0,
                             rx.foreach(
                                 AppState.suspected_returns_list,
                                 lambda sr: rx.hstack(
-                                    rx.badge(sr["column"].to_string(), color_scheme="blue", variant="soft"),
-                                    rx.text(f"{sr['count'].to_string()} return records kept", font_size="0.75rem", color="#cbd5e1"),
-                                    spacing="1"
-                                )
+                                    rx.text(sr["column"].to_string(), font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
+                                    rx.text(f"{sr['count'].to_string()} records kept", font_size="0.7rem", color=TEXT_MUTED),
+                                    spacing="1",
+                                ),
                             ),
-                            rx.text("None detected", font_size="0.75rem", color="#64748b")
+                            rx.text("None detected", font_size="0.75rem", color=TEXT_MUTED, font_style="italic"),
                         ),
-                        spacing="2",
-                        width="100%"
+                        spacing="1",
+                        align_items="flex-start",
+                        width="100%",
                     ),
-                    padding="1rem",
-                    border_radius="0.5rem",
-                    background_color="rgba(30, 41, 59, 0.3)",
-                    border="1px solid rgba(255, 255, 255, 0.05)"
+                    padding="0.75rem 0.9rem",
                 ),
                 columns=rx.breakpoints(initial="1", sm="3"),
                 spacing="3",
-                width="100%"
+                width="100%",
             ),
-            # Imputation rates table
+
+            # Imputation table
             rx.cond(
                 AppState.imputation_stats_list.length() > 0,
-                rx.box(
-                    rx.vstack(
-                        rx.text("Column Imputation Rates & Missing Value Strategies", font_size="0.8rem", font_weight="600", color="#cbd5e1"),
+                rx.vstack(
+                    rx.text("Column Imputation Rates & Missing Value Strategies", font_size="0.8rem", font_weight="600", color=TEXT_COLOR),
+                    rx.box(
                         rx.table.root(
                             rx.table.header(
                                 rx.table.row(
                                     rx.table.column_header_cell("Column"),
                                     rx.table.column_header_cell("Imputed Rows"),
-                                    rx.table.column_header_cell("Imputation Rate"),
-                                    rx.table.column_header_cell("Strategy")
+                                    rx.table.column_header_cell("Rate"),
+                                    rx.table.column_header_cell("Strategy"),
                                 )
                             ),
                             rx.table.body(
                                 rx.foreach(
                                     AppState.imputation_stats_list,
                                     lambda imp: rx.table.row(
-                                        rx.table.cell(rx.badge(imp["column"].to_string(), color_scheme="gray")),
-                                        rx.table.cell(rx.text(imp["count"].to_string(), font_size="0.8rem", color="#cbd5e1")),
-                                        rx.table.cell(rx.badge(imp["rate"].to_string(), color_scheme="amber", variant="surface")),
-                                        rx.table.cell(rx.text(imp["strategy"].to_string(), font_size="0.8rem", color="#94a3b8"))
+                                        rx.table.cell(rx.text(imp["column"].to_string(), font_size="0.78rem", font_weight="600", color=TEXT_COLOR)),
+                                        rx.table.cell(rx.text(imp["count"].to_string(), font_size="0.75rem", color=TEXT_MUTED)),
+                                        rx.table.cell(rx.text(imp["rate"].to_string(), font_size="0.75rem", color="var(--status-warning)")),
+                                        rx.table.cell(rx.text(imp["strategy"].to_string(), font_size="0.75rem", color=TEXT_MUTED)),
                                     )
                                 )
                             ),
-                            variant="surface",
-                            width="100%"
+                            width="100%",
                         ),
-                        spacing="2",
-                        width="100%"
+                        background_color=SURFACE_COLOR,
+                        box_shadow=SHADOW_INSET,
+                        border_radius=RADIUS_MD,
+                        padding="0.5rem",
+                        width="100%",
+                        overflow_x="auto",
                     ),
+                    spacing="2",
                     width="100%",
-                    margin_top="0.5rem"
-                )
+                    margin_top="0.5rem",
+                ),
             ),
+
             spacing="3",
-            width="100%"
+            align_items="flex-start",
+            width="100%",
         ),
-        padding="1.5rem",
-        border_radius="0.75rem",
-        background_color="rgba(15, 23, 42, 0.6)",
-        border="1px solid rgba(255, 255, 255, 0.08)",
-        width="100%"
+        width="100%",
     )
 
+
 def dashboard_page() -> rx.Component:
+    """Dashboard page combining KPIs, execution status, ranked findings, narrative, and sanitization."""
     return app_layout(
-        "Analytics Dashboard",
+        "Dashboard",
         rx.vstack(
-            # Top KPI metrics
+            # 1. Top KPI metrics
             rx.grid(
-                stat_card("Dataset Quality", f"{AppState.quality_score}/100", "Composite benchmark", "award", "#10b981"),
-                stat_card("Analyzed Rows", AppState.row_count, "Clean records", "layers", "#6366f1"),
-                stat_card("Top Insights", AppState.job_insights.length(), "Ranked findings", "sparkles", "#38bdf8"),
-                stat_card("Citation Audit", f"{AppState.verification_rate}%", "Factually grounded", "shield-check", "#a855f7"),
+                kpi_card("Dataset Quality", AppState.quality_score_text, "Composite benchmark", "award", "success"),
+                kpi_card("Analyzed Rows", AppState.row_count, "Clean records", "layers", "info"),
+                kpi_card("Ranked Insights", AppState.job_insights.length(), "Validated findings", "sparkles", "info"),
+                kpi_card("Grounding Audit", AppState.verification_rate_text, "Verified citations", "shield-check", "success"),
                 columns=rx.breakpoints(initial="1", sm="2", lg="4"),
-                spacing="4",
-                width="100%"
+                spacing="3",
+                width="100%",
             ),
 
-            # Error Banner
-            rx.cond(
-                AppState.error_message != "",
-                rx.box(
-                    rx.hstack(
-                        rx.icon(tag="triangle-alert", size=18, color="#ef4444"),
-                        rx.text(AppState.error_message, font_size="0.85rem", color="#f87171"),
-                        spacing="2",
-                        align_items="center"
-                    ),
-                    padding="0.85rem 1.25rem",
-                    border_radius="0.5rem",
-                    background_color="rgba(239, 68, 68, 0.1)",
-                    border="1px solid rgba(239, 68, 68, 0.3)",
-                    width="100%"
-                )
-            ),
-
-            # Progress panel when job is running
+            # 2. If job is actively running, show quick monitor card linking to /run
             rx.cond(
                 AppState.job_status == "running",
-                render_progress_panel()
+                neu_card(
+                    rx.hstack(
+                        rx.box(
+                            width="10px",
+                            height="10px",
+                            border_radius=RADIUS_FULL,
+                            background_color=ACCENT_COLOR,
+                            class_name="neu-active-step-pulse",
+                        ),
+                        rx.vstack(
+                            rx.text("Autonomous Agent In Flight", font_size="0.9rem", font_weight="600", color=TEXT_COLOR),
+                            rx.text(
+                                AppState.running_status_text,
+                                font_size="0.8rem",
+                                color=TEXT_MUTED,
+                            ),
+                            spacing="0",
+                            align_items="flex-start",
+                        ),
+                        rx.spacer(),
+                        rx.link(
+                            neu_button(
+                                rx.hstack(
+                                    rx.icon(tag="activity", size=14),
+                                    rx.text("View Run Monitor"),
+                                    spacing="1",
+                                    align_items="center",
+                                ),
+                                variant="primary",
+                            ),
+                            href="/run",
+                            text_decoration="none",
+                        ),
+                        spacing="3",
+                        align_items="center",
+                        width="100%",
+                    ),
+                    width="100%",
+                ),
             ),
 
-            # Executive Summary (when completed or insights available)
+            # 3. Main Results (When results are populated)
             rx.cond(
                 AppState.job_insights.length() > 0,
                 rx.vstack(
-                    render_executive_summary(),
+                    # Executive Narrative
+                    executive_summary_panel(),
 
-                    # Top Analytical Insights Section (Top 6)
-                    rx.box(
+                    # Top Analytical Insights Section
+                    neu_card(
                         rx.vstack(
                             rx.hstack(
-                                rx.icon(tag="sparkles", size=18, color="#818cf8"),
-                                rx.text("Top Analytical Insights (Top 6)", font_weight="700", font_size="1.1rem", color="#ffffff"),
+                                rx.hstack(
+                                    rx.icon(tag="sparkles", size=18, color=ACCENT_COLOR),
+                                    rx.text("Top Ranked Analytical Insights", font_size="1.05rem", font_weight="600", color=TEXT_COLOR),
+                                    spacing="2",
+                                    align_items="center",
+                                ),
                                 rx.spacer(),
-                                rx.badge("Effect & Significance Ranked", color_scheme="indigo", variant="surface"),
-                                spacing="2",
+                                status_pill("Ranked by Effect & Significance", icon="trending-up", status="info"),
+                                width="100%",
                                 align_items="center",
-                                width="100%"
                             ),
                             rx.text(
-                                "Core statistical findings scored by effect size, p-value significance, and sample coverage (n_used/exclusion rate).",
-                                font_size="0.85rem",
-                                color="#94a3b8"
+                                "Core statistical findings scored by effect size (Cohen's d), p-value significance, and sample coverage.",
+                                font_size="0.825rem",
+                                color=TEXT_MUTED,
                             ),
                             rx.grid(
                                 rx.foreach(AppState.job_analytical_insights, render_insight_card),
                                 columns=rx.breakpoints(initial="1", md="2"),
-                                spacing="4",
-                                width="100%"
+                                spacing="3",
+                                width="100%",
                             ),
-                            spacing="4",
-                            width="100%"
+                            spacing="3",
+                            align_items="flex-start",
+                            width="100%",
                         ),
-                        padding="1.5rem",
-                        border_radius="0.75rem",
-                        background_color="rgba(15, 23, 42, 0.6)",
-                        border="1px solid rgba(255, 255, 255, 0.08)",
-                        width="100%"
+                        width="100%",
                     ),
 
-                    # Data Quality Findings & Caveats Section (Max 4)
+                    # Data Quality Findings Section
                     rx.cond(
                         AppState.job_data_quality_insights.length() > 0,
-                        rx.box(
+                        neu_card(
                             rx.vstack(
                                 rx.hstack(
-                                    rx.icon(tag="shield_alert", size=18, color="#f59e0b"),
-                                    rx.text("Data Quality Findings & Caveats (Max 4)", font_weight="700", font_size="1.1rem", color="#ffffff"),
+                                    rx.hstack(
+                                        rx.icon(tag="shield-alert", size=18, color="var(--status-warning)"),
+                                        rx.text("Data Quality & Sanitization Caveats", font_size="1.05rem", font_weight="600", color=TEXT_COLOR),
+                                        spacing="2",
+                                        align_items="center",
+                                    ),
                                     rx.spacer(),
-                                    rx.badge("Quality & Sanitization Audit", color_scheme="amber", variant="surface"),
-                                    spacing="2",
+                                    status_pill("Audit Caveats", icon="triangle-alert", status="warn"),
+                                    width="100%",
                                     align_items="center",
-                                    width="100%"
                                 ),
                                 rx.text(
-                                    "Sanitized sentinel placeholders, domain invalid values, elevated imputation rates, and small sample caveats.",
-                                    font_size="0.85rem",
-                                    color="#94a3b8"
+                                    "Sanitized sentinels, domain invalid values, elevated imputation rates, and small-sample caveats.",
+                                    font_size="0.825rem",
+                                    color=TEXT_MUTED,
                                 ),
                                 rx.grid(
                                     rx.foreach(AppState.job_data_quality_insights, render_insight_card),
                                     columns=rx.breakpoints(initial="1", md="2"),
-                                    spacing="4",
-                                    width="100%"
+                                    spacing="3",
+                                    width="100%",
                                 ),
-                                spacing="4",
-                                width="100%"
+                                spacing="3",
+                                align_items="flex-start",
+                                width="100%",
                             ),
-                            padding="1.5rem",
-                            border_radius="0.75rem",
-                            background_color="rgba(15, 23, 42, 0.6)",
-                            border="1px solid rgba(245, 158, 11, 0.2)",
-                            width="100%"
-                        )
+                            width="100%",
+                        ),
                     ),
 
-                    # Data Quality Panel
-                    render_data_quality_panel(),
+                    # Data Quality & Cleaning Audit Panel
+                    data_quality_panel(),
 
-                    # Explainability Panel
-                    render_explainability_panel(),
-
-                    spacing="5",
-                    width="100%"
+                    spacing="4",
+                    width="100%",
                 ),
-                # Empty State
+                # Honest Empty State when no results exist
                 rx.cond(
                     AppState.job_status != "running",
-                    rx.box(
-                        rx.vstack(
-                            rx.icon(tag="file-bar-chart", size=36, color="#6366f1"),
-                            rx.text("No Active Analysis Results", font_weight="700", font_size="1.1rem", color="#ffffff"),
-                            rx.text(
-                                "Select a dataset and start an autonomous analysis job to generate ranked insights, executive summary, recharts, and audit logs.",
-                                font_size="0.85rem",
-                                color="#94a3b8",
-                                text_align="center",
-                                max_width="500px"
-                            ),
-                            rx.link(
-                                rx.button(
-                                    rx.hstack(
-                                        rx.icon(tag="upload", size=16),
-                                        rx.text("Go to Upload & Start Analysis"),
-                                        spacing="2"
-                                    ),
-                                    size="3",
-                                    variant="solid",
-                                    color_scheme="indigo"
+                    empty_state(
+                        title="No Analysis Results Ready",
+                        description="Select or upload a dataset, formulate an analysis goal, and launch an autonomous agent job to populate ranked insights, charts, and executive narrative.",
+                        icon="layout-dashboard",
+                        action_button=rx.link(
+                            neu_button(
+                                rx.hstack(
+                                    rx.icon(tag="upload", size=14),
+                                    rx.text("Go to Datasets & Upload"),
+                                    spacing="2",
+                                    align_items="center",
                                 ),
-                                href="/upload"
+                                variant="primary",
                             ),
-                            spacing="3",
-                            align_items="center",
-                            justify_content="center",
-                            padding="3rem 1.5rem"
+                            href="/upload",
+                            text_decoration="none",
                         ),
-                        border_radius="0.75rem",
-                        background_color="rgba(15, 23, 42, 0.6)",
-                        border="1px dashed rgba(255, 255, 255, 0.1)",
-                        width="100%"
-                    )
-                )
+                    ),
+                ),
             ),
 
-            spacing="5",
-            width="100%"
-        )
+            spacing="4",
+            width="100%",
+        ),
     )
