@@ -12,7 +12,7 @@ from frontend.components.neu_components import (
     neu_inset_card,
     status_pill,
 )
-from frontend.state import AppState, ReportItemModel
+from frontend.state import AppState, ReportItemModel, API_BASE_URL
 from frontend.theme import (
     ACCENT_COLOR,
     ACCENT_HOVER,
@@ -129,7 +129,7 @@ def past_report_row(rep: ReportItemModel) -> rx.Component:
                     variant="secondary",
                     padding="0.3rem 0.65rem",
                 ),
-                href=f"http://127.0.0.1:8000{rep.download_url}",
+                href=f"{API_BASE_URL.replace('/api/v1', '')}{rep.download_url}",
                 is_external=True,
             )
         ),

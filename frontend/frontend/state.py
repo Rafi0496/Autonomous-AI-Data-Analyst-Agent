@@ -7,7 +7,12 @@ from typing import Any, Dict, List, Optional, Union
 import httpx
 import reflex as rx
 
-API_BASE_URL = os.getenv("API_URL", "http://127.0.0.1:8000/api/v1")
+_raw_api_url = os.getenv("API_URL", "http://127.0.0.1:8000/api/v1").strip().rstrip("/")
+if not _raw_api_url.startswith(("http://", "https://")):
+    _raw_api_url = f"https://{_raw_api_url}"
+if not _raw_api_url.endswith("/api/v1"):
+    _raw_api_url = f"{_raw_api_url}/api/v1"
+API_BASE_URL = _raw_api_url
 
 from pydantic import BaseModel
 

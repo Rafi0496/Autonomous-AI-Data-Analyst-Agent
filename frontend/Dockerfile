@@ -23,6 +23,6 @@ COPY shared /app/shared
 WORKDIR /app/frontend
 
 EXPOSE 3000
-EXPOSE 8000
+EXPOSE 8001
 
 CMD ["reflex", "run", "--env", "prod", "--backend-host", "0.0.0.0", "--frontend-port", "3000"]

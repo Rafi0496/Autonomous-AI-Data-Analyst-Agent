@@ -1,0 +1,44 @@
+services:
+  # 1. FastAPI Backend API Service
+  - type: web
+    name: autonomous-ai-data-analyst-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: ENVIRONMENT
+        value: production
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///./data/app.db
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "True"
+      - key: ALLOW_ANONYMOUS
+        value: "True"
+
+  # 2. Reflex Frontend UI Service
+  - type: web
+    name: autonomous-ai-data-analyst-frontend
+    runtime: docker
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: API_URL
+        fromService:
+          type: web
+          name: autonomous-ai-data-analyst-backend
+          property: host
