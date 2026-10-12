@@ -4,7 +4,14 @@ FROM python:3.11-slim
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_ROOT_USER_ACTION=ignore
+
+# Create dedicated virtual environment so pip never runs directly on system python
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 
 # Install nodejs & curl ONLY for building frontend assets during docker build
 RUN apt-get update && apt-get install -y --no-install-recommends \
