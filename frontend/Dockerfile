@@ -5,7 +5,9 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_ROOT_USER_ACTION=ignore
+    PIP_ROOT_USER_ACTION=ignore \
+    ENVIRONMENT=production \
+    PYTHONPATH="/app/frontend:/app"
 
 # Create dedicated virtual environment so pip never runs directly on system python
 ENV VIRTUAL_ENV=/opt/venv
