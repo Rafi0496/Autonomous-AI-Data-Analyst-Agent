@@ -23,11 +23,19 @@ for static_dir in static_candidates:
         break
 
 if not mounted:
-    print("Warning: No pre-built static frontend found. Serving API and WebSocket routes only.")
+    print("Warning: No pre-built static frontend found. Serving API and WebSocket routes only.", flush=True)
 
 api = app._api
 
 if __name__ == "__main__":
-    import uvicorn
     port = int(os.getenv("PORT", "3000"))
-    uvicorn.run(api, host="0.0.0.0", port=port)
+    print(f"Starting production server on 0.0.0.0:{port}...", flush=True)
+    try:
+        import uvicorn
+        uvicorn.run(api, host="0.0.0.0", port=port)
+    except ImportError:
+        import granian
+        from granian.constants import Interfaces
+        print("Uvicorn not found, running with Granian engine...", flush=True)
+        granian.Granian(api, address="0.0.0.0", port=port, interface=Interfaces.ASGI).serve()
+

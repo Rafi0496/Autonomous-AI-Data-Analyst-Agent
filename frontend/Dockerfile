@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
@@ -26,6 +26,7 @@ WORKDIR /app/frontend
 RUN reflex export --frontend-only --no-zip
 
 EXPOSE 3000
+EXPOSE 10000
 
 # Start ultra-lightweight Uvicorn server (~45MB RAM, NO Node.js running at runtime!)
 CMD ["python", "server.py"]
