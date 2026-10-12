@@ -171,8 +171,8 @@ class AppState(rx.State):
     verification_is_valid: bool = True
 
     # Settings / System Info
-    active_provider: str = os.getenv("LLM_PROVIDER", "gemini")
-    active_model: str = "gemini-2.5-flash" if os.getenv("LLM_PROVIDER", "gemini") == "gemini" else "claude-3-7-sonnet-20250219"
+    active_provider: str = "AI engine"
+    active_model: str = "Autonomous Analytics Engine"
     step_budget_setting: int = 5
     token_budget_setting: int = 15000
 
@@ -209,7 +209,7 @@ class AppState(rx.State):
     # Layout, Sidebar & Neumorphic Shell
     sidebar_collapsed: bool = False
     sidebar_search_query: str = ""
-    theme_mode: str = "dark"  # "dark" | "light"
+    theme_mode: str = "light"
     pinned_job_ids: List[str] = []
     recent_jobs: List[RecentJobModel] = []
     hero_prompt: str = ""
@@ -1106,12 +1106,20 @@ class AppState(rx.State):
     # -------------------------------------------------------------
     def toggle_sidebar(self):
         self.sidebar_collapsed = not self.sidebar_collapsed
+        return rx.call_script(
+            f"localStorage.setItem('aa_sidebar_collapsed', '{str(self.sidebar_collapsed).lower()}');"
+        )
 
     def set_sidebar_search(self, query: str):
         self.sidebar_search_query = query
 
     def toggle_theme(self):
-        self.theme_mode = "light" if self.theme_mode == "dark" else "dark"
+        self.theme_mode = "dark" if self.theme_mode == "light" else "light"
+        return rx.call_script(
+            f"localStorage.setItem('aa_theme_mode', '{self.theme_mode}');"
+            f"document.documentElement.setAttribute('data-theme', '{self.theme_mode}');"
+            f"document.body.setAttribute('data-theme', '{self.theme_mode}');"
+        )
 
     def toggle_pin_job(self, job_id: str):
         if job_id in self.pinned_job_ids:
@@ -1135,8 +1143,9 @@ class AppState(rx.State):
             period = "Good afternoon"
         else:
             period = "Good evening"
-        name = self.current_user_name or "Analyst"
-        return f"{period}, {name}"
+        if self.current_user_name and self.current_user_name.strip():
+            return f"{period}, {self.current_user_name.strip()}"
+        return period
 
     @rx.var
     def user_initial(self) -> str:

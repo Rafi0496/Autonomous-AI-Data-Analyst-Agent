@@ -66,6 +66,7 @@ def kpi_card(title: str, value: Any, subtitle: str, icon: str, status: str = "in
                 font_weight="700",
                 color=TEXT_COLOR,
                 letter_spacing="-0.02em",
+                class_name="tabular-nums",
             ),
             rx.text(
                 subtitle,
@@ -82,7 +83,7 @@ def kpi_card(title: str, value: Any, subtitle: str, icon: str, status: str = "in
 
 
 def render_insight_chart(ins: InsightModel) -> rx.Component:
-    """Render recharts visualization from embedded insight chart_spec with terracotta accent."""
+    """Render recharts visualization from embedded insight chart_spec with muted slate-teal and pastel accents."""
     return rx.cond(
         ins.chart_spec,
         rx.box(
@@ -104,7 +105,7 @@ def render_insight_chart(ins: InsightModel) -> rx.Component:
                         ),
                         rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
                         rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
-                        rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.05)"),
+                        rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="var(--border-subtle)"),
                         rx.recharts.graphing_tooltip(),
                         data=ins.chart_spec.data,
                         height=180,
@@ -116,7 +117,7 @@ def render_insight_chart(ins: InsightModel) -> rx.Component:
                             rx.recharts.scatter(data_key=ins.chart_spec.y_key, fill=ACCENT_COLOR),
                             rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
                             rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
-                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.05)"),
+                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="var(--border-subtle)"),
                             rx.recharts.graphing_tooltip(),
                             data=ins.chart_spec.data,
                             height=180,
@@ -126,7 +127,7 @@ def render_insight_chart(ins: InsightModel) -> rx.Component:
                             rx.recharts.bar(data_key=ins.chart_spec.y_key, fill=ACCENT_COLOR, radius=[4, 4, 0, 0]),
                             rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
                             rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
-                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="rgba(255,255,255,0.05)"),
+                            rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="var(--border-subtle)"),
                             rx.recharts.graphing_tooltip(),
                             data=ins.chart_spec.data,
                             height=180,

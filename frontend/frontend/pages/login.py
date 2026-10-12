@@ -137,7 +137,7 @@ def login_page() -> rx.Component:
                         rx.vstack(
                             rx.text("Full Name", font_size="0.8rem", color=TEXT_MUTED, font_weight="500"),
                             neu_input(
-                                placeholder="Lead Analyst",
+                                placeholder="Alex Morgan",
                                 value=AppState.auth_name_input,
                                 on_change=AppState.set_auth_name,
                             ),
@@ -199,7 +199,7 @@ def login_page() -> rx.Component:
                                     "Register",
                                     variant="ghost",
                                     size="1",
-                                    color_scheme="orange",
+                                    color_scheme="teal",
                                     on_click=lambda: AppState.set_auth_mode("register"),
                                 ),
                                 spacing="1",
@@ -211,7 +211,7 @@ def login_page() -> rx.Component:
                                     "Sign In",
                                     variant="ghost",
                                     size="1",
-                                    color_scheme="orange",
+                                    color_scheme="teal",
                                     on_click=lambda: AppState.set_auth_mode("login"),
                                 ),
                                 spacing="1",

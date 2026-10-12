@@ -1,25 +1,20 @@
-"""App Layout Shell with Neumorphic 60% + Minimalist 40% design, fixed sidebar, and centered column."""
+"""App Layout Shell with Neumorphic 60% + Minimalist 40% design, responsive sidebar, and centered column."""
 from typing import Optional
 import reflex as rx
 from frontend.components.neu_components import (
     neu_button,
     neu_card,
+    neu_icon_button,
     neu_input,
-    status_pill,
 )
 from frontend.components.sidebar import sidebar
 from frontend.state import AppState
 from frontend.theme import (
     ACCENT_COLOR,
-    BG_COLOR,
     FONT_SANS,
-    FONT_SERIF,
     RADIUS_FULL,
-    RADIUS_LG,
     RADIUS_MD,
-    RADIUS_XL,
     SHADOW_INSET,
-    SHADOW_RAISED,
     SHADOW_RAISED_SM,
     SURFACE_COLOR,
     TEXT_COLOR,
@@ -80,7 +75,7 @@ def auth_modal() -> rx.Component:
                         rx.vstack(
                             rx.text("Full Name", font_size="0.8rem", color=TEXT_MUTED, font_weight="500"),
                             neu_input(
-                                placeholder="Lead Analyst",
+                                placeholder="Alex Morgan",
                                 value=AppState.auth_name_input,
                                 on_change=AppState.set_auth_name,
                             ),
@@ -136,7 +131,7 @@ def auth_modal() -> rx.Component:
                                     "Register",
                                     variant="ghost",
                                     size="1",
-                                    color_scheme="orange",
+                                    color=ACCENT_COLOR,
                                     on_click=lambda: AppState.set_auth_mode("register"),
                                 ),
                                 spacing="1",
@@ -148,7 +143,7 @@ def auth_modal() -> rx.Component:
                                     "Sign In",
                                     variant="ghost",
                                     size="1",
-                                    color_scheme="orange",
+                                    color=ACCENT_COLOR,
                                     on_click=lambda: AppState.set_auth_mode("login"),
                                 ),
                                 spacing="1",
@@ -173,14 +168,17 @@ def auth_modal() -> rx.Component:
 
 
 def top_status_bar() -> rx.Component:
-    """Free-form status bar with top-center pill (LLM provider + API status)."""
+    """Clean top bar with mobile menu trigger on left and theme toggle + user badge on right."""
     return rx.hstack(
-        rx.spacer(),
-        # Center status pill
-        status_pill(
-            text=f"{AppState.active_provider.upper()} • {AppState.api_health_status}",
-            icon="sparkles",
-            status=rx.cond(AppState.api_health_status == "Healthy", "success", "warn"),
+        # Mobile hamburger toggle (<900px)
+        rx.box(
+            neu_icon_button(
+                icon="menu",
+                on_click=AppState.toggle_sidebar,
+                size=16,
+                tooltip="Open navigation menu",
+            ),
+            display=["block", "block", "none"],
         ),
         rx.spacer(),
         # Top-right quick actions: Theme toggle + Auth badge
@@ -188,8 +186,8 @@ def top_status_bar() -> rx.Component:
             rx.box(
                 rx.icon(
                     tag=rx.cond(AppState.theme_mode == "dark", "moon", "sun"),
-                    size=14,
-                    color=TEXT_MUTED,
+                    size=15,
+                    color=TEXT_COLOR,
                 ),
                 padding="0.45rem",
                 border_radius=RADIUS_FULL,
@@ -199,6 +197,7 @@ def top_status_bar() -> rx.Component:
                 on_click=AppState.toggle_theme,
                 _hover={"box_shadow": SHADOW_INSET},
                 transition="box-shadow 150ms ease",
+                title="Toggle light/dark theme",
             ),
             rx.cond(
                 AppState.is_authenticated,
@@ -245,6 +244,12 @@ def top_status_bar() -> rx.Component:
 def app_layout(page_title: str, content: rx.Component, max_width: str = "820px") -> rx.Component:
     """Standard app shell: Fixed left sidebar + calm centered content column (max ~820px)."""
     return rx.box(
+        # Mobile Scrim (<900px drawer overlay)
+        rx.box(
+            class_name=rx.cond(~AppState.sidebar_collapsed, "sidebar-scrim visible", "sidebar-scrim"),
+            on_click=AppState.toggle_sidebar,
+            display=["block", "block", "none"],
+        ),
         rx.hstack(
             sidebar(),
             rx.vstack(
@@ -265,16 +270,17 @@ def app_layout(page_title: str, content: rx.Component, max_width: str = "820px")
                 overflow_y="auto",
                 spacing="0",
                 align_items="center",
+                flex="1",
             ),
             spacing="0",
             width="100%",
             min_height="100vh",
             align_items="flex-start",
         ),
-        background_color=BG_COLOR,
+        background_color="transparent",
         color=TEXT_COLOR,
         font_family=FONT_SANS,
         min_height="100vh",
         width="100vw",
-        class_name=rx.cond(AppState.theme_mode == "light", "theme-light", ""),
+        class_name=rx.cond(AppState.theme_mode == "light", "theme-light", "theme-dark"),
     )

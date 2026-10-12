@@ -58,7 +58,7 @@ def timeline_step(
         ),
         rx.cond(
             is_active,
-            # Active: Terracotta border circle with slow opacity pulse (NO glow)
+            # Active: Slate-teal border circle with slow opacity pulse (NO glow)
             rx.box(
                 rx.box(
                     width="10px",
@@ -387,7 +387,7 @@ def run_page() -> rx.Component:
                             rx.icon(tag="coins", size=16, color=ACCENT_COLOR),
                             rx.text("Token Consumption", font_size="0.8rem", color=TEXT_MUTED),
                             rx.spacer(),
-                            rx.text(f"{AppState.job_tokens_used} / {AppState.job_token_budget}", font_size="0.8rem", font_weight="600", color=TEXT_COLOR),
+                            rx.text(f"{AppState.job_tokens_used} / {AppState.job_token_budget}", font_size="0.8rem", font_weight="600", color=TEXT_COLOR, class_name="tabular-nums"),
                             width="100%",
                             align_items="center",
                         ),
@@ -404,7 +404,7 @@ def run_page() -> rx.Component:
                             rx.icon(tag="layers", size=16, color=ACCENT_COLOR),
                             rx.text("Step Progress", font_size="0.8rem", color=TEXT_MUTED),
                             rx.spacer(),
-                            rx.text(f"Step {AppState.job_current_step} of {AppState.job_step_limit}", font_size="0.8rem", font_weight="600", color=TEXT_COLOR),
+                            rx.text(f"Step {AppState.job_current_step} of {AppState.job_step_limit}", font_size="0.8rem", font_weight="600", color=TEXT_COLOR, class_name="tabular-nums"),
                             width="100%",
                             align_items="center",
                         ),
@@ -421,7 +421,7 @@ def run_page() -> rx.Component:
                             rx.icon(tag="timer", size=16, color=ACCENT_COLOR),
                             rx.text("Execution Time", font_size="0.8rem", color=TEXT_MUTED),
                             rx.spacer(),
-                            rx.text(f"{AppState.job_elapsed_seconds:.1f}s", font_size="0.85rem", font_weight="700", color=TEXT_COLOR),
+                            rx.text(f"{AppState.job_elapsed_seconds:.1f}s", font_size="0.85rem", font_weight="700", color=TEXT_COLOR, class_name="tabular-nums"),
                             width="100%",
                             align_items="center",
                         ),

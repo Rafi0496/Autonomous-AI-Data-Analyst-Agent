@@ -363,7 +363,6 @@ def run_analysis_cta_card() -> rx.Component:
                     padding="0.75rem 1.5rem",
                     on_click=AppState.start_analysis,
                 ),
-                status_pill(f"Provider: {AppState.active_provider.upper()}", icon="cpu"),
                 spacing="3",
                 align_items="center",
                 width="100%",
@@ -457,7 +456,7 @@ def upload_page() -> rx.Component:
                         neu_card(
                             rx.vstack(
                                 rx.text("Total Rows", font_size="0.75rem", color=TEXT_MUTED),
-                                rx.text(f"{AppState.row_count}", font_size="1.25rem", font_weight="700", color=TEXT_COLOR),
+                                rx.text(f"{AppState.row_count}", font_size="1.25rem", font_weight="700", color=TEXT_COLOR, class_name="tabular-nums"),
                                 rx.text("Cleaned records", font_size="0.7rem", color=TEXT_MUTED),
                                 spacing="0",
                             ),
@@ -466,7 +465,7 @@ def upload_page() -> rx.Component:
                         neu_card(
                             rx.vstack(
                                 rx.text("Total Columns", font_size="0.75rem", color=TEXT_MUTED),
-                                rx.text(f"{AppState.column_count}", font_size="1.25rem", font_weight="700", color=TEXT_COLOR),
+                                rx.text(f"{AppState.column_count}", font_size="1.25rem", font_weight="700", color=TEXT_COLOR, class_name="tabular-nums"),
                                 rx.text("Evaluated features", font_size="0.7rem", color=TEXT_MUTED),
                                 spacing="0",
                             ),
@@ -475,7 +474,7 @@ def upload_page() -> rx.Component:
                         neu_card(
                             rx.vstack(
                                 rx.text("Duplicates", font_size="0.75rem", color=TEXT_MUTED),
-                                rx.text(f"{AppState.duplicate_rows}", font_size="1.25rem", font_weight="700", color=TEXT_COLOR),
+                                rx.text(f"{AppState.duplicate_rows}", font_size="1.25rem", font_weight="700", color=TEXT_COLOR, class_name="tabular-nums"),
                                 rx.text("Removed in cleaning", font_size="0.7rem", color=TEXT_MUTED),
                                 spacing="0",
                             ),
@@ -484,7 +483,7 @@ def upload_page() -> rx.Component:
                         neu_card(
                             rx.vstack(
                                 rx.text("Missing Cells", font_size="0.75rem", color=TEXT_MUTED),
-                                rx.text(f"{AppState.missing_percentage}%", font_size="1.25rem", font_weight="700", color=TEXT_COLOR),
+                                rx.text(f"{AppState.missing_percentage}%", font_size="1.25rem", font_weight="700", color=TEXT_COLOR, class_name="tabular-nums"),
                                 rx.text("Overall missingness", font_size="0.7rem", color=TEXT_MUTED),
                                 spacing="0",
                             ),

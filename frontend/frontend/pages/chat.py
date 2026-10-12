@@ -1,6 +1,6 @@
 """Interactive Follow-up Chat Q&A page for Autonomous AI Data Analyst Agent.
 Neo-morphism 60% + Minimalism 40% with sunken thread, raised assistant responses,
-grounded citation chips, verification badges, and pinned terracotta input bar.
+grounded citation chips, verification badges, and pinned slate-teal input bar.
 """
 from typing import Any, Dict
 import reflex as rx
@@ -313,6 +313,7 @@ def chat_page() -> rx.Component:
                                 font_size="0.875rem",
                                 outline="none",
                                 width="100%",
+                                class_name="neu-input-field",
                                 _focus={"outline": "none"},
                             ),
                             neu_button(
@@ -335,6 +336,7 @@ def chat_page() -> rx.Component:
                             align_items="center",
                             width="100%",
                         ),
+                        class_name="neu-input-container",
                         padding="0.5rem 0.85rem",
                         border_radius=RADIUS_XL,
                         width="100%",

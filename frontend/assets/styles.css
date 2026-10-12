@@ -2,59 +2,137 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap');
 
 :root {
-  /* Dark Theme (Default) */
-  --bg: #1c1c1f;
-  --surface: #1f1f23;
-  --text: #e8e6e3;
-  --text-muted: #8f8d8a;
-  --accent: #d97757;
-  --accent-hover: #c5684a;
-  --accent-subtle: rgba(217, 119, 87, 0.12);
-  --shadow-dark: #131315;
-  --shadow-light: #28282d;
+  /* Light Theme (Default: Soft Off-White Cement) */
+  --bg: #EAE9E5;
+  --surface: #EFEEEB;
+  --text: #1D2228;
+  --text-muted: #5E6773;
+  --border-subtle: rgba(0, 0, 0, 0.06);
 
-  /* Neumorphic Shadows */
-  --shadow-raised: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
-  --shadow-raised-sm: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
-  --shadow-inset: inset 4px 4px 9px var(--shadow-dark), inset -4px -4px 9px var(--shadow-light);
-  --shadow-inset-deep: inset 5px 5px 12px var(--shadow-dark), inset -5px -5px 12px var(--shadow-light);
+  /* Primary Action: Muted Slate-Teal (High contrast with white) */
+  --accent: #4F7C82;
+  --accent-hover: #3E6368;
+  --accent-subtle: rgba(79, 124, 130, 0.12);
+  --accent-text: #FFFFFF;
 
-  /* Status Colors (Semantic text/icon accents - tonal, no glow) */
-  --status-success: #4ade80;
-  --status-warning: #fbbf24;
-  --status-error: #f87171;
-  --status-info: #60a5fa;
+  /* Neumorphic Tonal Shadows (Refined & Quiet) */
+  --shadow-dark: #CFCDC8;
+  --shadow-light: #FFFFFF;
+  --shadow-raised: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);
+  --shadow-raised-sm: 2px 2px 6px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+  --shadow-inset: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  --shadow-inset-deep: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+
+  /* Supporting Pastel Palette (Soft fills with high-contrast text) */
+  --color-sage: #9DBFA8;
+  --color-sage-subtle: rgba(157, 191, 168, 0.22);
+  --color-sage-text: #224D33;
+
+  --color-dusty-blue: #9DB4D3;
+  --color-dusty-blue-subtle: rgba(157, 180, 211, 0.22);
+  --color-dusty-blue-text: #1E3B60;
+
+  --color-lavender: #B9AEDB;
+  --color-lavender-subtle: rgba(185, 174, 219, 0.22);
+  --color-lavender-text: #3E3263;
+
+  --color-sand: #DCC9A3;
+  --color-sand-subtle: rgba(220, 201, 163, 0.25);
+  --color-sand-text: #4F3D14;
+
+  --color-rose-mist: #D9B1B8;
+  --color-rose-mist-subtle: rgba(217, 177, 184, 0.22);
+  --color-rose-mist-text: #5E202B;
+
+  /* Status Colors */
+  --status-success: var(--color-sage-text);
+  --status-success-bg: var(--color-sage-subtle);
+  --status-warning: var(--color-sand-text);
+  --status-warning-bg: var(--color-sand-subtle);
+  --status-error: var(--color-rose-mist-text);
+  --status-error-bg: var(--color-rose-mist-subtle);
+  --status-info: var(--accent);
+  --status-info-bg: var(--accent-subtle);
+
+  /* Background Pattern */
+  --bg-pattern: url('/bg-light.svg');
 
   /* Typography */
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-serif: 'Newsreader', Georgia, serif;
 
-  /* Radii */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
+  /* Radii (8px grid aligned: 12 / 16 / 20) */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
   --radius-xl: 24px;
   --radius-full: 9999px;
 }
 
-[data-theme="light"], .theme-light {
-  --bg: #f1f0ee;
-  --surface: #f4f3f1;
-  --text: #1d1c1a;
-  --text-muted: #6e6c68;
-  --accent: #d97757;
-  --accent-hover: #c5684a;
-  --accent-subtle: rgba(217, 119, 87, 0.14);
-  --shadow-dark: #d8d6d2;
-  --shadow-light: #ffffff;
+:root[data-theme="dark"],
+html[data-theme="dark"],
+body[data-theme="dark"],
+body:has(.theme-dark),
+[data-theme="dark"],
+.theme-dark,
+.dark {
+  /* Dark Theme: Deep Ink Blue-Slate */
+  --bg: #1B2230;
+  --surface: #202838;
+  --text: #E5EBF2;
+  --text-muted: #8B98AA;
+  --border-subtle: rgba(255, 255, 255, 0.06);
 
-  --shadow-raised: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
-  --shadow-raised-sm: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
-  --shadow-inset: inset 4px 4px 9px var(--shadow-dark), inset -4px -4px 9px var(--shadow-light);
-  --shadow-inset-deep: inset 5px 5px 12px var(--shadow-dark), inset -5px -5px 12px var(--shadow-light);
+  /* Primary Action: Lighter slate-teal for dark theme with dark text */
+  --accent: #7FB3B8;
+  --accent-hover: #92C6CB;
+  --accent-subtle: rgba(127, 179, 184, 0.16);
+  --accent-text: #121B24;
+
+  /* Neumorphic Tonal Shadows for Ink Slate */
+  --shadow-dark: #131824;
+  --shadow-light: #283246;
+  --shadow-raised: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);
+  --shadow-raised-sm: 2px 2px 6px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+  --shadow-inset: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  --shadow-inset-deep: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+
+  /* Supporting Pastel Palette for Dark Theme */
+  --color-sage: #9DBFA8;
+  --color-sage-subtle: rgba(157, 191, 168, 0.16);
+  --color-sage-text: #B4D6BE;
+
+  --color-dusty-blue: #9DB4D3;
+  --color-dusty-blue-subtle: rgba(157, 180, 211, 0.16);
+  --color-dusty-blue-text: #B7CCEB;
+
+  --color-lavender: #B9AEDB;
+  --color-lavender-subtle: rgba(185, 174, 219, 0.16);
+  --color-lavender-text: #CFB8F0;
+
+  --color-sand: #DCC9A3;
+  --color-sand-subtle: rgba(220, 201, 163, 0.16);
+  --color-sand-text: #EADBBA;
+
+  --color-rose-mist: #D9B1B8;
+  --color-rose-mist-subtle: rgba(217, 177, 184, 0.16);
+  --color-rose-mist-text: #E7C6CD;
+
+  /* Status Colors */
+  --status-success: var(--color-sage-text);
+  --status-success-bg: var(--color-sage-subtle);
+  --status-warning: var(--color-sand-text);
+  --status-warning-bg: var(--color-sand-subtle);
+  --status-error: var(--color-rose-mist-text);
+  --status-error-bg: var(--color-rose-mist-subtle);
+  --status-info: var(--accent);
+  --status-info-bg: var(--accent-subtle);
+
+  /* Background Pattern */
+  --bg-pattern: url('/bg-dark.svg');
 }
 
-/* Global Reset & Surface Styling */
+/* Global Reset & Base Styling */
 * {
   box-sizing: border-box;
 }
@@ -63,17 +141,41 @@ body, html {
   margin: 0;
   padding: 0;
   background-color: var(--bg) !important;
+  background-image: var(--bg-pattern);
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+  background-attachment: fixed;
   color: var(--text) !important;
   font-family: var(--font-sans) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Strictly forbidden: Glassmorphism and glow */
+.theme-light, .theme-dark {
+  background-color: var(--bg) !important;
+  background-image: var(--bg-pattern) !important;
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: cover;
+  background-attachment: fixed;
+  color: var(--text) !important;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Strictly Forbidden Rules: No Glassmorphism, No Blur, No Glow, No Radial Gradient Halos */
 *, *::before, *::after {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   text-shadow: none !important;
+  filter: none;
+}
+
+/* Tabular Numerals for metrics */
+.tabular-nums, .metric-value, [data-tabular="true"] {
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
 }
 
 /* Base Neumorphic Classes */
@@ -128,10 +230,10 @@ body, html {
   border: none !important;
 }
 
-/* Primary Button (Terracotta flat accent fill, generous radius) */
+/* Primary Button (Slate-Teal flat accent fill, generous radius) */
 .neu-btn-primary {
   background-color: var(--accent) !important;
-  color: #ffffff !important;
+  color: var(--accent-text) !important;
   border-radius: var(--radius-md) !important;
   border: none !important;
   font-weight: 500 !important;
@@ -146,6 +248,11 @@ body, html {
 
 .neu-btn-primary:active {
   transform: translateY(1px);
+}
+
+.neu-btn-primary:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
 }
 
 /* Secondary Button (Raised Neumorphic) */
@@ -168,39 +275,90 @@ body, html {
   box-shadow: var(--shadow-inset) !important;
 }
 
-/* Inputs & Focus Outline (WCAG Solid 2px Accent, No Glow) */
-input.neu-input, textarea.neu-input, .neu-input input {
-  background-color: var(--surface) !important;
-  box-shadow: var(--shadow-inset) !important;
-  color: var(--text) !important;
-  border: 1px solid transparent !important;
-  border-radius: var(--radius-md) !important;
-  outline: none !important;
-  transition: box-shadow 150ms ease, border-color 150ms ease !important;
+.neu-btn-secondary:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px !important;
 }
 
-input.neu-input:focus, textarea.neu-input:focus, .neu-input input:focus {
+/* Input Containers: One clean Neumorphic inset container with no inner boxes */
+.neu-input-container {
+  background-color: var(--surface) !important;
+  box-shadow: var(--shadow-inset) !important;
+  border-radius: var(--radius-md) !important;
+  border: 2px solid transparent !important;
+  transition: border-color 150ms ease, box-shadow 150ms ease !important;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.neu-input-container:focus-within {
   box-shadow: var(--shadow-inset-deep) !important;
-  outline: 2px solid var(--accent) !important;
-  outline-offset: 1px !important;
+  border-color: var(--accent) !important;
+}
+
+/* Strip native and Radix input styling completely */
+.neu-input-container input,
+.neu-input-container textarea,
+input.neu-input-field,
+textarea.neu-input-field,
+.neu-input-field input,
+.neu-input input,
+input.neu-input,
+.rt-TextFieldRoot,
+.rt-TextFieldInput {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  color: var(--text) !important;
+  font-family: inherit !important;
+  font-size: 0.875rem !important;
+}
+
+.neu-input-container input:focus,
+.neu-input-container textarea:focus,
+input.neu-input-field:focus,
+textarea.neu-input-field:focus {
+  outline: 0 !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+/* Browser autofill override: eliminates dark/blue boxes in both themes */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text) !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface) inset !important;
+  box-shadow: 0 0 0px 1000px var(--surface) inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
 }
 
 input::placeholder, textarea::placeholder {
   color: var(--text-muted) !important;
+  opacity: 0.85;
 }
 
 /* Hero Typography */
 .neu-hero-greeting {
   font-family: var(--font-serif) !important;
   font-weight: 400;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 /* Page Entry Transition */
 @keyframes neuPageEntry {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -212,7 +370,7 @@ input::placeholder, textarea::placeholder {
   animation: neuPageEntry 200ms ease-out forwards;
 }
 
-/* Timeline Animations */
+/* Timeline Step Animations (Quiet, no glow) */
 @keyframes neuStepPulse {
   0%, 100% {
     opacity: 1;
@@ -228,7 +386,7 @@ input::placeholder, textarea::placeholder {
 
 @keyframes neuStepCheckIn {
   from {
-    transform: scale(0.85);
+    transform: scale(0.88);
     opacity: 0;
   }
   to {
@@ -241,7 +399,7 @@ input::placeholder, textarea::placeholder {
   animation: neuStepCheckIn 150ms ease-out forwards;
 }
 
-/* Chart Draw-in (first render only, 400ms) */
+/* Chart Container & Gentle Draw */
 @keyframes neuChartDraw {
   from {
     opacity: 0;
@@ -252,31 +410,10 @@ input::placeholder, textarea::placeholder {
 }
 
 .neu-chart-container {
-  animation: neuChartDraw 400ms ease-out forwards;
+  animation: neuChartDraw 300ms ease-out forwards;
 }
 
-/* Staggered Sidebar Items (30ms steps, max 8 items) */
-@keyframes neuStaggerFade {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.neu-stagger-1 { animation: neuStaggerFade 200ms ease-out 30ms forwards; }
-.neu-stagger-2 { animation: neuStaggerFade 200ms ease-out 60ms forwards; }
-.neu-stagger-3 { animation: neuStaggerFade 200ms ease-out 90ms forwards; }
-.neu-stagger-4 { animation: neuStaggerFade 200ms ease-out 120ms forwards; }
-.neu-stagger-5 { animation: neuStaggerFade 200ms ease-out 150ms forwards; }
-.neu-stagger-6 { animation: neuStaggerFade 200ms ease-out 180ms forwards; }
-.neu-stagger-7 { animation: neuStaggerFade 200ms ease-out 210ms forwards; }
-.neu-stagger-8 { animation: neuStaggerFade 200ms ease-out 240ms forwards; }
-
-/* Progress bar width transition without shimmer */
+/* Progress bar without shimmer */
 .neu-progress-track {
   background-color: var(--surface);
   box-shadow: var(--shadow-inset);
@@ -287,11 +424,11 @@ input::placeholder, textarea::placeholder {
 .neu-progress-fill {
   background-color: var(--accent);
   border-radius: var(--radius-full);
-  transition: width 300ms ease-out;
+  transition: width 250ms ease-out;
   height: 100%;
 }
 
-/* Plain Inset Skeletons (No shimmer sweep) */
+/* Plain Inset Loading Skeleton (No shimmer sweep) */
 .neu-skeleton {
   background-color: var(--surface) !important;
   box-shadow: var(--shadow-inset) !important;
@@ -299,16 +436,104 @@ input::placeholder, textarea::placeholder {
   border: none !important;
 }
 
-/* Scrollbars */
+/* Sidebar Smooth Collapse & Rail Behavior (220ms ease-out) */
+.app-sidebar {
+  width: 280px;
+  transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: width;
+  overflow-x: hidden;
+}
+
+.app-sidebar.collapsed {
+  width: 72px;
+}
+
+.sidebar-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 100ms ease, max-width 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  max-width: 190px;
+}
+
+.app-sidebar.collapsed .sidebar-label {
+  opacity: 0;
+  max-width: 0;
+  pointer-events: none;
+}
+
+.sidebar-collapsible-section {
+  transition: opacity 100ms ease, max-height 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  max-height: 600px;
+  overflow: hidden;
+}
+
+.app-sidebar.collapsed .sidebar-collapsible-section {
+  opacity: 0;
+  max-height: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* Flat tonal tooltips (no glow) */
+.rt-TooltipContent, [data-radix-popper-content-wrapper] {
+  background-color: var(--surface) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: var(--shadow-raised-sm) !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.75rem !important;
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+
+/* Mobile Overlay Drawer (<900px) */
+@media (max-width: 900px) {
+  .app-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh !important;
+    z-index: 100 !important;
+    width: 280px !important;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.12) !important;
+  }
+  .app-sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+  .sidebar-scrim {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.45);
+    backdrop-filter: none !important;
+    z-index: 99;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms ease-out;
+  }
+  .sidebar-scrim.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* Clean Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--shadow-light);
+  background: var(--shadow-dark);
   border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover {

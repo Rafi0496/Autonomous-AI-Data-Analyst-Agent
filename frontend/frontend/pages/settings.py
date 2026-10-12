@@ -9,7 +9,6 @@ from frontend.components.neu_components import (
     neu_button,
     neu_card,
     neu_inset_card,
-    neu_toggle,
     status_pill,
 )
 from frontend.state import AppState
@@ -91,7 +90,7 @@ def settings_page() -> rx.Component:
                             ),
                             rx.vstack(
                                 rx.text(
-                                    rx.cond(AppState.is_authenticated, AppState.current_user_name, "Guest Analyst"),
+                                    rx.cond(AppState.is_authenticated, AppState.current_user_name, "Guest User"),
                                     font_size="1.05rem",
                                     font_weight="600",
                                     color=TEXT_COLOR,
@@ -154,7 +153,7 @@ def settings_page() -> rx.Component:
                         ),
                         rx.vstack(
                             rx.text("Visual Theme & Aesthetics", font_size="0.95rem", font_weight="600", color=TEXT_COLOR),
-                            rx.text("Neo-morphism 60% + Minimalism 40% with dual tonal shadows and single terracotta accent.", font_size="0.78rem", color=TEXT_MUTED),
+                            rx.text("Neo-morphism 60% + Minimalism 40% with dual tonal shadows and slate-teal accent.", font_size="0.78rem", color=TEXT_MUTED),
                             spacing="0",
                             align_items="flex-start",
                         ),
@@ -189,7 +188,7 @@ def settings_page() -> rx.Component:
                 width="100%",
             ),
 
-            # 3. Active Backend & LLM Configuration (Real parameters only)
+            # 3. Active Backend Orchestration Parameters (Neutral, zero provider names)
             neu_card(
                 rx.vstack(
                     rx.hstack(
@@ -203,7 +202,7 @@ def settings_page() -> rx.Component:
                             ),
                             rx.vstack(
                                 rx.text("Active Orchestration Parameters", font_size="1rem", font_weight="600", color=TEXT_COLOR),
-                                rx.text("Verified against FastAPI backend environment variables and health status.", font_size="0.78rem", color=TEXT_MUTED),
+                                rx.text("Verified against backend orchestration environment and execution guardrails.", font_size="0.78rem", color=TEXT_MUTED),
                                 spacing="0",
                                 align_items="flex-start",
                             ),
@@ -219,15 +218,15 @@ def settings_page() -> rx.Component:
                     # Grid of verified parameters
                     rx.grid(
                         config_item(
-                            title="LLM Provider",
-                            badge_text=AppState.active_provider.upper(),
-                            description="Configured via LLM_PROVIDER in .env. Provider-agnostic engine (gemini | claude | heuristic).",
+                            title="Analytics Engine",
+                            badge_text="Autonomous",
+                            description="Multi-phase autonomous reasoning engine for exploratory data analysis.",
                             icon="bot",
                         ),
                         config_item(
-                            title="Active Model",
-                            badge_text=AppState.active_model,
-                            description="Core language model used for autonomous hypothesis formulation and synthesis.",
+                            title="Execution Pipeline",
+                            badge_text="Active",
+                            description="Perceive-plan-act-reflect-synthesize analytical cycle with grounded citations.",
                             icon="cpu",
                         ),
                         config_item(
@@ -239,7 +238,7 @@ def settings_page() -> rx.Component:
                         config_item(
                             title="Token Safety Cap",
                             badge_text=f"{AppState.token_budget_setting} Tokens",
-                            description="Hard spending guardrail. If breached, job gracefully falls back to deterministic heuristic synthesis.",
+                            description="Hard spending guardrail. If reached, job completes with verified deterministic synthesis.",
                             icon="coins",
                         ),
                         columns=rx.breakpoints(initial="1", sm="2"),
@@ -266,7 +265,7 @@ def settings_page() -> rx.Component:
                         neu_inset_card(
                             rx.vstack(
                                 rx.text("Core API Backend", font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
-                                rx.text("FastAPI 0.115 + Celery asynchronous task queue with SQLite/Postgres persistence.", font_size="0.72rem", color=TEXT_MUTED),
+                                rx.text("FastAPI + Celery asynchronous task queue with SQLite/Postgres persistence.", font_size="0.72rem", color=TEXT_MUTED),
                                 spacing="1",
                             ),
                             padding="0.7rem 0.85rem",
@@ -290,7 +289,7 @@ def settings_page() -> rx.Component:
                         neu_inset_card(
                             rx.vstack(
                                 rx.text("Statistical Analytics", font_size="0.75rem", font_weight="600", color=TEXT_COLOR),
-                                rx.text("Pandas, NumPy & SciPy for deterministic profiling, segment tests, and Cohen's d effect sizes.", font_size="0.72rem", color=TEXT_MUTED),
+                                rx.text("Pandas, NumPy & SciPy for deterministic profiling, segment tests, and effect sizes.", font_size="0.72rem", color=TEXT_MUTED),
                                 spacing="1",
                             ),
                             padding="0.7rem 0.85rem",

@@ -5,7 +5,7 @@ from frontend.theme import (
     ACCENT_COLOR,
     ACCENT_HOVER,
     ACCENT_SUBTLE,
-    BG_COLOR,
+    ACCENT_TEXT,
     CARD_SM_STYLE,
     CARD_STYLE,
     FONT_SANS,
@@ -31,7 +31,7 @@ from frontend.theme import (
 
 
 def neu_card(*children: rx.Component, sm: bool = False, **props) -> rx.Component:
-    """Neumorphic raised card container with soft 14-24px radii and dual tonal shadows."""
+    """Neumorphic raised card container with soft 16-20px radii and dual tonal shadows."""
     base_style = CARD_SM_STYLE if sm else CARD_STYLE
     merged = {**base_style, **props}
     return rx.box(*children, **merged)
@@ -50,7 +50,7 @@ def neu_button(
     **props,
 ) -> rx.Component:
     """Neumorphic button.
-    Primary: Flat muted terracotta (#d97757) fill with white text.
+    Primary: Flat muted slate-teal (#4F7C82) fill with white text.
     Secondary: Raised soft surface with dual tonal shadows.
     """
     if variant == "primary":
@@ -109,20 +109,25 @@ def neu_input(
     width: str = "100%",
     **props,
 ) -> rx.Component:
-    """Sunken/inset text input with WCAG AA solid 2px accent outline on focus."""
-    merged = {
-        **INPUT_STYLE,
+    """Sunken/inset text input with ONE container only and stripped inner input."""
+    input_props = {
         "type": type,
         "placeholder": placeholder,
-        "width": width,
-        **props,
+        "class_name": "neu-input-field",
+        "width": "100%",
     }
     if value is not None:
-        merged["value"] = value
+        input_props["value"] = value
     if on_change is not None:
-        merged["on_change"] = on_change
+        input_props["on_change"] = on_change
 
-    return rx.input(**merged)
+    return rx.box(
+        rx.input(**input_props),
+        class_name="neu-input-container",
+        padding="0.65rem 1rem",
+        width=width,
+        **props,
+    )
 
 
 def neu_toggle(
@@ -131,12 +136,12 @@ def neu_toggle(
     label: str = "",
     **props,
 ) -> rx.Component:
-    """Neumorphic toggle with inset groove and smooth sliding indicator."""
+    """Neumorphic toggle with teal active indicator."""
     return rx.hstack(
         rx.switch(
             checked=checked,
             on_change=on_change,
-            color_scheme="orange",
+            color_scheme="teal",
             size="2",
             **props,
         ),
@@ -226,7 +231,7 @@ def progress_track(
             rx.hstack(
                 rx.text(label, font_size="0.8rem", color=TEXT_MUTED),
                 rx.spacer(),
-                rx.text(f"{percent}%", font_size="0.8rem", color=TEXT_COLOR, font_weight="600"),
+                rx.text(f"{percent}%", font_size="0.8rem", color=TEXT_COLOR, font_weight="600", class_name="tabular-nums"),
                 width="100%",
                 align_items="center",
             ),
@@ -254,19 +259,28 @@ def progress_track(
 
 def status_pill(
     text: Union[str, rx.Var[str]],
-    icon: str = "sparkles",
+    icon: str = "circle-check",
     status: str = "info",  # "success" | "warn" | "error" | "info"
     **props,
 ) -> rx.Component:
-    """Top free-form status pill with text + icon (never color alone, WCAG compliant)."""
+    """High-contrast semantic status pill with icon + text (never color alone, WCAG compliant)."""
     if isinstance(status, rx.Var):
-        icon_color = rx.cond(
+        pill_color = rx.cond(
             status == "success",
             "var(--status-success)",
             rx.cond(
                 status == "warn",
                 "var(--status-warning)",
-                rx.cond(status == "error", "var(--status-error)", ACCENT_COLOR),
+                rx.cond(status == "error", "var(--status-error)", "var(--status-info)"),
+            ),
+        )
+        pill_bg = rx.cond(
+            status == "success",
+            "var(--status-success-bg)",
+            rx.cond(
+                status == "warn",
+                "var(--status-warning-bg)",
+                rx.cond(status == "error", "var(--status-error-bg)", "var(--status-info-bg)"),
             ),
         )
     else:
@@ -274,24 +288,36 @@ def status_pill(
             "success": "var(--status-success)",
             "warn": "var(--status-warning)",
             "error": "var(--status-error)",
-            "info": ACCENT_COLOR,
+            "info": "var(--status-info)",
         }
-        icon_color = color_map.get(status, ACCENT_COLOR)
+        bg_map = {
+            "success": "var(--status-success-bg)",
+            "warn": "var(--status-warning-bg)",
+            "error": "var(--status-error-bg)",
+            "info": "var(--status-info-bg)",
+        }
+        pill_color = color_map.get(status, "var(--status-info)")
+        pill_bg = bg_map.get(status, "var(--status-info-bg)")
 
     return rx.box(
         rx.hstack(
-            rx.icon(tag=icon, size=13, color=icon_color),
+            rx.icon(tag=icon, size=13, color=pill_color),
             rx.text(
                 text,
                 font_size="0.75rem",
-                font_weight="500",
-                color=TEXT_COLOR,
+                font_weight="600",
+                color=pill_color,
                 letter_spacing="0.01em",
             ),
             spacing="2",
             align_items="center",
         ),
-        **STATUS_PILL_STYLE,
+        background_color=pill_bg,
+        border_radius=RADIUS_FULL,
+        padding="0.3rem 0.75rem",
+        box_shadow=SHADOW_RAISED_SM,
+        display="inline-flex",
+        align_items="center",
         **props,
     )
 
@@ -377,20 +403,17 @@ def hero_input(
     selected_dataset: Union[str, rx.Var[str]],
     on_select_dataset: Any,
     on_attach_file: Optional[Any] = None,
-    provider_name: Union[str, rx.Var[str]] = "gemini",
     is_loading: Union[bool, rx.Var[bool]] = False,
-    placeholder: str = "Drop a dataset or ask a question...",
+    placeholder: str = "Ask a question or describe what you want to analyze...",
     **props,
 ) -> rx.Component:
-    """Twin of the reference chat/analysis input box.
-    Large rounded inset container with '+' attach button, prompt input, and bottom selector row.
-    """
+    """Clean hero input container with NO inner box, solid outline on focus, and NO provider label."""
     return rx.box(
         rx.vstack(
-            # Top row: '+' button and prompt input
+            # Top row: '+' button, prompt input, and submit action
             rx.hstack(
                 rx.box(
-                    rx.icon(tag="plus", size=18, color=ACCENT_COLOR),
+                    rx.icon(tag="plus", size=16, color=ACCENT_COLOR),
                     padding="0.55rem",
                     border_radius=RADIUS_FULL,
                     background_color=SURFACE_COLOR,
@@ -399,18 +422,15 @@ def hero_input(
                     on_click=on_attach_file,
                     _hover={"box_shadow": SHADOW_INSET},
                     transition="box-shadow 150ms ease",
+                    title="Upload dataset",
+                    flex_shrink=0,
                 ),
                 rx.input(
                     placeholder=placeholder,
                     value=input_value,
                     on_change=on_change,
-                    border="none",
-                    background="transparent",
-                    color=TEXT_COLOR,
-                    font_size="0.975rem",
+                    class_name="neu-input-field",
                     width="100%",
-                    outline="none",
-                    _focus={"outline": "none"},
                 ),
                 rx.spacer(),
                 neu_button(
@@ -422,12 +442,15 @@ def hero_input(
                     padding="0.55rem",
                     width="36px",
                     height="36px",
+                    display="inline-flex",
+                    align_items="center",
+                    justify_content="center",
                 ),
                 spacing="3",
                 align_items="center",
                 width="100%",
             ),
-            # Bottom row: Dataset selector on left, mode/provider pill on right
+            # Bottom row: Clean Dataset selector on left
             rx.hstack(
                 rx.hstack(
                     rx.icon(tag="database", size=13, color=TEXT_MUTED),
@@ -443,22 +466,15 @@ def hero_input(
                     spacing="1",
                     align_items="center",
                 ),
-                rx.spacer(),
-                status_pill(
-                    text=rx.cond(provider_name != "", provider_name.upper(), "GEMINI"),
-                    icon="cpu",
-                    status="info",
-                ),
                 spacing="2",
                 align_items="center",
                 width="100%",
-                padding_top="0.4rem",
+                padding_top="0.25rem",
             ),
             spacing="3",
             width="100%",
         ),
-        background_color=SURFACE_COLOR,
-        box_shadow=SHADOW_INSET,
+        class_name="neu-input-container",
         border_radius=RADIUS_XL,
         padding="1rem 1.25rem",
         width="100%",

@@ -1,0 +1,83 @@
+{
+  "measured_contrasts": {
+    "Light Theme - Body Text (#1E293B) on Surface (#EFEEEB)": {
+      "foreground": "#1E293B",
+      "background": "#EFEEEB",
+      "ratio": 12.61,
+      "required": 4.5,
+      "passed": true
+    },
+    "Light Theme - Body Text (#1E293B) on Base (#EAE9E5)": {
+      "foreground": "#1E293B",
+      "background": "#EAE9E5",
+      "ratio": 12.04,
+      "required": 4.5,
+      "passed": true
+    },
+    "Light Theme - Secondary/Muted (#475569) on Surface (#EFEEEB)": {
+      "foreground": "#475569",
+      "background": "#EFEEEB",
+      "ratio": 6.53,
+      "required": 4.5,
+      "passed": true
+    },
+    "Light Theme - Primary Button Text (#FFFFFF) on Muted Slate-Teal (#4F7C82)": {
+      "foreground": "#FFFFFF",
+      "background": "#4F7C82",
+      "ratio": 4.63,
+      "required": 4.5,
+      "passed": true
+    },
+    "Light Theme - Primary Hover (#FFFFFF) on Darker Slate-Teal (#3D6368)": {
+      "foreground": "#FFFFFF",
+      "background": "#3D6368",
+      "ratio": 6.6,
+      "required": 4.5,
+      "passed": true
+    },
+    "Light Theme - Large Headings (#0F172A) on Base (#EAE9E5)": {
+      "foreground": "#0F172A",
+      "background": "#EAE9E5",
+      "ratio": 14.69,
+      "required": 3.0,
+      "passed": true
+    },
+    "Light Theme - Sage Status Text (#224D33) on Surface (#EFEEEB)": {
+      "foreground": "#224D33",
+      "background": "#EFEEEB",
+      "ratio": 8.31,
+      "required": 4.5,
+      "passed": true
+    },
+    "Dark Theme - Body Text (#F1F5F9) on Base (#1B2230)": {
+      "foreground": "#F1F5F9",
+      "background": "#1B2230",
+      "ratio": 14.54,
+      "required": 4.5,
+      "passed": true
+    },
+    "Dark Theme - Body Text (#F1F5F9) on Surface (#202838)": {
+      "foreground": "#F1F5F9",
+      "background": "#202838",
+      "ratio": 13.48,
+      "required": 4.5,
+      "passed": true
+    },
+    "Dark Theme - Primary Action Text (#121B24) on Light Slate-Teal (#7FB3B8)": {
+      "foreground": "#121B24",
+      "background": "#7FB3B8",
+      "ratio": 7.49,
+      "required": 4.5,
+      "passed": true
+    },
+    "Dark Theme - Muted Text (#94A3B8) on Surface (#202838)": {
+      "foreground": "#94A3B8",
+      "background": "#202838",
+      "ratio": 5.76,
+      "required": 4.5,
+      "passed": true
+    }
+  },
+  "axe_violations_count": 4,
+  "screenshots_count": 39
+}
