@@ -1,0 +1,126 @@
+{
+  "timestamp": 1791875963.414834,
+  "api_health": true,
+  "auth_flow": true,
+  "chat_general_hi": true,
+  "chat_with_dataset": true,
+  "formats_tested": {
+    "retail_sales_messy.csv": {
+      "dataset_id": "47926bd3-7c97-482e-b609-88b7873d24f9",
+      "rows": 126,
+      "columns": 9,
+      "status": "processing",
+      "stage": "Cleaning"
+    },
+    "sample_sales.xlsx": {
+      "dataset_id": "e3ceb04f-7fe6-408e-980d-696b62d2afad",
+      "rows": 4,
+      "columns": 5,
+      "status": "processing",
+      "stage": "Cleaning"
+    },
+    "sample_marketing.json": {
+      "dataset_id": "c4c6db3b-7dc5-4daa-80dc-78fa01ea6f24",
+      "rows": 4,
+      "columns": 5,
+      "status": "uploaded",
+      "stage": "Cleaning"
+    },
+    "sample_inventory.xml": {
+      "dataset_id": "28ff63b0-bb35-480d-b437-cacba2663e4c",
+      "rows": 3,
+      "columns": 4,
+      "status": "processing",
+      "stage": "Cleaning"
+    },
+    "sample_clinical.parquet": {
+      "dataset_id": "e4d6c68a-a509-44d1-b17c-a4e951ce8642",
+      "rows": 4,
+      "columns": 5,
+      "status": "processing",
+      "stage": "Cleaning"
+    },
+    "sample_report_table.pdf": {
+      "dataset_id": "f6c50918-a2bd-40f4-8bd4-04e3d8241d7c",
+      "rows": 27,
+      "columns": 3,
+      "status": "uploaded",
+      "stage": "Cleaning"
+    },
+    "sample_archive.zip": {
+      "dataset_id": "66b42872-abc8-438c-b552-311570a7b325",
+      "rows": 3,
+      "columns": 4,
+      "status": "processing",
+      "stage": "Cleaning"
+    }
+  },
+  "upload_state_machine": true,
+  "analysis_dispatched": true,
+  "run_monitor_phases": true,
+  "dashboard_rendered": true,
+  "report_generated": true,
+  "contrast_audit": {
+    "Light Theme - Body Text (#1D2228) on Surface (#EFEEEB)": {
+      "ratio": 13.8,
+      "required": 4.5,
+      "pass": true
+    },
+    "Light Theme - Body Text (#1D2228) on Base (#EAE9E5)": {
+      "ratio": 13.18,
+      "required": 4.5,
+      "pass": true
+    },
+    "Light Theme - Secondary/Muted (#48525F) on Surface (#EFEEEB)": {
+      "ratio": 6.84,
+      "required": 4.5,
+      "pass": true
+    },
+    "Light Theme - Tertiary/Label (#5A6573) on Surface (#EFEEEB)": {
+      "ratio": 5.11,
+      "required": 4.5,
+      "pass": true
+    },
+    "Light Theme - Button Text (#FFFFFF) on Slate-Teal (#4F7C82)": {
+      "ratio": 4.63,
+      "required": 4.5,
+      "pass": true
+    },
+    "Light Theme - Status Error (#9B1C2E) on Surface (#EFEEEB)": {
+      "ratio": 6.96,
+      "required": 4.5,
+      "pass": true
+    },
+    "Light Theme - Status Success (#1E5C38) on Surface (#EFEEEB)": {
+      "ratio": 6.85,
+      "required": 4.5,
+      "pass": true
+    },
+    "Dark Theme - Body Text (#E5EBF2) on Base (#1B2230)": {
+      "ratio": 13.27,
+      "required": 4.5,
+      "pass": true
+    },
+    "Dark Theme - Body Text (#E5EBF2) on Surface (#202838)": {
+      "ratio": 12.3,
+      "required": 4.5,
+      "pass": true
+    },
+    "Dark Theme - Secondary/Muted (#A6B4C4) on Surface (#202838)": {
+      "ratio": 6.99,
+      "required": 4.5,
+      "pass": true
+    },
+    "Dark Theme - Action Text (#0F161E) on Light Slate-Teal (#7FB3B8)": {
+      "ratio": 7.84,
+      "required": 4.5,
+      "pass": true
+    },
+    "Dark Theme - Status Success (#8DE0A8) on Surface (#202838)": {
+      "ratio": 9.4,
+      "required": 4.5,
+      "pass": true
+    }
+  },
+  "navigation_verified": false
+}

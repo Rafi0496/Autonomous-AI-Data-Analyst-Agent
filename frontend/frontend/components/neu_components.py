@@ -403,14 +403,15 @@ def hero_input(
     selected_dataset: Union[str, rx.Var[str]],
     on_select_dataset: Any,
     on_attach_file: Optional[Any] = None,
+    on_key_down: Optional[Any] = None,
     is_loading: Union[bool, rx.Var[bool]] = False,
-    placeholder: str = "Ask a question or describe what you want to analyze...",
+    placeholder: str = "Ask a question or describe what you want to analyze... (Enter sends, Shift+Enter for newline)",
     **props,
 ) -> rx.Component:
-    """Clean hero input container with NO inner box, solid outline on focus, and NO provider label."""
+    """Clean hero input container with textarea supporting Enter to send, Shift+Enter newline, and clean dataset selector."""
     return rx.box(
         rx.vstack(
-            # Top row: '+' button, prompt input, and submit action
+            # Top row: '+' button, prompt textarea, and submit action
             rx.hstack(
                 rx.box(
                     rx.icon(tag="plus", size=16, color=ACCENT_COLOR),
@@ -425,18 +426,28 @@ def hero_input(
                     title="Upload dataset",
                     flex_shrink=0,
                 ),
-                rx.input(
+                rx.text_area(
+                    id="hero-input-textarea",
                     placeholder=placeholder,
                     value=input_value,
                     on_change=on_change,
+                    on_key_down=on_key_down,
                     class_name="neu-input-field",
                     width="100%",
+                    rows="1",
+                    resize="none",
+                    border="none",
+                    outline="none",
+                    background="transparent",
+                    color=TEXT_COLOR,
+                    _focus={"outline": "none"},
                 ),
                 rx.spacer(),
                 neu_button(
                     rx.icon(tag="arrow-up", size=16),
                     variant="primary",
                     is_loading=is_loading,
+                    is_disabled=is_loading,
                     on_click=on_submit,
                     border_radius=RADIUS_FULL,
                     padding="0.55rem",

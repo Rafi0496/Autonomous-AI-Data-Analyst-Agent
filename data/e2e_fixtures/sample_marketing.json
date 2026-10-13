@@ -1,0 +1,30 @@
+[
+  {
+    "user_id": 101,
+    "name": "Alice Smith",
+    "department": "Marketing",
+    "campaigns": 5,
+    "spend": 4500.0
+  },
+  {
+    "user_id": 102,
+    "name": "Bob Jones",
+    "department": "Engineering",
+    "campaigns": 2,
+    "spend": 1200.0
+  },
+  {
+    "user_id": 103,
+    "name": "Carol Taylor",
+    "department": "Sales",
+    "campaigns": 8,
+    "spend": 9800.0
+  },
+  {
+    "user_id": 104,
+    "name": "David Clark",
+    "department": "Finance",
+    "campaigns": 3,
+    "spend": 3100.0
+  }
+]

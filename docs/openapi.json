@@ -49,9 +49,16 @@
             "title": "History"
           },
           "job_id": {
-            "description": "ID of the analysis job",
-            "title": "Job Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional ID of the analysis job",
+            "title": "Job Id"
           },
           "question": {
             "description": "User analytical question",
@@ -60,7 +67,6 @@
           }
         },
         "required": [
-          "job_id",
           "question"
         ],
         "title": "ChatRequest",
@@ -725,10 +731,13 @@
       "DatasetStatus": {
         "enum": [
           "uploaded",
+          "processing",
           "cleaned",
           "profiled",
+          "ready",
           "analyzing",
           "analyzed",
+          "non_tabular",
           "error"
         ],
         "title": "DatasetStatus",
@@ -2716,7 +2725,7 @@
     },
     "/api/v1/upload": {
       "post": {
-        "description": "Upload a dataset file (CSV, XLSX, XLS, JSON).\nValidates file format, limits file size, parses dimensions, and stores record.",
+        "description": "Upload a dataset in any file format.\nStreams chunks directly to disk, validates structure, parses dimensions,\nand returns 201 immediately while triggering background cleaning and profiling.",
         "operationId": "upload_dataset_file_api_v1_upload_post",
         "requestBody": {
           "content": {

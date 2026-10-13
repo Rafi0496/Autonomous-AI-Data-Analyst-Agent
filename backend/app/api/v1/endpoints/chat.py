@@ -14,7 +14,7 @@ from backend.app.services.chat_service import process_chat_question
 router = APIRouter()
 
 class ChatRequest(BaseModel):
-    job_id: str = Field(..., description="ID of the analysis job")
+    job_id: Optional[str] = Field(default=None, description="Optional ID of the analysis job")
     question: str = Field(..., description="User analytical question")
     history: Optional[List[Dict[str, str]]] = Field(default=[], description="Prior conversation turns")
     dataset_id: Optional[str] = Field(default=None, description="Optional dataset ID fallback")
@@ -52,41 +52,29 @@ def handle_chat_query(
             tool_calls_used=[]
         )
 
-    job = db.query(AnalysisJob).filter(AnalysisJob.id == request.job_id).first()
-    if job:
-        if job.user_id and (not current_user or job.user_id != current_user.id):
+    job = None
+    if request.job_id:
+        job = db.query(AnalysisJob).filter(AnalysisJob.id == request.job_id).first()
+        if job and job.user_id and (not current_user or job.user_id != current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Job not found."
             )
-    elif request.dataset_id:
+
+    if request.dataset_id:
         ds = db.query(Dataset).filter(Dataset.id == request.dataset_id).first()
         if ds and ds.user_id and (not current_user or ds.user_id != current_user.id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Dataset not found."
             )
-        if not ds:
-            from backend.app.services.data_loader import get_dataset_dataframe
-            try:
-                get_dataset_dataframe(request.dataset_id)
-            except Exception:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Dataset '{request.dataset_id}' not found."
-                )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Analysis job '{request.job_id}' not found."
-        )
 
     result = process_chat_question(
         db=db,
-        job_id=request.job_id,
+        job_id=job.id if job else None,
         question=request.question,
         history=request.history,
-        dataset_id=request.dataset_id
+        dataset_id=request.dataset_id or (job.dataset_id if job else None)
     )
     return ChatResponse(
         answer=result["answer"],

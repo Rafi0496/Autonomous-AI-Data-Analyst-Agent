@@ -20,7 +20,7 @@ from frontend.theme import (
 
 def sidebar_nav_item(label: str, icon: str, route: str, tab_id: str) -> rx.Component:
     """Primary nav item with flat icon in rail, label in expanded mode, and clean tooltip."""
-    is_active = AppState.active_tab == tab_id
+    is_active = AppState.current_page_tab == tab_id
 
     inner_content = rx.hstack(
         rx.icon(
@@ -48,7 +48,7 @@ def sidebar_nav_item(label: str, icon: str, route: str, tab_id: str) -> rx.Compo
             "box_shadow": rx.cond(is_active, SHADOW_INSET, SHADOW_RAISED_SM),
             "color": TEXT_COLOR,
         },
-        transition="all 150ms ease",
+        transition="box-shadow 150ms ease, background-color 150ms ease",
         width="100%",
     )
 
@@ -118,7 +118,7 @@ def recent_job_item(job: RecentJobModel) -> rx.Component:
                 "background_color": SURFACE_COLOR,
                 "box_shadow": SHADOW_RAISED_SM,
             },
-            transition="all 150ms ease",
+            transition="box-shadow 150ms ease, background-color 150ms ease",
             width="100%",
         ),
         href="/dashboard",

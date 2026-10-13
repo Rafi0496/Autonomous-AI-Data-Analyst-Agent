@@ -9,10 +9,13 @@ class FileType(str, Enum):
 
 class DatasetStatus(str, Enum):
     UPLOADED = "uploaded"
+    PROCESSING = "processing"
     CLEANED = "cleaned"
     PROFILED = "profiled"
+    READY = "ready"
     ANALYZING = "analyzing"
     ANALYZED = "analyzed"
+    NON_TABULAR = "non_tabular"
     ERROR = "error"
 
 class MissingValueStrategy(str, Enum):

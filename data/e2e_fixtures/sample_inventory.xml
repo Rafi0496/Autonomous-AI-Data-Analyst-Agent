@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inventory>
+  <item>
+    <sku>SKU-001</sku>
+    <title>Ergonomic Chair</title>
+    <stock>45</stock>
+    <cost>189.50</cost>
+  </item>
+  <item>
+    <sku>SKU-002</sku>
+    <title>Standing Desk</title>
+    <stock>22</stock>
+    <cost>349.00</cost>
+  </item>
+  <item>
+    <sku>SKU-003</sku>
+    <title>Monitor Arm</title>
+    <stock>80</stock>
+    <cost>49.99</cost>
+  </item>
+</inventory>

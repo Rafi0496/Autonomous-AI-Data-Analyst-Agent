@@ -346,7 +346,47 @@ def process_chat_question(
     job = db.query(AnalysisJob).filter(AnalysisJob.id == job_id).first() if job_id else None
     ds_id = dataset_id or (job.dataset_id if job else None) or ""
     
+    # Check general greeting / conversational inquiries
+    q_clean = re.sub(r"[^a-zA-Z\s]", "", question.lower()).strip()
+    greetings = {"hi", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening", "howdy", "help", "who are you", "what can you do"}
+    is_greeting = q_clean in greetings or (len(q_clean.split()) <= 2 and any(w in greetings for w in q_clean.split()))
+
     dataset = db.query(Dataset).filter(Dataset.id == ds_id).first() if ds_id else None
+    
+    if not ds_id and not job:
+        if is_greeting:
+            return {
+                "answer": "Hello! I am your Autonomous Data Analyst assistant. You can upload any dataset or select a benchmark dataset to begin. Once loaded, I can discover hidden trends, evaluate statistical anomalies, run segmentation tests, and answer questions grounded strictly in computed facts. How can I assist you today?",
+                "evidence": [],
+                "verification": {"is_valid": True, "status": "passed", "total_claims_checked": 0, "verified_claims_count": 0, "unverified_claims_count": 0, "verification_rate_percent": 100.0, "pre_strip_verification_rate": 100.0, "post_strip_verification_rate": 100.0},
+                "provider": "assistant",
+                "tool_calls_used": [],
+                "pre_strip_rate": 100.0,
+                "post_strip_rate": 100.0
+            }
+        else:
+            return {
+                "answer": "To answer specific questions regarding statistics, metrics, or anomalies, please select or upload a dataset first. You can load a benchmark dataset or upload your own file on the Datasets screen.",
+                "evidence": [],
+                "verification": {"is_valid": True, "status": "passed", "total_claims_checked": 0, "verified_claims_count": 0, "unverified_claims_count": 0, "verification_rate_percent": 100.0, "pre_strip_verification_rate": 100.0, "post_strip_verification_rate": 100.0},
+                "provider": "assistant",
+                "tool_calls_used": [],
+                "pre_strip_rate": 100.0,
+                "post_strip_rate": 100.0
+            }
+
+    if is_greeting:
+        ds_name = dataset.filename if dataset else ds_id
+        return {
+            "answer": f"Hello! I am ready to explore '{ds_name}'. You can ask me about top statistical findings, data quality sanitizations, correlations, or segment comparisons. What would you like to investigate?",
+            "evidence": [],
+            "verification": {"is_valid": True, "status": "passed", "total_claims_checked": 0, "verified_claims_count": 0, "unverified_claims_count": 0, "verification_rate_percent": 100.0, "pre_strip_verification_rate": 100.0, "post_strip_verification_rate": 100.0},
+            "provider": "assistant",
+            "tool_calls_used": [],
+            "pre_strip_rate": 100.0,
+            "post_strip_rate": 100.0
+        }
+
     profile = (dataset.get_profile() if dataset and hasattr(dataset, "get_profile") else None) or {}
     cleaning_report = (dataset.get_cleaning_summary() if dataset and hasattr(dataset, "get_cleaning_summary") else None) or {}
     

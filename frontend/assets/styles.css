@@ -5,15 +5,30 @@
   /* Light Theme (Default: Soft Off-White Cement) */
   --bg: #EAE9E5;
   --surface: #EFEEEB;
-  --text: #1D2228;
-  --text-muted: #5E6773;
-  --border-subtle: rgba(0, 0, 0, 0.06);
+  /* Semantic Text Tokens (WCAG AA Compliant >= 4.5:1) */
+  --text-primary: #1D2228;
+  --text-secondary: #48525F;
+  --text-tertiary: #5A6573;
+  --text-on-primary: #FFFFFF;
+  --text-on-pastel-sage: #1E462E;
+  --text-on-pastel-blue: #16365C;
+  --text-on-pastel-lavender: #352857;
+  --text-on-pastel-sand: #4A3810;
+  --text-on-pastel-rose: #561A25;
+  --text-error: #9B1C2E;
+  --text-success: #1E5C38;
+  --text-warning: #7A5300;
+
+  /* Legacy Aliases */
+  --text: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --border-subtle: rgba(0, 0, 0, 0.08);
 
   /* Primary Action: Muted Slate-Teal (High contrast with white) */
   --accent: #4F7C82;
   --accent-hover: #3E6368;
   --accent-subtle: rgba(79, 124, 130, 0.12);
-  --accent-text: #FFFFFF;
+  --accent-text: var(--text-on-primary);
 
   /* Neumorphic Tonal Shadows (Refined & Quiet) */
   --shadow-dark: #CFCDC8;
@@ -26,33 +41,53 @@
   /* Supporting Pastel Palette (Soft fills with high-contrast text) */
   --color-sage: #9DBFA8;
   --color-sage-subtle: rgba(157, 191, 168, 0.22);
-  --color-sage-text: #224D33;
+  --color-sage-text: var(--text-on-pastel-sage);
 
   --color-dusty-blue: #9DB4D3;
   --color-dusty-blue-subtle: rgba(157, 180, 211, 0.22);
-  --color-dusty-blue-text: #1E3B60;
+  --color-dusty-blue-text: var(--text-on-pastel-blue);
 
   --color-lavender: #B9AEDB;
   --color-lavender-subtle: rgba(185, 174, 219, 0.22);
-  --color-lavender-text: #3E3263;
+  --color-lavender-text: var(--text-on-pastel-lavender);
 
   --color-sand: #DCC9A3;
   --color-sand-subtle: rgba(220, 201, 163, 0.25);
-  --color-sand-text: #4F3D14;
+  --color-sand-text: var(--text-on-pastel-sand);
 
   --color-rose-mist: #D9B1B8;
   --color-rose-mist-subtle: rgba(217, 177, 184, 0.22);
-  --color-rose-mist-text: #5E202B;
+  --color-rose-mist-text: var(--text-on-pastel-rose);
 
   /* Status Colors */
-  --status-success: var(--color-sage-text);
+  --status-success: var(--text-success);
   --status-success-bg: var(--color-sage-subtle);
-  --status-warning: var(--color-sand-text);
+  --status-warning: var(--text-warning);
   --status-warning-bg: var(--color-sand-subtle);
-  --status-error: var(--color-rose-mist-text);
+  --status-error: var(--text-error);
   --status-error-bg: var(--color-rose-mist-subtle);
   --status-info: var(--accent);
   --status-info-bg: var(--accent-subtle);
+
+  /* Radix UI Theme Token Overrides (Light) */
+  --gray-1: var(--bg);
+  --gray-2: var(--surface);
+  --gray-3: var(--shadow-dark);
+  --gray-4: var(--border-subtle);
+  --gray-5: var(--border-subtle);
+  --gray-6: var(--text-tertiary);
+  --gray-7: var(--text-tertiary);
+  --gray-8: var(--text-secondary);
+  --gray-9: var(--text-secondary);
+  --gray-10: var(--text-primary);
+  --gray-11: var(--text-primary);
+  --gray-12: var(--text-primary);
+  --accent-9: var(--accent);
+  --accent-10: var(--accent-hover);
+  --accent-11: var(--accent);
+  --accent-12: var(--accent-text);
+  --color-text: var(--text-primary);
+  --color-text-muted: var(--text-secondary);
 
   /* Background Pattern */
   --bg-pattern: url('/bg-light.svg');
@@ -79,15 +114,31 @@ body:has(.theme-dark),
   /* Dark Theme: Deep Ink Blue-Slate */
   --bg: #1B2230;
   --surface: #202838;
-  --text: #E5EBF2;
-  --text-muted: #8B98AA;
-  --border-subtle: rgba(255, 255, 255, 0.06);
+  
+  /* Semantic Text Tokens for Dark Theme */
+  --text-primary: #E5EBF2;
+  --text-secondary: #A6B4C4;
+  --text-tertiary: #92A2B4;
+  --text-on-primary: #0F161E;
+  --text-on-pastel-sage: #BCE2C7;
+  --text-on-pastel-blue: #C2D7F3;
+  --text-on-pastel-lavender: #D8CEF7;
+  --text-on-pastel-sand: #EFE0C2;
+  --text-on-pastel-rose: #F2D0D7;
+  --text-error: #F8A5AF;
+  --text-success: #8DE0A8;
+  --text-warning: #F5CD78;
+
+  /* Legacy Aliases */
+  --text: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --border-subtle: rgba(255, 255, 255, 0.08);
 
   /* Primary Action: Lighter slate-teal for dark theme with dark text */
   --accent: #7FB3B8;
   --accent-hover: #92C6CB;
   --accent-subtle: rgba(127, 179, 184, 0.16);
-  --accent-text: #121B24;
+  --accent-text: var(--text-on-primary);
 
   /* Neumorphic Tonal Shadows for Ink Slate */
   --shadow-dark: #131824;
@@ -100,33 +151,53 @@ body:has(.theme-dark),
   /* Supporting Pastel Palette for Dark Theme */
   --color-sage: #9DBFA8;
   --color-sage-subtle: rgba(157, 191, 168, 0.16);
-  --color-sage-text: #B4D6BE;
+  --color-sage-text: var(--text-on-pastel-sage);
 
   --color-dusty-blue: #9DB4D3;
   --color-dusty-blue-subtle: rgba(157, 180, 211, 0.16);
-  --color-dusty-blue-text: #B7CCEB;
+  --color-dusty-blue-text: var(--text-on-pastel-blue);
 
   --color-lavender: #B9AEDB;
   --color-lavender-subtle: rgba(185, 174, 219, 0.16);
-  --color-lavender-text: #CFB8F0;
+  --color-lavender-text: var(--text-on-pastel-lavender);
 
   --color-sand: #DCC9A3;
   --color-sand-subtle: rgba(220, 201, 163, 0.16);
-  --color-sand-text: #EADBBA;
+  --color-sand-text: var(--text-on-pastel-sand);
 
   --color-rose-mist: #D9B1B8;
   --color-rose-mist-subtle: rgba(217, 177, 184, 0.16);
-  --color-rose-mist-text: #E7C6CD;
+  --color-rose-mist-text: var(--text-on-pastel-rose);
 
   /* Status Colors */
-  --status-success: var(--color-sage-text);
+  --status-success: var(--text-success);
   --status-success-bg: var(--color-sage-subtle);
-  --status-warning: var(--color-sand-text);
+  --status-warning: var(--text-warning);
   --status-warning-bg: var(--color-sand-subtle);
-  --status-error: var(--color-rose-mist-text);
+  --status-error: var(--text-error);
   --status-error-bg: var(--color-rose-mist-subtle);
   --status-info: var(--accent);
   --status-info-bg: var(--accent-subtle);
+
+  /* Radix UI Theme Token Overrides (Dark) */
+  --gray-1: var(--bg);
+  --gray-2: var(--surface);
+  --gray-3: var(--shadow-dark);
+  --gray-4: var(--border-subtle);
+  --gray-5: var(--border-subtle);
+  --gray-6: var(--text-tertiary);
+  --gray-7: var(--text-tertiary);
+  --gray-8: var(--text-secondary);
+  --gray-9: var(--text-secondary);
+  --gray-10: var(--text-primary);
+  --gray-11: var(--text-primary);
+  --gray-12: var(--text-primary);
+  --accent-9: var(--accent);
+  --accent-10: var(--accent-hover);
+  --accent-11: var(--accent);
+  --accent-12: var(--accent-text);
+  --color-text: var(--text-primary);
+  --color-text-muted: var(--text-secondary);
 
   /* Background Pattern */
   --bg-pattern: url('/bg-dark.svg');
@@ -141,25 +212,29 @@ body, html {
   margin: 0;
   padding: 0;
   background-color: var(--bg) !important;
-  background-image: var(--bg-pattern);
-  background-repeat: no-repeat;
-  background-position: center top;
-  background-size: cover;
-  background-attachment: fixed;
-  color: var(--text) !important;
+  color: var(--text-primary) !important;
   font-family: var(--font-sans) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.theme-light, .theme-dark {
-  background-color: var(--bg) !important;
-  background-image: var(--bg-pattern) !important;
+/* Single Fixed Background Layer (Zero Layout Repaints) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background-image: var(--bg-pattern);
   background-repeat: no-repeat;
   background-position: center top;
   background-size: cover;
-  background-attachment: fixed;
-  color: var(--text) !important;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.theme-light, .theme-dark {
+  background-color: var(--bg) !important;
+  color: var(--text-primary) !important;
   min-height: 100vh;
   width: 100%;
 }
@@ -547,5 +622,49 @@ input::placeholder, textarea::placeholder {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Typing indicator micro-animation */
+@keyframes typingDot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.neu-pulse-dot-1 {
+  animation: typingDot 1.4s infinite ease-in-out;
+}
+.neu-pulse-dot-2 {
+  animation: typingDot 1.4s infinite ease-in-out 0.2s;
+}
+.neu-pulse-dot-3 {
+  animation: typingDot 1.4s infinite ease-in-out 0.4s;
+}
+
+/* Cold-start server waking banner */
+.server-waking-banner {
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-raised-sm) !important;
+  padding: 0.55rem 1rem !important;
+  color: var(--text-secondary) !important;
+  font-size: 0.8rem !important;
+  animation: wakingPulse 2s infinite ease-in-out;
+}
+
+@keyframes wakingPulse {
+  0%, 100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+    box-shadow: var(--shadow-raised);
   }
 }

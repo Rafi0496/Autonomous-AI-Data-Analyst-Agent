@@ -28,6 +28,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY frontend /app/frontend
 COPY shared /app/shared
+COPY data/samples /app/data/samples
+COPY data/samples /app/frontend/data/samples
 
 WORKDIR /app/frontend
 

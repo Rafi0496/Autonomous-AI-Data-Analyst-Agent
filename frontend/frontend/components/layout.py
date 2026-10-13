@@ -180,6 +180,17 @@ def top_status_bar() -> rx.Component:
             ),
             display=["block", "block", "none"],
         ),
+        # Waking up server indicator
+        rx.cond(
+            AppState.is_server_waking,
+            rx.hstack(
+                rx.icon(tag="activity", size=13, color=ACCENT_COLOR, class_name="neu-active-step-pulse"),
+                rx.text("Waking up the server... Please allow a few seconds", font_size="0.75rem"),
+                class_name="server-waking-banner",
+                spacing="2",
+                align_items="center",
+            ),
+        ),
         rx.spacer(),
         # Top-right quick actions: Theme toggle + Auth badge
         rx.hstack(

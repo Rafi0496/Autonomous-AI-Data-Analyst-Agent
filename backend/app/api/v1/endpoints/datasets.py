@@ -83,6 +83,23 @@ def get_dataset(
             detail=f"Dataset with ID {dataset_id} not found."
         )
     check_dataset_access(dataset, current_user)
+    prof = dataset.get_profile() or {}
+    clean_summary = dataset.get_cleaning_summary() or {}
+    quality_score = prof.get("quality_score") or clean_summary.get("quality_score") or clean_summary.get("raw_quality_score")
+
+    stage = "Ready"
+    if dataset.status in ("uploaded", "processing"):
+        if not dataset.cleaned_file_path:
+            stage = "Cleaning"
+        elif not dataset.profile_json:
+            stage = "Profiling"
+    elif dataset.status == "cleaned":
+        stage = "Profiling"
+    elif dataset.status in ("profiled", "ready"):
+        stage = "Ready"
+    elif dataset.status == "non_tabular":
+        stage = "Non-tabular media"
+
     return {
         "id": dataset.id,
         "filename": dataset.filename,
@@ -91,9 +108,13 @@ def get_dataset(
         "row_count": dataset.row_count,
         "column_count": dataset.column_count,
         "status": dataset.status,
+        "stage": stage,
+        "quality_score": quality_score,
+        "is_ready": dataset.status in ("profiled", "ready", "analyzed") or (bool(dataset.profile_json) and bool(dataset.cleaned_file_path)),
         "has_cleaned_version": bool(dataset.cleaned_file_path),
         "has_profile": bool(dataset.profile_json),
-        "cleaning_summary": dataset.get_cleaning_summary(),
+        "cleaning_summary": clean_summary,
+        "profile": prof,
         "created_at": dataset.created_at.isoformat(),
         "updated_at": dataset.updated_at.isoformat()
     }

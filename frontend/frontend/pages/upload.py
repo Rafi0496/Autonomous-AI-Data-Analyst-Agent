@@ -67,8 +67,8 @@ def sample_dataset_card(title: str, description: str, filename: str, icon_name: 
     )
 
 
-def upload_zone() -> rx.Component:
-    """Sunken/inset upload drop zone with dual tonal shadows and dashed border."""
+def upload_idle_view() -> rx.Component:
+    """State 0: Inset drop zone accepting ANY file format."""
     return neu_inset_card(
         rx.vstack(
             rx.upload(
@@ -80,55 +80,379 @@ def upload_zone() -> rx.Component:
                         background_color=SURFACE_COLOR,
                         box_shadow=SHADOW_RAISED_SM,
                     ),
-                    rx.text("Drop your dataset here, or click to browse", font_weight="600", font_size="0.95rem", color=TEXT_COLOR),
-                    rx.text("Supports CSV, XLSX, XLS, and JSON files up to 50 MB", font_size="0.775rem", color=TEXT_MUTED),
+                    rx.text("Upload any file", font_weight="700", font_size="1.1rem", color=TEXT_COLOR),
+                    rx.text(
+                        "Drop your dataset or document here, or click to browse. Any file format accepted.",
+                        font_size="0.8rem",
+                        color=TEXT_MUTED,
+                        text_align="center",
+                        max_width="480px",
+                    ),
                     rx.hstack(
-                        status_pill(".csv", icon="file-spreadsheet"),
-                        status_pill(".xlsx", icon="file-spreadsheet"),
-                        status_pill(".json", icon="file-code"),
+                        status_pill("CSV / TSV / TXT", icon="file-spreadsheet"),
+                        status_pill("Excel / Sheets", icon="table"),
+                        status_pill("JSON / XML / HTML", icon="file-code"),
+                        status_pill("Parquet / Feather", icon="database"),
+                        status_pill("SQLite / DB", icon="hard-drive"),
+                        status_pill("PDF / DOCX", icon="file-text"),
+                        status_pill("ZIP / GZ", icon="folder-archive"),
+                        wrap="wrap",
+                        justify_content="center",
                         spacing="2",
+                        padding_top="0.25rem",
                     ),
                     spacing="2",
                     align_items="center",
                     justify_content="center",
-                    padding="2rem 1rem",
+                    padding="2.2rem 1.25rem",
                     width="100%",
                 ),
                 id="dataset_upload",
-                border="2px dashed var(--shadow-light)",
+                border="2px dashed var(--shadow-dark)",
                 border_radius=RADIUS_LG,
                 background_color="transparent",
                 padding="0.5rem",
                 width="100%",
                 cursor="pointer",
             ),
+            spacing="2",
+            width="100%",
+            align_items="center",
+        ),
+        width="100%",
+    )
+
+
+def upload_selected_view() -> rx.Component:
+    """State 1: File selected - file chip with name, type, and remove button."""
+    return neu_card(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(tag="file-check", size=24, color=ACCENT_COLOR),
+                    padding="0.65rem",
+                    border_radius=RADIUS_FULL,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_RAISED_SM,
+                ),
+                rx.vstack(
+                    rx.text("File Selected", font_size="0.75rem", font_weight="600", color=TEXT_MUTED),
+                    rx.hstack(
+                        rx.foreach(
+                            rx.selected_files("dataset_upload"),
+                            lambda fn: rx.text(fn, font_weight="700", font_size="1rem", color=TEXT_COLOR),
+                        ),
+                        status_pill("Ready to upload", icon="check", status="info"),
+                        spacing="2",
+                        align_items="center",
+                    ),
+                    spacing="0",
+                    align_items="flex-start",
+                ),
+                rx.spacer(),
+                neu_button(
+                    rx.hstack(
+                        rx.icon(tag="x", size=13),
+                        rx.text("Remove", font_size="0.75rem"),
+                        spacing="1",
+                        align_items="center",
+                    ),
+                    variant="ghost",
+                    on_click=[rx.clear_selected_files("dataset_upload"), AppState.reset_upload],
+                ),
+                width="100%",
+                align_items="center",
+            ),
             rx.hstack(
                 neu_button(
                     rx.hstack(
                         rx.icon(tag="upload", size=15),
-                        rx.text("Upload & Ingest"),
+                        rx.text("Upload & Ingest", font_weight="600"),
                         spacing="2",
                         align_items="center",
                     ),
                     variant="primary",
-                    is_loading=AppState.is_uploading,
-                    on_click=AppState.handle_upload(rx.upload_files(upload_id="dataset_upload")),
+                    width="100%",
+                    padding="0.7rem",
+                    on_click=AppState.handle_upload(rx.upload_files(upload_id="dataset_upload", on_upload_progress=AppState.handle_upload_progress)),
                 ),
-                neu_button(
-                    "Clear Selection",
-                    variant="secondary",
-                    on_click=rx.clear_selected_files("dataset_upload"),
-                ),
-                spacing="3",
-                justify_content="center",
                 width="100%",
                 padding_top="0.5rem",
             ),
             spacing="3",
             width="100%",
-            align_items="center",
         ),
         width="100%",
+    )
+
+
+def upload_uploading_view() -> rx.Component:
+    """State 2: Uploading - real progress bar with percent, disabled button to prevent duplicate uploads."""
+    return neu_card(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(tag="upload-cloud", size=22, color=ACCENT_COLOR),
+                    padding="0.6rem",
+                    border_radius=RADIUS_FULL,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_RAISED_SM,
+                ),
+                rx.vstack(
+                    rx.text("Uploading File...", font_weight="700", font_size="1rem", color=TEXT_COLOR),
+                    rx.text(f"Streaming data safely ({AppState.upload_progress_pct}%)", font_size="0.8rem", color=TEXT_MUTED),
+                    spacing="0",
+                    align_items="flex-start",
+                ),
+                rx.spacer(),
+                status_pill(f"{AppState.upload_progress_pct}%", icon="loader", status="info"),
+                width="100%",
+                align_items="center",
+            ),
+            progress_track(
+                percent=AppState.upload_progress_pct,
+                height="10px",
+            ),
+            neu_button(
+                rx.hstack(
+                    rx.icon(tag="loader", size=14, class_name="neu-active-step-pulse"),
+                    rx.text("Transferring file...", font_size="0.8rem"),
+                    spacing="2",
+                    align_items="center",
+                ),
+                variant="secondary",
+                width="100%",
+                is_disabled=True,
+            ),
+            spacing="3",
+            width="100%",
+        ),
+        width="100%",
+    )
+
+
+def upload_processing_view() -> rx.Component:
+    """State 3: Processing - stage text that dynamically changes."""
+    return neu_card(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.box(
+                        width="12px",
+                        height="12px",
+                        border_radius=RADIUS_FULL,
+                        background_color=ACCENT_COLOR,
+                        class_name="neu-active-step-pulse",
+                    ),
+                    padding="0.65rem",
+                    border_radius=RADIUS_FULL,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_RAISED_SM,
+                    display="flex",
+                    align_items="center",
+                    justify_content="center",
+                ),
+                rx.vstack(
+                    rx.text("Processing Dataset", font_weight="700", font_size="1.05rem", color=TEXT_COLOR),
+                    rx.text(
+                        AppState.upload_stage_name,
+                        font_size="0.85rem",
+                        color=ACCENT_COLOR,
+                        font_weight="600",
+                    ),
+                    spacing="0",
+                    align_items="flex-start",
+                ),
+                rx.spacer(),
+                status_pill("Background Tasks Active", icon="cpu", status="info"),
+                width="100%",
+                align_items="center",
+            ),
+            rx.hstack(
+                status_pill("1. Validating", icon="check", status="info"),
+                rx.icon(tag="arrow-right", size=12, color=TEXT_MUTED),
+                status_pill("2. Parsing", icon="check", status="info"),
+                rx.icon(tag="arrow-right", size=12, color=TEXT_MUTED),
+                status_pill("3. Cleaning", icon="sparkles", status="info"),
+                rx.icon(tag="arrow-right", size=12, color=TEXT_MUTED),
+                status_pill("4. Profiling", icon="activity", status="info"),
+                wrap="wrap",
+                spacing="2",
+                align_items="center",
+                justify_content="center",
+                width="100%",
+                padding_y="0.5rem",
+            ),
+            spacing="3",
+            width="100%",
+        ),
+        width="100%",
+    )
+
+
+def upload_ready_view() -> rx.Component:
+    """State 4: Ready - success summary card + primary Run analysis button."""
+    return neu_card(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(tag="circle-check", size=24, color="var(--status-success)"),
+                    padding="0.65rem",
+                    border_radius=RADIUS_FULL,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_RAISED_SM,
+                ),
+                rx.vstack(
+                    rx.hstack(
+                        rx.text(AppState.selected_dataset_name, font_weight="700", font_size="1.1rem", color=TEXT_COLOR),
+                        status_pill("Dataset Ready", icon="check", status="success"),
+                        spacing="2",
+                        align_items="center",
+                    ),
+                    rx.text(
+                        f"Parsed with {AppState.detected_reader} | Profiling & data quality evaluation complete.",
+                        font_size="0.8rem",
+                        color=TEXT_MUTED,
+                    ),
+                    spacing="0",
+                    align_items="flex-start",
+                ),
+                rx.spacer(),
+                neu_button(
+                    rx.hstack(
+                        rx.icon(tag="refresh-cw", size=13),
+                        rx.text("Upload another", font_size="0.75rem"),
+                        spacing="1",
+                        align_items="center",
+                    ),
+                    variant="ghost",
+                    on_click=[AppState.reset_upload, rx.clear_selected_files("dataset_upload")],
+                ),
+                width="100%",
+                align_items="center",
+            ),
+            # Key Metric Summary Pills
+            rx.grid(
+                neu_inset_card(
+                    rx.vstack(
+                        rx.text("Total Rows", font_size="0.75rem", color=TEXT_MUTED),
+                        rx.text(f"{AppState.row_count}", font_weight="700", font_size="1.15rem", color=TEXT_COLOR),
+                        spacing="0",
+                    ),
+                    padding="0.65rem",
+                ),
+                neu_inset_card(
+                    rx.vstack(
+                        rx.text("Features / Columns", font_size="0.75rem", color=TEXT_MUTED),
+                        rx.text(f"{AppState.column_count}", font_weight="700", font_size="1.15rem", color=TEXT_COLOR),
+                        spacing="0",
+                    ),
+                    padding="0.65rem",
+                ),
+                neu_inset_card(
+                    rx.vstack(
+                        rx.text("Quality Score", font_size="0.75rem", color=TEXT_MUTED),
+                        rx.text(f"{AppState.quality_score:.1f}/100", font_weight="700", font_size="1.15rem", color=ACCENT_COLOR),
+                        spacing="0",
+                    ),
+                    padding="0.65rem",
+                ),
+                columns=rx.breakpoints(initial="1", sm="3"),
+                spacing="3",
+                width="100%",
+            ),
+            # Primary CTA: Run Analysis Button
+            rx.hstack(
+                neu_button(
+                    rx.hstack(
+                        rx.icon(tag="play", size=16),
+                        rx.text("Run Analysis", font_weight="600"),
+                        spacing="2",
+                        align_items="center",
+                    ),
+                    variant="primary",
+                    width="100%",
+                    padding="0.75rem",
+                    is_loading=AppState.is_analyzing,
+                    on_click=AppState.start_analysis,
+                ),
+                width="100%",
+                padding_top="0.25rem",
+            ),
+            spacing="3",
+            width="100%",
+        ),
+        width="100%",
+    )
+
+
+def upload_failed_view() -> rx.Component:
+    """State 5: Failed - plain-language reason + Try again button."""
+    return neu_card(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(tag="circle-alert", size=24, color="var(--status-error)"),
+                    padding="0.65rem",
+                    border_radius=RADIUS_FULL,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_RAISED_SM,
+                ),
+                rx.vstack(
+                    rx.text("Upload or Processing Failed", font_weight="700", font_size="1.05rem", color="var(--status-error)"),
+                    rx.text(
+                        AppState.upload_error_reason,
+                        font_size="0.85rem",
+                        color=TEXT_COLOR,
+                        line_height="1.45",
+                    ),
+                    spacing="0",
+                    align_items="flex-start",
+                ),
+                width="100%",
+                align_items="center",
+            ),
+            neu_button(
+                rx.hstack(
+                    rx.icon(tag="rotate-cw", size=14),
+                    rx.text("Try again", font_weight="600"),
+                    spacing="2",
+                    align_items="center",
+                ),
+                variant="primary",
+                on_click=[AppState.reset_upload, rx.clear_selected_files("dataset_upload")],
+                width="100%",
+                padding="0.65rem",
+            ),
+            spacing="3",
+            width="100%",
+        ),
+        width="100%",
+    )
+
+
+def upload_zone() -> rx.Component:
+    """Renders strictly ONE upload UI state at a time."""
+    return rx.cond(
+        AppState.upload_ui_state == "failed",
+        upload_failed_view(),
+        rx.cond(
+            AppState.upload_ui_state == "ready",
+            upload_ready_view(),
+            rx.cond(
+                AppState.upload_ui_state == "processing",
+                upload_processing_view(),
+                rx.cond(
+                    AppState.upload_ui_state == "uploading",
+                    upload_uploading_view(),
+                    rx.cond(
+                        rx.selected_files("dataset_upload").length() > 0,
+                        upload_selected_view(),
+                        upload_idle_view(),
+                    ),
+                ),
+            ),
+        ),
     )
 
 
@@ -382,7 +706,7 @@ def upload_page() -> rx.Component:
         rx.vstack(
             # Status Alerts
             rx.cond(
-                AppState.status_message != "",
+                (AppState.status_message != "") & (AppState.upload_ui_state != "failed") & (AppState.upload_ui_state != "ready"),
                 rx.callout(
                     AppState.status_message,
                     icon="info",
@@ -392,7 +716,7 @@ def upload_page() -> rx.Component:
                 ),
             ),
             rx.cond(
-                AppState.error_message != "",
+                (AppState.error_message != "") & (AppState.upload_ui_state != "failed"),
                 rx.callout(
                     AppState.error_message,
                     icon="circle-alert",

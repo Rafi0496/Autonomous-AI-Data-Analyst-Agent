@@ -96,7 +96,7 @@ def settings_page() -> rx.Component:
                                     color=TEXT_COLOR,
                                 ),
                                 rx.text(
-                                    rx.cond(AppState.is_authenticated, AppState.current_user_email, "Anonymous session (Local tenant)"),
+                                    rx.cond(AppState.is_authenticated, AppState.current_user_email, "Guest workspace (Local session)"),
                                     font_size="0.8rem",
                                     color=TEXT_MUTED,
                                 ),
@@ -209,8 +209,6 @@ def settings_page() -> rx.Component:
                             spacing="3",
                             align_items="center",
                         ),
-                        rx.spacer(),
-                        status_pill(AppState.api_health_status, icon="shield-check", status="success"),
                         width="100%",
                         align_items="center",
                     ),
