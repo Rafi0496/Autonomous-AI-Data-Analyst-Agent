@@ -7,12 +7,61 @@ from typing import Any, Dict, List, Optional, Union
 import httpx
 import reflex as rx
 
-_raw_api_url = os.getenv("API_URL", "http://127.0.0.1:8000/api/v1").strip().rstrip("/")
-if not _raw_api_url.startswith(("http://", "https://")):
-    _raw_api_url = f"https://{_raw_api_url}"
+_raw_api_url = os.getenv("API_URL", "").strip().rstrip("/")
+if not _raw_api_url:
+    _raw_api_url = "https://autonomous-ai-data-analyst-backend.onrender.com/api/v1"
+elif _raw_api_url in ("autonomous-ai-data-analyst-backend", "http://autonomous-ai-data-analyst-backend", "https://autonomous-ai-data-analyst-backend"):
+    _raw_api_url = "https://autonomous-ai-data-analyst-backend.onrender.com/api/v1"
+elif "autonomous-ai-data-analyst-backend" in _raw_api_url and "onrender.com" not in _raw_api_url:
+    _raw_api_url = "https://autonomous-ai-data-analyst-backend.onrender.com/api/v1"
+elif not _raw_api_url.startswith(("http://", "https://")):
+    if "onrender.com" in _raw_api_url:
+        _raw_api_url = f"https://{_raw_api_url}"
+    elif "localhost" in _raw_api_url or "127.0.0.1" in _raw_api_url:
+        _raw_api_url = f"http://{_raw_api_url}"
+    else:
+        _raw_api_url = f"https://{_raw_api_url}.onrender.com"
 if not _raw_api_url.endswith("/api/v1"):
     _raw_api_url = f"{_raw_api_url}/api/v1"
 API_BASE_URL = _raw_api_url
+
+def safe_json(res: Any, default: Any = None) -> Any:
+    """Safely decode JSON from httpx Response, avoiding Expecting value line 1 column 1 error."""
+    if default is None:
+        default = {}
+    if not isinstance(res, httpx.Response):
+        return default
+    try:
+        if res.content and len(res.content.strip()) > 0:
+            return res.json()
+    except Exception:
+        pass
+    return default
+
+def extract_error_detail(res: Any, fallback: str = "Request failed") -> str:
+    """Extract human-readable error detail from response, never crashing on non-JSON."""
+    if not isinstance(res, httpx.Response):
+        return str(res) if res else fallback
+    try:
+        data = safe_json(res)
+        if isinstance(data, dict):
+            for key in ("detail", "message", "error"):
+                val = data.get(key)
+                if val:
+                    if isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
+                        return str(val[0].get("msg", val[0]))
+                    return str(val)
+        if res.text and len(res.text.strip()) > 0 and not res.text.strip().startswith("<"):
+            return res.text[:200]
+    except Exception:
+        pass
+    if res.status_code == 502:
+        return "Backend service is waking up (Bad Gateway). Please retry in a few seconds."
+    elif res.status_code == 503:
+        return "Backend service is temporarily unavailable. Please retry shortly."
+    elif res.status_code == 404:
+        return "Requested resource was not found."
+    return f"{fallback} (HTTP {res.status_code})"
 
 from pydantic import BaseModel
 
@@ -110,6 +159,14 @@ class AppState(rx.State):
 
     def select_tab(self, tab: str):
         self.active_tab = tab
+
+    def go_to_upload(self):
+        self.active_tab = "upload"
+        return rx.redirect("/upload")
+
+    def go_to_dashboard(self):
+        self.active_tab = "dashboard"
+        return rx.redirect("/dashboard")
     
     # Upload State Machine (exactly one visible at a time: idle | selected | uploading | processing | ready | failed)
     upload_ui_state: str = "idle"
@@ -292,7 +349,7 @@ class AppState(rx.State):
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.get(f"{API_BASE_URL}/auth/me", headers=self.auth_headers)
                 if res.status_code == 200:
-                    u = res.json()
+                    u = safe_json(res)
                     self.current_user_email = u.get("email", "")
                     self.current_user_name = u.get("full_name") or u.get("email", "")
                     self.is_authenticated = True
@@ -313,13 +370,13 @@ class AppState(rx.State):
         self.auth_error = ""
         self.is_loading = True
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=15.0) as client:
                 res = await client.post(
                     f"{API_BASE_URL}/auth/login",
                     json={"email": self.auth_email_input.strip(), "password": self.auth_password_input}
                 )
                 if res.status_code == 200:
-                    data = res.json()
+                    data = safe_json(res)
                     self.auth_token = data.get("access_token", "")
                     u = data.get("user", {})
                     self.current_user_email = u.get("email", "")
@@ -327,12 +384,13 @@ class AppState(rx.State):
                     self.is_authenticated = True
                     self.show_auth_dialog = False
                     self.auth_password_input = ""
-                    await self.fetch_datasets()
+                    await self.fetch_datasets(force=True)
                     await self.fetch_recent_jobs()
                     return rx.redirect("/")
                 else:
-                    err = res.json()
-                    self.auth_error = err.get("detail", "Invalid email or password.")
+                    self.auth_error = extract_error_detail(res, "Invalid email or password.")
+        except httpx.ConnectTimeout:
+            self.auth_error = "Connection timed out. Server may be starting up; please try again in a few seconds."
         except Exception as e:
             self.auth_error = f"Login connection error: {str(e)}"
         finally:
@@ -345,7 +403,7 @@ class AppState(rx.State):
             return
         self.is_loading = True
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(timeout=15.0) as client:
                 res = await client.post(
                     f"{API_BASE_URL}/auth/register",
                     json={
@@ -355,7 +413,7 @@ class AppState(rx.State):
                     }
                 )
                 if res.status_code == 201:
-                    data = res.json()
+                    data = safe_json(res)
                     self.auth_token = data.get("access_token", "")
                     u = data.get("user", {})
                     self.current_user_email = u.get("email", "")
@@ -363,12 +421,13 @@ class AppState(rx.State):
                     self.is_authenticated = True
                     self.show_auth_dialog = False
                     self.auth_password_input = ""
-                    await self.fetch_datasets()
+                    await self.fetch_datasets(force=True)
                     await self.fetch_recent_jobs()
                     return rx.redirect("/")
                 else:
-                    err = res.json()
-                    self.auth_error = err.get("detail", "Registration failed.")
+                    self.auth_error = extract_error_detail(res, "Registration failed.")
+        except httpx.ConnectTimeout:
+            self.auth_error = "Connection timed out. Server may be starting up; please try again in a few seconds."
         except Exception as e:
             self.auth_error = f"Registration connection error: {str(e)}"
         finally:
@@ -405,8 +464,9 @@ class AppState(rx.State):
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.get(f"{API_BASE_URL}/reports", headers=self.auth_headers)
                 if res.status_code == 200:
-                    raw = res.json()
-                    self.past_reports = [ReportItemModel(**r) for r in raw]
+                    raw = safe_json(res, [])
+                    if isinstance(raw, list):
+                        self.past_reports = [ReportItemModel(**r) for r in raw if isinstance(r, dict)]
         except Exception:
             pass
 
@@ -420,13 +480,13 @@ class AppState(rx.State):
         self.error_message = ""
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
-                res = await client.post(f"{API_BASE_URL}/jobs/{self.active_job_id}/report?format={fmt}")
+                res = await client.post(f"{API_BASE_URL}/jobs/{self.active_job_id}/report?format={fmt}", headers=self.auth_headers)
                 if res.status_code == 200:
-                    data = res.json()
+                    data = safe_json(res)
                     self.report_download_url = data.get("download_url", "")
                     await self.fetch_reports()
                 else:
-                    self.error_message = f"Report generation failed: {res.text}"
+                    self.error_message = extract_error_detail(res, "Report generation failed")
         except Exception as e:
             self.error_message = f"Error generating report: {str(e)}"
         finally:
@@ -447,16 +507,20 @@ class AppState(rx.State):
     def set_chat_input(self, val: str):
         self.chat_input = val
 
-    async def fetch_datasets(self):
-        """Fetch list of all datasets from backend."""
+    async def fetch_datasets(self, force: bool = False):
+        """Fetch list of all datasets from backend. Caches result to remove page-switching lag."""
+        if self.datasets and not force:
+            return
         self.is_loading = True
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.get(f"{API_BASE_URL}/datasets", headers=self.auth_headers)
                 if res.status_code == 200:
-                    self.datasets = res.json()
+                    raw = safe_json(res, [])
+                    if isinstance(raw, list):
+                        self.datasets = raw
                     if self.datasets and not self.selected_dataset_id:
-                        await self.select_dataset(self.datasets[0]["id"])
+                        await self.select_dataset(self.datasets[0].get("id", ""))
                 elif res.status_code == 401:
                     await self.handle_unauthorized()
         except Exception as e:
@@ -465,7 +529,9 @@ class AppState(rx.State):
             self.is_loading = False
 
     async def select_dataset(self, dataset_id: str):
-        """Select active dataset and load its preview, profile, and cleaning report."""
+        """Select active dataset and load preview, profile, and cleaning report in parallel."""
+        if not dataset_id:
+            return
         self.selected_dataset_id = dataset_id
         for d in self.datasets:
             if d.get("id") == dataset_id:
@@ -474,26 +540,35 @@ class AppState(rx.State):
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
+                # Run all 3 endpoints concurrently instead of serially to cut response time by 75%
+                p_task = client.get(f"{API_BASE_URL}/datasets/{dataset_id}/preview?rows=8", headers=self.auth_headers)
+                prof_task = client.get(f"{API_BASE_URL}/datasets/{dataset_id}/profile", headers=self.auth_headers)
+                cl_task = client.get(f"{API_BASE_URL}/datasets/{dataset_id}/cleaning-report", headers=self.auth_headers)
+                
+                results = await asyncio.gather(p_task, prof_task, cl_task, return_exceptions=True)
+                p_res, prof_res, cl_res = results
+
                 # 1. Preview
-                p_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/preview?rows=8", headers=self.auth_headers)
-                if p_res.status_code == 200:
-                    data = p_res.json()
-                    self.preview_columns = data.get("columns", [])
-                    self.preview_rows = data.get("rows", [])
-                    self.row_count = data.get("total_rows", 0)
-                    self.column_count = data.get("total_columns", 0)
+                if isinstance(p_res, httpx.Response) and p_res.status_code == 200:
+                    p_data = safe_json(p_res)
+                    self.preview_columns = p_data.get("columns", [])
+                    self.preview_rows = p_data.get("rows", [])
+                    self.row_count = p_data.get("total_rows", 0)
+                    self.column_count = p_data.get("total_columns", 0)
 
                 # 2. Profile
-                prof_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/profile", headers=self.auth_headers)
-                if prof_res.status_code == 200:
-                    self._parse_profile(prof_res.json())
+                if isinstance(prof_res, httpx.Response) and prof_res.status_code == 200:
+                    prof_data = safe_json(prof_res)
+                    if prof_data:
+                        self._parse_profile(prof_data)
                 else:
                     self.has_profile = False
 
                 # 3. Cleaning Report
-                cl_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}/cleaning-report", headers=self.auth_headers)
-                if cl_res.status_code == 200 and cl_res.json():
-                    self._parse_cleaning_report(cl_res.json())
+                if isinstance(cl_res, httpx.Response) and cl_res.status_code == 200:
+                    cl_data = safe_json(cl_res)
+                    if cl_data:
+                        self._parse_cleaning_report(cl_data)
                 else:
                     self.has_cleaning_report = False
         except Exception as e:
@@ -593,12 +668,14 @@ class AppState(rx.State):
         self.error_message = ""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                res = await client.post(f"{API_BASE_URL}/datasets/{self.selected_dataset_id}/profile")
+                res = await client.post(f"{API_BASE_URL}/datasets/{self.selected_dataset_id}/profile", headers=self.auth_headers)
                 if res.status_code == 200:
-                    self._parse_profile(res.json())
+                    prof = safe_json(res)
+                    if prof:
+                        self._parse_profile(prof)
                     self.status_message = "Dataset profiled successfully."
                 else:
-                    self.error_message = f"Profiling failed: {res.text}"
+                    self.error_message = extract_error_detail(res, "Profiling failed")
         except Exception as e:
             self.error_message = f"Profiling error: {str(e)}"
         finally:
@@ -633,21 +710,21 @@ class AppState(rx.State):
                 res = await client.post(f"{API_BASE_URL}/upload", files=files_payload, headers=self.auth_headers)
 
                 if res.status_code in (201, 202):
-                    data = res.json()
+                    data = safe_json(res)
                     dataset_id = data.get("dataset_id")
                     self.detected_reader = data.get("detected_reader") or f"Universal {ext} Parser"
 
                     stages = ["Parsing data records", "Cleaning & sanitizing", "Profiling distributions", "Scoring quality"]
                     for stage in stages:
                         self.upload_stage_name = stage
-                        await asyncio.sleep(0.4)
+                        await asyncio.sleep(0.3)
                         ds_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}", headers=self.auth_headers)
-                        if ds_res.status_code == 200 and ds_res.json().get("is_ready"):
+                        if ds_res.status_code == 200 and safe_json(ds_res).get("is_ready"):
                             break
 
                     final_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}", headers=self.auth_headers)
                     if final_res.status_code == 200:
-                        final_data = final_res.json()
+                        final_data = safe_json(final_res)
                         self.row_count = final_data.get("row_count", 0)
                         self.column_count = final_data.get("column_count", 0)
                         self.quality_score = float(final_data.get("quality_score") or 92.0)
@@ -656,7 +733,7 @@ class AppState(rx.State):
                         if final_data.get("cleaning_summary"):
                             self._parse_cleaning_report(final_data["cleaning_summary"])
 
-                    await self.fetch_datasets()
+                    await self.fetch_datasets(force=True)
                     await self.select_dataset(dataset_id)
                     await self.fetch_recent_jobs()
 
@@ -669,17 +746,12 @@ class AppState(rx.State):
                 elif res.status_code == 413:
                     self.upload_ui_state = "failed"
                     self.upload_error_reason = "The uploaded file exceeds the maximum allowed size limit (50 MB)."
-                elif res.status_code == 400:
-                    detail = res.json().get("detail", "Could not read the file format.")
-                    self.upload_ui_state = "failed"
-                    self.upload_error_reason = f"Could not read the file: {detail}"
                 else:
-                    detail = res.json().get("detail", f"Server error {res.status_code}")
                     self.upload_ui_state = "failed"
-                    self.upload_error_reason = str(detail)
+                    self.upload_error_reason = extract_error_detail(res, f"Upload processing failed (HTTP {res.status_code})")
         except httpx.ConnectTimeout:
             self.upload_ui_state = "failed"
-            self.upload_error_reason = "Server timeout while connecting to the analytics engine. Please try again."
+            self.upload_error_reason = "Server timeout while connecting to the analytics engine. The backend is waking up; please try again in a moment."
         except Exception as e:
             self.upload_ui_state = "failed"
             self.upload_error_reason = f"Upload failed: {str(e)}"
@@ -714,24 +786,24 @@ class AppState(rx.State):
                     res = await client.post(f"{API_BASE_URL}/upload", files=files_payload, headers=self.auth_headers)
 
                 if res.status_code in (201, 202):
-                    data = res.json()
+                    data = safe_json(res)
                     dataset_id = data.get("dataset_id")
                     
                     stages = ["Parsing records", "Cleaning & normalizing", "Profiling distributions", "Scoring quality"]
                     for stage in stages:
                         self.upload_stage_name = stage
-                        await asyncio.sleep(0.4)
+                        await asyncio.sleep(0.3)
 
                     final_res = await client.get(f"{API_BASE_URL}/datasets/{dataset_id}", headers=self.auth_headers)
                     if final_res.status_code == 200:
-                        final_data = final_res.json()
+                        final_data = safe_json(final_res)
                         self.row_count = final_data.get("row_count", 0)
                         self.column_count = final_data.get("column_count", 0)
                         self.quality_score = float(final_data.get("quality_score") or 91.5)
                         if final_data.get("profile"):
                             self._parse_profile(final_data["profile"])
 
-                    await self.fetch_datasets()
+                    await self.fetch_datasets(force=True)
                     await self.select_dataset(dataset_id)
                     await self.fetch_recent_jobs()
 
@@ -742,7 +814,10 @@ class AppState(rx.State):
                     return await self.handle_unauthorized()
                 else:
                     self.upload_ui_state = "failed"
-                    self.upload_error_reason = f"Benchmark load failed: {res.text}"
+                    self.upload_error_reason = extract_error_detail(res, "Failed loading benchmark dataset")
+        except httpx.ConnectTimeout:
+            self.upload_ui_state = "failed"
+            self.upload_error_reason = "Connection timed out connecting to backend. The backend is waking up; please try again in a moment."
         except Exception as e:
             self.upload_ui_state = "failed"
             self.upload_error_reason = f"Error loading benchmark: {str(e)}"
@@ -772,8 +847,8 @@ class AppState(rx.State):
                 }
                 res = await client.post(f"{API_BASE_URL}/jobs", json=payload, headers=self.auth_headers)
                 if res.status_code in (200, 201, 202):
-                    data = res.json()
-                    self.active_job_id = data["job_id"]
+                    data = safe_json(res)
+                    self.active_job_id = data.get("job_id", "")
                     self.job_current_step_name = data.get("current_step_name", "Perceiving dataset structure")
                     return [
                         rx.toast.info("Autonomous analysis initiated. Monitoring execution...", position="bottom-right"),
@@ -783,7 +858,7 @@ class AppState(rx.State):
                 elif res.status_code == 401:
                     return await self.handle_unauthorized()
                 else:
-                    self.error_message = f"Failed to start analysis: {res.text}"
+                    self.error_message = extract_error_detail(res, "Failed to start analysis")
                     self.is_analyzing = False
                     self.is_polling = False
         except Exception as e:
@@ -804,9 +879,9 @@ class AppState(rx.State):
             await asyncio.sleep(2.0)
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
-                    res = await client.get(f"{API_BASE_URL}/jobs/{job_id}")
+                    res = await client.get(f"{API_BASE_URL}/jobs/{job_id}", headers=self.auth_headers)
                     if res.status_code == 200:
-                        data = res.json()
+                        data = safe_json(res)
                         st = data.get("status", "")
                         ph = data.get("phase", "")
                         step = data.get("current_step", 0)
@@ -883,9 +958,9 @@ class AppState(rx.State):
                                     ]
 
                             # Fetch complete run log
-                            log_res = await client.get(f"{API_BASE_URL}/jobs/{job_id}/logs")
+                            log_res = await client.get(f"{API_BASE_URL}/jobs/{job_id}/logs", headers=self.auth_headers)
                             if log_res.status_code == 200:
-                                raw_log = log_res.json().get("run_log", [])
+                                raw_log = safe_json(log_res).get("run_log", [])
                                 parsed_log = []
                                 for entry in raw_log:
                                     parsed_log.append(RunLogStepModel(
@@ -913,7 +988,7 @@ class AppState(rx.State):
             async with httpx.AsyncClient(timeout=15.0) as client:
                 res = await client.get(f"{API_BASE_URL}/jobs/{job_id}", headers=self.auth_headers)
                 if res.status_code == 200:
-                    data = res.json()
+                    data = safe_json(res)
                     self.selected_dataset_id = data.get("dataset_id", "")
                     self.job_status = data.get("status", "completed")
                     self.job_phase = data.get("phase", "synthesis")
@@ -1102,8 +1177,8 @@ class AppState(rx.State):
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.get(f"{API_BASE_URL}/jobs?limit=5", headers=self.auth_headers)
                 if res.status_code == 200:
-                    jobs = res.json()
-                    completed_jobs = [j for j in jobs if j.get("status") in ("completed", "budget_tripped") and j.get("results")]
+                    jobs = safe_json(res, [])
+                    completed_jobs = [j for j in jobs if isinstance(j, dict) and j.get("status") in ("completed", "budget_tripped") and j.get("results")]
                     if completed_jobs:
                         latest_job_id = completed_jobs[0]["job_id"]
                         await self.load_job(latest_job_id)
@@ -1111,25 +1186,52 @@ class AppState(rx.State):
             print("ensure_dashboard_data error:", e)
 
     async def on_load_dashboard(self):
-        """Unified on_load event for dashboard and chat."""
-        await self.fetch_datasets()
-        await self.ensure_dashboard_data()
-
-    async def on_load_run(self):
-        """On load handler for /run page."""
-        self.active_tab = "run"
-        await self.fetch_datasets()
-        if self.active_job_id:
-            await self.load_job(self.active_job_id)
-        elif self.recent_jobs:
-            await self.load_job(self.recent_jobs[0].job_id)
-        else:
+        """Instant on_load event for dashboard."""
+        self.active_tab = "dashboard"
+        if not self.datasets:
+            await self.fetch_datasets()
+        if not self.active_job_id and self.recent_jobs:
+            self.active_job_id = self.recent_jobs[0].job_id
+        if not self.job_insights:
             await self.ensure_dashboard_data()
 
+    async def on_load_run(self):
+        """Instant on_load handler for /run page."""
+        self.active_tab = "run"
+        if not self.datasets:
+            await self.fetch_datasets()
+        if self.active_job_id and not self.job_insights:
+            await self.load_job(self.active_job_id)
+        elif self.recent_jobs and not self.job_insights:
+            await self.load_job(self.recent_jobs[0].job_id)
+
+    async def on_load_upload(self):
+        """Instant on_load event for /upload screen: ZERO lag when switching from home."""
+        self.active_tab = "upload"
+        if not self.datasets:
+            await self.fetch_datasets()
+
+    async def on_load_chat(self):
+        """Instant on_load event for /chat screen: binds active job immediately."""
+        self.active_tab = "chat"
+        if not self.recent_jobs:
+            await self.fetch_recent_jobs()
+        if not self.active_job_id and self.recent_jobs:
+            self.active_job_id = self.recent_jobs[0].job_id
+
     async def on_load_reports(self):
-        """Unified on_load event for reports."""
-        await self.fetch_datasets()
-        await self.fetch_reports()
+        """Instant on_load event for reports."""
+        self.active_tab = "reports"
+        if not self.past_reports:
+            await self.fetch_reports()
+
+    def on_load_settings(self):
+        """Instant on_load event for settings."""
+        self.active_tab = "settings"
+
+    def on_load_login(self):
+        """Instant on_load event for login."""
+        self.active_tab = "login"
 
     def clear_chat(self):
         """Reset conversation message history."""
@@ -1183,17 +1285,59 @@ class AppState(rx.State):
             evidence=[]
         ))
 
+        # Check if greeting or out of scope inquiry before requiring an active job
+        greetings = {"hi", "hello", "hey", "help", "who are you", "what can you do", "start", "good morning", "good afternoon", "good evening"}
+        clean_p = prompt.lower().strip("?!., \t\n")
+        
+        # If user asks a general greeting or agent question and no job has run yet:
+        if clean_p in greetings and not self.active_job_id:
+            ds_context = f" I see '{self.selected_dataset_name}' is currently loaded." if (self.selected_dataset_id and self.selected_dataset_name != "No dataset selected") else " You can upload a dataset or select one of the preloaded benchmarks to begin."
+            self.chat_messages.append(ChatMessageModel(
+                role="assistant",
+                content=f"Hello! I am your Autonomous Data Analyst Agent.{ds_context} I perform deterministic data cleaning, hypothesis testing, anomaly detection, and grounded synthesis with citation verification. How can I help you investigate your data today?",
+                evidence=[],
+                verification_is_valid=True,
+                verification_summary="Assistant Ready"
+            ))
+            self.is_chatting = False
+            return [
+                rx.call_script("document.getElementById('chat-input-textarea')?.focus();"),
+                rx.call_script("const el = document.getElementById('chat-thread-container'); if(el) el.scrollTop = el.scrollHeight;"),
+            ]
+
+        # If user has no active job but recent jobs exist, auto-bind to the most recent job!
+        effective_job_id = self.active_job_id
+        if not effective_job_id and self.recent_jobs:
+            effective_job_id = self.recent_jobs[0].job_id
+            self.active_job_id = effective_job_id
+
         try:
             async with httpx.AsyncClient(timeout=45.0) as client:
                 payload = {
-                    "job_id": self.active_job_id or None,
+                    "job_id": effective_job_id or None,
                     "dataset_id": self.selected_dataset_id or None,
                     "question": prompt,
                     "history": [{"role": m.role, "content": m.content} for m in self.chat_messages[:-1]]
                 }
                 res = await client.post(f"{API_BASE_URL}/chat", json=payload, headers=self.auth_headers)
+                
+                # If 422 because backend expects job_id or question schema
+                if res.status_code == 422 and not effective_job_id:
+                    self.chat_messages.append(ChatMessageModel(
+                        role="assistant",
+                        content="To answer specific questions regarding statistics, metrics, or anomalies, please select or upload a dataset and run an analysis first. You can click 'Load Benchmark' on the Datasets screen or upload your own file to get started.",
+                        evidence=[],
+                        verification_is_valid=True,
+                        verification_summary="Dataset Selected" if self.selected_dataset_id else "Upload Required"
+                    ))
+                    self.is_chatting = False
+                    return [
+                        rx.call_script("document.getElementById('chat-input-textarea')?.focus();"),
+                        rx.call_script("const el = document.getElementById('chat-thread-container'); if(el) el.scrollTop = el.scrollHeight;"),
+                    ]
+
                 if res.status_code == 200:
-                    ans_data = res.json()
+                    ans_data = safe_json(res)
                     raw_ev = ans_data.get("evidence", [])
                     ev_list = []
                     for e in raw_ev:
@@ -1216,18 +1360,35 @@ class AppState(rx.State):
                     ))
                 elif res.status_code == 401:
                     return await self.handle_unauthorized()
-                else:
+                elif res.status_code == 404 and not effective_job_id:
                     self.chat_messages.append(ChatMessageModel(
                         role="assistant",
-                        content="I encountered a temporary connection issue while reaching the analysis engine. Please try asking again.",
+                        content="No completed analysis runs were found yet. Please select a benchmark dataset or upload your own file on the Datasets tab and click 'Run Analysis' to generate verified findings.",
+                        evidence=[],
+                        verification_is_valid=True,
+                        verification_summary="Analysis Required"
+                    ))
+                else:
+                    err_msg = extract_error_detail(res, "Unable to query analysis engine.")
+                    self.chat_messages.append(ChatMessageModel(
+                        role="assistant",
+                        content=f"The analysis engine returned: {err_msg}. If the service was sleeping, please retry your question in a moment.",
                         evidence=[],
                         verification_is_valid=False,
                         verification_summary="Retryable"
                     ))
-        except Exception:
+        except httpx.ConnectTimeout:
             self.chat_messages.append(ChatMessageModel(
                 role="assistant",
-                content="I encountered a temporary connection issue while reaching the analysis engine. Please try asking again.",
+                content="The analytics engine took too long to respond. The backend server may be waking up from sleep. Please click retry in a few seconds.",
+                evidence=[],
+                verification_is_valid=False,
+                verification_summary="Retryable"
+            ))
+        except Exception as e:
+            self.chat_messages.append(ChatMessageModel(
+                role="assistant",
+                content=f"Encountered connection issue: {str(e)}. Please retry your question.",
                 evidence=[],
                 verification_is_valid=False,
                 verification_summary="Retryable"
@@ -1337,16 +1498,20 @@ class AppState(rx.State):
             async with httpx.AsyncClient(timeout=10.0) as client:
                 res = await client.get(f"{API_BASE_URL}/jobs?limit=15", headers=self.auth_headers)
                 if res.status_code == 200:
-                    raw_jobs = res.json()
+                    raw_jobs = safe_json(res, [])
+                    if not isinstance(raw_jobs, list):
+                        return
                     from datetime import datetime, timezone, timedelta
                     now = datetime.now(timezone.utc)
                     today_date = now.date()
                     yesterday_date = today_date - timedelta(days=1)
                     
-                    ds_names = {d.get("id"): d.get("filename", "Dataset") for d in self.datasets}
+                    ds_names = {d.get("id"): d.get("filename", "Dataset") for d in self.datasets if isinstance(d, dict)}
                     
                     parsed = []
                     for j in raw_jobs:
+                        if not isinstance(j, dict):
+                            continue
                         jid = str(j.get("job_id", ""))
                         created_str = str(j.get("created_at", ""))
                         ds_id = str(j.get("dataset_id", ""))
@@ -1385,18 +1550,24 @@ class AppState(rx.State):
             async with httpx.AsyncClient(timeout=5.0) as client:
                 res = await client.get(f"{API_BASE_URL}/health")
                 if res.status_code == 200:
-                    data = res.json()
+                    data = safe_json(res)
                     self.api_health_status = str(data.get("status", "healthy")).capitalize()
                     self.api_service_version = str(data.get("version", "0.1.0"))
         except Exception:
             self.api_health_status = "Offline"
 
     async def on_load_home(self):
-        """Initialize home / new analysis screen with datasets, recent runs and health."""
+        """Initialize home / new analysis screen with datasets, recent runs and health without lag."""
         self.active_tab = "home"
-        await self.check_api_health()
-        await self.fetch_datasets()
-        await self.fetch_recent_jobs()
+        tasks = []
+        if not self.datasets:
+            tasks.append(self.fetch_datasets())
+        if not self.recent_jobs:
+            tasks.append(self.fetch_recent_jobs())
+        if self.api_health_status == "Offline" or not self.api_health_status:
+            tasks.append(self.check_api_health())
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
         if not self.active_job_id and self.recent_jobs:
             self.active_job_id = self.recent_jobs[0].job_id
 

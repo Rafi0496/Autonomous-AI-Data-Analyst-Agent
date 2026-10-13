@@ -151,7 +151,7 @@ def home_page() -> rx.Component:
                     dataset_options=AppState.dataset_options,
                     selected_dataset=AppState.selected_dataset_name,
                     on_select_dataset=AppState.select_dataset_by_name,
-                    on_attach_file=lambda: rx.redirect("/upload"),
+                    on_attach_file=AppState.go_to_upload,
                     is_loading=AppState.is_analyzing,
                     placeholder="Ask an analytical question or describe your dataset... (Enter sends)",
                 ),
@@ -232,7 +232,7 @@ def home_page() -> rx.Component:
                         action_button=neu_button(
                             "Upload Dataset",
                             variant="secondary",
-                            on_click=lambda: rx.redirect("/upload"),
+                            on_click=AppState.go_to_upload,
                         ),
                     ),
                 ),
