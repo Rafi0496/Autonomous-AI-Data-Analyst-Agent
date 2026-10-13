@@ -694,9 +694,14 @@ class AppState(rx.State):
 
         sample_path = Path("data/samples") / sample_name
         if not sample_path.exists():
-            alt_path = Path("/app/data/samples") / sample_name
-            if alt_path.exists():
-                sample_path = alt_path
+            for candidate in [
+                Path("/app/data/samples") / sample_name,
+                Path("frontend/data/samples") / sample_name,
+                Path("/app/frontend/data/samples") / sample_name,
+            ]:
+                if candidate.exists():
+                    sample_path = candidate
+                    break
             else:
                 self.upload_ui_state = "failed"
                 self.upload_error_reason = f"Benchmark dataset {sample_name} not found on server."

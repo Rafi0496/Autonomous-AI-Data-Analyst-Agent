@@ -1,0 +1,127 @@
+Transaction_ID,Date,Customer_ID,Product,Category,Region,Quantity,Unit_Price,Payment_Method
+TXN-1000,2025-03-23,CUST-127,Laptop,Office Supplies,East,,$100.58,Credit Card
+TXN-1001,2025-01-04,CUST-128,Wireless Mouse,electronics,central,,612.88,
+TXN-1002,2025-02-05,CUST-124,Webcam,electronics,CENTRAL,10.0,$194.79,Credit Card
+TXN-1003,02/15/2025,CUST-124,Monitor,Electronics,,999.0,,Credit Card
+TXN-1004,03/12/2025,,Webcam,Office Supplies,central,2.0,175.56,PayPal
+TXN-1005,04/09/2025,CUST-122,Laptop,electronics,,10.0,$545.80,PayPal
+TXN-1006,03/27/2025,CUST-115,Headphones,Office Supplies,CENTRAL,3.0,,PayPal
+TXN-1007,03/01/2025,CUST-102,Keyboard,Office Supplies,CENTRAL,1.0,718.78,Debit Card
+TXN-1008,02/21/2025,CUST-141,Laptop,electronics,central,-1.0,562.29,credit card
+TXN-1009,01/19/2025,CUST-108,Wireless Mouse,electronics,CENTRAL,-1.0,$503.13,
+TXN-1010,2025-03-05,CUST-124,Webcam,Electronics ,,-1.0,676.39,credit card
+TXN-1011,03/18/2025,CUST-149,Monitor,Electronics,central,,$616.80,Debit Card
+TXN-1012,01/15/2025,CUST-148,USB-C Cable,electronics,West,5.0,,PayPal
+TXN-1013,2025-03-06,CUST-134,Webcam,Office Supplies,East,10.0,181.09,
+TXN-1014,01-01-2025,CUST-115,Keyboard, Accessories,North,5.0,837.74,
+TXN-1015,2025-01-11,CUST-108,Headphones, Accessories,,,,credit card
+TXN-1016,2025-03-12,CUST-125,Keyboard,Accessories  ,,4.0,790.64,Debit Card
+TXN-1017,26-02-2025,CUST-100,USB-C Cable,Electronics ,South,4.0,506.24,Credit Card
+TXN-1018,01-04-2025,CUST-131,Laptop,electronics,North,4.0,74.17,PayPal
+TXN-1019,2025-03-11,CUST-142,Headphones,Accessories  ,central,4.0,689.26,credit card
+TXN-1020,02/15/2025,,USB-C Cable, Accessories,,2.0,836.78,Debit Card
+TXN-1021,2025-01-14,CUST-104,Wireless Mouse,electronics,central,4.0,247.59,credit card
+TXN-1022,2025-03-12,CUST-131,Laptop,Office Supplies,central,4.0,788.52,credit card
+TXN-1023,01/28/2025,CUST-150,Laptop,electronics,West,-1.0,,credit card
+TXN-1024,02/06/2025,CUST-103,Headphones,Office Supplies,,5.0,144.26,
+TXN-1025,05-04-2025,CUST-133,Laptop,Office Supplies,East,999.0,,PayPal
+TXN-1026,08-01-2025,CUST-136,Laptop,electronics,North,2.0,211.4,PayPal
+TXN-1027,16-03-2025,CUST-145,Laptop,Accessories  ,North,5.0,451.52,Debit Card
+TXN-1028,01/31/2025,,USB-C Cable,electronics,CENTRAL,2.0,790.73,
+TXN-1029,2025-03-14,CUST-123,Laptop,Accessories  ,South,2.0,$306.42,Debit Card
+TXN-1030,01/21/2025,,Webcam,Accessories  ,CENTRAL,,688.93,
+TXN-1031,08-02-2025,CUST-113,Laptop,electronics,East,5.0,$476.94,Debit Card
+TXN-1032,27-01-2025,CUST-117,Headphones,Electronics,central,2.0,721.5,Credit Card
+TXN-1033,01/01/2025,CUST-107,Webcam,electronics,CENTRAL,-1.0,$383.93,Credit Card
+TXN-1034,2025-03-30,CUST-150,Monitor,Electronics ,,1.0,373.87,Credit Card
+TXN-1035,2025-02-15,CUST-147,Headphones,electronics,CENTRAL,-1.0,753.25,PayPal
+TXN-1036,2025-01-31,CUST-126,Webcam,electronics,West,10.0,,PayPal
+TXN-1037,2025-02-04,CUST-129,Webcam,Office Supplies,North,4.0,$408.03,Debit Card
+TXN-1038,2025-02-09,CUST-132,Wireless Mouse,Electronics ,CENTRAL,5.0,736.73,credit card
+TXN-1039,28-03-2025,,Keyboard,Electronics ,North,5.0,$499.79,
+TXN-1040,02/25/2025,CUST-145,Headphones,Electronics,West,4.0,336.64,credit card
+TXN-1041,01-01-2025,CUST-142,Webcam,Accessories  ,CENTRAL,10.0,574.97,Debit Card
+TXN-1042,03/21/2025,CUST-118,Headphones,Electronics ,CENTRAL,10.0,571.86,
+TXN-1043,2025-01-17,CUST-100,USB-C Cable,Office Supplies,West,5.0,528.95,Debit Card
+TXN-1044,2025-02-06,CUST-150,USB-C Cable,Accessories  ,central,4.0,384.2,PayPal
+TXN-1045,2025-03-26,CUST-114,Keyboard,Accessories  ,CENTRAL,4.0,698.38,PayPal
+TXN-1046,2025-01-19,CUST-124,Laptop,electronics,West,4.0,395.27,credit card
+TXN-1047,2025-02-21,CUST-114,Wireless Mouse,Office Supplies,CENTRAL,2.0,,PayPal
+TXN-1048,31-03-2025,CUST-135,USB-C Cable,Electronics ,central,999.0,396.15,
+TXN-1049,02/10/2025,CUST-130,Monitor,Office Supplies,central,3.0,387.34,credit card
+TXN-1050,2025-02-03,CUST-145,Webcam,Office Supplies,East,5.0,538.33,Debit Card
+TXN-1051,01/31/2025,CUST-144,Keyboard,Electronics,central,3.0,,PayPal
+TXN-1052,2025-04-01,CUST-149,Laptop, Accessories,West,-1.0,66.99,
+TXN-1053,2025-03-31,CUST-126,Webcam,Accessories  ,West,-1.0,264.34,
+TXN-1054,06-04-2025,CUST-143,Monitor,Accessories  ,South,-1.0,$420.51,credit card
+TXN-1055,2025-04-03,CUST-127,Webcam, Accessories,South,1.0,772.29,PayPal
+TXN-1056,2025-03-01,CUST-126,Laptop,Electronics,West,-1.0,296.81,Debit Card
+TXN-1057,01/11/2025,CUST-104,Laptop,Office Supplies,central,10.0,,Credit Card
+TXN-1058,2025-04-07,CUST-130,Wireless Mouse,electronics,,3.0,,Credit Card
+TXN-1059,2025-03-14,CUST-110,USB-C Cable,Office Supplies,East,2.0,$522.05,Debit Card
+TXN-1060,14-01-2025,,Laptop,Electronics,central,4.0,346.21,PayPal
+TXN-1061,14-01-2025,CUST-127,Webcam,Electronics,,1.0,679.85,Debit Card
+TXN-1062,09-01-2025,CUST-129,Headphones,Electronics,North,10.0,103.12,PayPal
+TXN-1063,2025-02-25,CUST-146,Headphones,Accessories  ,CENTRAL,999.0,464.37,
+TXN-1064,02/04/2025,CUST-142,Webcam,electronics,,999.0,$391.42,credit card
+TXN-1065,2025-02-13,CUST-144,USB-C Cable,Electronics,South,5.0,230.72,Debit Card
+TXN-1066,2025-03-13,CUST-141,Monitor,electronics,North,4.0,478.57,credit card
+TXN-1067,2025-02-27,CUST-133,Laptop,Electronics,South,10.0,$569.41,Debit Card
+TXN-1068,24-02-2025,CUST-120,Monitor,Electronics,East,2.0,$224.92,Credit Card
+TXN-1069,06-04-2025,CUST-106,Webcam,Office Supplies,South,,245.88,PayPal
+TXN-1070,2025-02-07,CUST-102,Keyboard,electronics,East,,,Credit Card
+TXN-1071,03/12/2025,CUST-128,Headphones,electronics,CENTRAL,5.0,743.72,Debit Card
+TXN-1072,2025-01-24,CUST-136,Keyboard, Accessories,North,1.0,76.86,Debit Card
+TXN-1073,2025-01-11,CUST-128,Laptop,Accessories  ,,,531.38,Debit Card
+TXN-1074,03/17/2025,CUST-113,Keyboard,Accessories  ,central,2.0,,PayPal
+TXN-1075,03-02-2025,CUST-130,Laptop,electronics,South,999.0,$17.23,Debit Card
+TXN-1076,2025-01-05,CUST-140,Keyboard,Office Supplies,East,5.0,588.97,
+TXN-1077,2025-03-26,,USB-C Cable,Electronics ,central,3.0,$236.80,PayPal
+TXN-1078,09-02-2025,CUST-132,Headphones,Accessories  ,East,-1.0,268.92,
+TXN-1079,03/05/2025,CUST-143,Laptop,Accessories  ,North,1.0,519.1,
+TXN-1080,2025-03-17,CUST-128,Webcam,Office Supplies,,999.0,$646.48,Debit Card
+TXN-1081,24-01-2025,CUST-106,USB-C Cable,Office Supplies,,10.0,$305.55,PayPal
+TXN-1082,02/12/2025,CUST-120,Headphones, Accessories,East,1.0,650.02,Debit Card
+TXN-1083,2025-02-11,CUST-103,Webcam, Accessories,,,564.15,PayPal
+TXN-1084,03/08/2025,CUST-128,Monitor, Accessories,CENTRAL,3.0,$237.99,credit card
+TXN-1085,2025-01-16,CUST-114,Headphones,Accessories  ,,,$474.95,Credit Card
+TXN-1086,2025-03-01,CUST-130,Headphones,electronics,West,-1.0,$604.02,PayPal
+TXN-1087,28-02-2025,CUST-150,Wireless Mouse, Accessories,South,2.0,749.24,credit card
+TXN-1088,13-02-2025,CUST-128,Keyboard,Electronics ,East,999.0,499.24,
+TXN-1089,03/03/2025,CUST-115,Keyboard,Accessories  ,,4.0,283.68,
+TXN-1090,2025-02-19,CUST-142,Webcam, Accessories,North,-1.0,777.71,PayPal
+TXN-1091,2025-03-05,CUST-129,Wireless Mouse,Accessories  ,central,2.0,$720.61,Credit Card
+TXN-1092,2025-04-03,CUST-144,USB-C Cable,Office Supplies,South,5.0,,credit card
+TXN-1093,2025-03-25,CUST-102,Webcam,Electronics,,999.0,811.71,
+TXN-1094,2025-01-09,CUST-145,Headphones,Office Supplies,East,2.0,377.37,Credit Card
+TXN-1095,2025-02-26,CUST-123,Headphones,Electronics,North,1.0,,credit card
+TXN-1096,2025-01-19,CUST-115,Monitor, Accessories,central,-1.0,$161.18,credit card
+TXN-1097,2025-03-16,CUST-143,Wireless Mouse, Accessories,CENTRAL,999.0,$22.85,
+TXN-1098,2025-01-21,CUST-112,USB-C Cable,Electronics,central,999.0,591.41,credit card
+TXN-1099,2025-03-03,CUST-142,Wireless Mouse, Accessories,central,1.0,$598.90,credit card
+TXN-1100,2025-02-05,CUST-118,Monitor,Office Supplies,,999.0,$521.35,PayPal
+TXN-1101,03/19/2025,CUST-140,Wireless Mouse,Office Supplies,South,3.0,616.98,Credit Card
+TXN-1102,02/09/2025,CUST-108,Laptop,Accessories  ,East,-1.0,$261.42,
+TXN-1103,16-02-2025,CUST-121,Monitor,Electronics,,5.0,803.4,Credit Card
+TXN-1104,2025-03-01,CUST-150,Wireless Mouse,electronics,,,346.84,credit card
+TXN-1105,01/02/2025,CUST-123,Monitor,Electronics ,West,-1.0,233.9,Credit Card
+TXN-1106,2025-03-28,CUST-140,USB-C Cable,Electronics ,central,4.0,779.24,credit card
+TXN-1107,03/31/2025,CUST-115,Headphones, Accessories,North,999.0,269.14,
+TXN-1108,01/18/2025,CUST-141,USB-C Cable,Electronics,CENTRAL,3.0,466.06,Credit Card
+TXN-1109,04-03-2025,CUST-106,USB-C Cable,Electronics,North,4.0,$386.32,Debit Card
+TXN-1110,11-03-2025,CUST-113,Keyboard,Electronics ,West,999.0,807.42,
+TXN-1111,2025-01-03,CUST-113,Webcam,Electronics,South,,186.35,PayPal
+TXN-1112,2025-02-12,CUST-111,Webcam,Accessories  ,North,,839.59,Credit Card
+TXN-1113,2025-03-26,CUST-108,Wireless Mouse,Electronics ,East,3.0,$285.35,credit card
+TXN-1114,2025-03-09,CUST-139,Headphones,Electronics ,West,999.0,510.71,Credit Card
+TXN-1115,04-04-2025,CUST-106,Monitor,Electronics,West,-1.0,$848.82,credit card
+TXN-1116,04/02/2025,CUST-124,Laptop,Electronics ,East,,$244.64,
+TXN-1117,03/09/2025,CUST-113,USB-C Cable,Accessories  ,central,,110.54,credit card
+TXN-1118,2025-02-27,CUST-116,USB-C Cable,Electronics,,-1.0,94.4,Debit Card
+TXN-1119,20-01-2025,CUST-135,USB-C Cable,Electronics ,North,10.0,$95.63,Credit Card
+TXN-1005,04/09/2025,CUST-122,Laptop,electronics,,10.0,$545.80,PayPal
+TXN-1012,01/15/2025,CUST-148,USB-C Cable,electronics,West,5.0,,PayPal
+TXN-1025,05-04-2025,CUST-133,Laptop,Office Supplies,East,999.0,,PayPal
+TXN-1040,02/25/2025,CUST-145,Headphones,Electronics,West,4.0,336.64,credit card
+TXN-1012,01/15/2025,CUST-148,USB-C Cable,electronics,West,5.0,,PayPal
+TXN-1040,02/25/2025,CUST-145,Headphones,Electronics,West,4.0,336.64,credit card

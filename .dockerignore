@@ -6,5 +6,11 @@
 **/.web
 **/.states
 **/uploaded_files
-**/data
+data/uploads/*
+data/processed/*
+data/reports/*
+data/demo_outputs/*
+*.db
+*.sqlite
+*.sqlite3
 *.log

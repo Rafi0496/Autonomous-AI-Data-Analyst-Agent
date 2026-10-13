@@ -28,8 +28,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY frontend /app/frontend
 COPY shared /app/shared
-COPY data/samples /app/data/samples
-COPY data/samples /app/frontend/data/samples
+RUN mkdir -p /app/data/samples /app/frontend/data/samples && \
+    if [ -d "/app/frontend/data/samples" ]; then cp -r /app/frontend/data/samples/* /app/data/samples/ 2>/dev/null || true; fi
 
 WORKDIR /app/frontend
 
