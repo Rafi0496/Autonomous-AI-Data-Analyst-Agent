@@ -10,6 +10,9 @@ from frontend.pages.settings import settings_page
 from frontend.pages.upload import upload_page
 from frontend.state import AppState
 
+# Remove the "Built with Reflex" sticky badge completely
+rx.App._setup_sticky_badge = lambda self: None
+
 app = rx.App(
     theme=rx.theme(
         appearance="light",
@@ -25,7 +28,7 @@ app = rx.App(
 )
 
 # Register routes with zero-lag instant handlers
-app.add_page(home_page, route="/", title="AutoAnalyst | New Analysis", on_load=AppState.on_load_home)
+app.add_page(home_page, route="/", title="AutoAnalyst | Autonomous AI Data Analyst", on_load=AppState.on_load_home)
 app.add_page(login_page, route="/login", title="AutoAnalyst | Sign In", on_load=AppState.on_load_login)
 app.add_page(upload_page, route="/upload", title="AutoAnalyst | Datasets & Quality", on_load=AppState.on_load_upload)
 app.add_page(run_page, route="/run", title="AutoAnalyst | Run Monitor", on_load=AppState.on_load_run)

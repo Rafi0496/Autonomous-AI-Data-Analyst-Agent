@@ -822,6 +822,11 @@ class AppState(rx.State):
             self.upload_ui_state = "failed"
             self.upload_error_reason = f"Error loading benchmark: {str(e)}"
 
+    async def quick_start_benchmark(self, sample_name: str):
+        """1-Click launch from landing page: load benchmark and transition into the operational workspace."""
+        await self.load_sample(sample_name)
+        return rx.redirect("/upload")
+
     async def start_analysis(self):
         """Submit analysis job and immediately navigate to Run monitor with instant toast acknowledgment."""
         if not self.selected_dataset_id:
@@ -1312,12 +1317,21 @@ class AppState(rx.State):
             self.active_job_id = effective_job_id
 
         try:
+            # Clean conversation history: omit failed or retryable assistant turns
+            clean_history = [
+                {"role": m.role, "content": m.content}
+                for m in self.chat_messages[:-1]
+                if m.verification_summary != "Retryable"
+                and not m.content.startswith("The analysis engine returned")
+                and m.content.strip()
+            ]
+
             async with httpx.AsyncClient(timeout=45.0) as client:
                 payload = {
                     "job_id": effective_job_id or None,
                     "dataset_id": self.selected_dataset_id or None,
                     "question": prompt,
-                    "history": [{"role": m.role, "content": m.content} for m in self.chat_messages[:-1]]
+                    "history": clean_history
                 }
                 res = await client.post(f"{API_BASE_URL}/chat", json=payload, headers=self.auth_headers)
                 
@@ -1367,6 +1381,14 @@ class AppState(rx.State):
                         evidence=[],
                         verification_is_valid=True,
                         verification_summary="Analysis Required"
+                    ))
+                elif res.status_code == 429:
+                    self.chat_messages.append(ChatMessageModel(
+                        role="assistant",
+                        content="The AI model rate limit was reached momentarily. Please click 'Retry question' below in a few moments, or ask another data question.",
+                        evidence=[],
+                        verification_is_valid=False,
+                        verification_summary="Retryable"
                     ))
                 else:
                     err_msg = extract_error_detail(res, "Unable to query analysis engine.")
@@ -1557,17 +1579,13 @@ class AppState(rx.State):
             self.api_health_status = "Offline"
 
     async def on_load_home(self):
-        """Initialize home / new analysis screen with datasets, recent runs and health without lag."""
+        """Instant on_load event for landing page: loads with zero lag."""
         self.active_tab = "home"
-        tasks = []
+        # Non-blocking hydration in background if cache is empty
         if not self.datasets:
-            tasks.append(self.fetch_datasets())
+            asyncio.create_task(self.fetch_datasets())
         if not self.recent_jobs:
-            tasks.append(self.fetch_recent_jobs())
-        if self.api_health_status == "Offline" or not self.api_health_status:
-            tasks.append(self.check_api_health())
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+            asyncio.create_task(self.fetch_recent_jobs())
         if not self.active_job_id and self.recent_jobs:
             self.active_job_id = self.recent_jobs[0].job_id
 

@@ -57,7 +57,6 @@ def sidebar_nav_item(label: str, icon: str, route: str, tab_id: str) -> rx.Compo
         href=route,
         text_decoration="none",
         width="100%",
-        on_click=AppState.select_tab(tab_id),
     )
 
     # In collapsed rail mode, wrap in flat tonal tooltip

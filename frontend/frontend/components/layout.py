@@ -252,6 +252,158 @@ def top_status_bar() -> rx.Component:
     )
 
 
+def landing_navbar() -> rx.Component:
+    """Dedicated modern landing page navigation bar with brand, anchor links, theme toggle, and Get Started CTA."""
+    return rx.box(
+        rx.hstack(
+            # Left: Brand Logo & Title
+            rx.link(
+                rx.hstack(
+                    rx.box(
+                        rx.icon(tag="bot", size=20, color="#FFFFFF"),
+                        padding="0.5rem",
+                        border_radius=RADIUS_MD,
+                        background_color=ACCENT_COLOR,
+                        box_shadow=SHADOW_RAISED_SM,
+                        flex_shrink=0,
+                    ),
+                    rx.vstack(
+                        rx.text(
+                            "AutoAnalyst",
+                            font_size="1.15rem",
+                            font_weight="700",
+                            color=TEXT_COLOR,
+                            letter_spacing="-0.02em",
+                            line_height="1.2",
+                        ),
+                        rx.text(
+                            "Autonomous AI Agent",
+                            font_size="0.7rem",
+                            color=TEXT_MUTED,
+                            letter_spacing="0.04em",
+                        ),
+                        spacing="0",
+                        align_items="flex-start",
+                    ),
+                    spacing="2",
+                    align_items="center",
+                ),
+                href="/",
+                text_decoration="none",
+            ),
+
+            rx.spacer(),
+
+            # Center: Anchor Links (Desktop)
+            rx.hstack(
+                rx.link("Features", href="#features", class_name="landing-nav-link"),
+                rx.link("How It Works", href="#how-it-works", class_name="landing-nav-link"),
+                rx.link("Benchmarks", href="#benchmarks", class_name="landing-nav-link"),
+                rx.link("Upload", href="#upload-section", class_name="landing-nav-link"),
+                spacing="2",
+                align_items="center",
+                display=["none", "none", "flex"],
+            ),
+
+            rx.spacer(),
+
+            # Right: Theme Toggle + Auth Button + Primary "Get Started" CTA
+            rx.hstack(
+                # Theme toggle button
+                rx.box(
+                    rx.icon(
+                        tag=rx.cond(AppState.theme_mode == "dark", "moon", "sun"),
+                        size=16,
+                        color=TEXT_COLOR,
+                    ),
+                    padding="0.5rem",
+                    border_radius=RADIUS_FULL,
+                    background_color=SURFACE_COLOR,
+                    box_shadow=SHADOW_RAISED_SM,
+                    cursor="pointer",
+                    on_click=AppState.toggle_theme,
+                    _hover={"box_shadow": SHADOW_INSET},
+                    transition="box-shadow 150ms ease",
+                    title="Toggle theme",
+                ),
+
+                # Sign In button
+                rx.cond(
+                    AppState.is_authenticated,
+                    rx.box(
+                        rx.hstack(
+                            rx.box(width="7px", height="7px", border_radius=RADIUS_FULL, background_color="var(--status-success)"),
+                            rx.text(AppState.current_user_name, font_size="0.8rem", font_weight="600", color=TEXT_COLOR),
+                            spacing="2",
+                            align_items="center",
+                        ),
+                        padding="0.4rem 0.85rem",
+                        border_radius=RADIUS_FULL,
+                        background_color=SURFACE_COLOR,
+                        box_shadow=SHADOW_RAISED_SM,
+                    ),
+                    neu_button(
+                        "Sign In",
+                        variant="secondary",
+                        padding="0.45rem 0.9rem",
+                        font_size="0.8rem",
+                        on_click=AppState.toggle_auth_dialog,
+                    ),
+                ),
+
+                # The primary GET STARTED Button
+                rx.link(
+                    neu_button(
+                        rx.hstack(
+                            rx.text("Get Started", font_weight="600", font_size="0.85rem"),
+                            rx.icon(tag="arrow-right", size=15),
+                            spacing="2",
+                            align_items="center",
+                        ),
+                        variant="primary",
+                        padding="0.5rem 1.15rem",
+                    ),
+                    href="/upload",
+                    text_decoration="none",
+                ),
+
+                spacing="3",
+                align_items="center",
+            ),
+            width="100%",
+            max_width="1180px",
+            margin="0 auto",
+            padding_x="1.5rem",
+            padding_y="0.85rem",
+            align_items="center",
+        ),
+        class_name="landing-navbar",
+        width="100%",
+    )
+
+
+def landing_layout(content: rx.Component) -> rx.Component:
+    """Dedicated full-width landing layout without operational sidebar until Get Started is clicked."""
+    return rx.box(
+        landing_navbar(),
+        rx.box(
+            content,
+            width="100%",
+            max_width="1180px",
+            margin="0 auto",
+            padding_x="1.5rem",
+            padding_bottom="4rem",
+        ),
+        auth_modal(),
+        background_color="transparent",
+        color=TEXT_COLOR,
+        font_family=FONT_SANS,
+        min_height="100vh",
+        width="100vw",
+        class_name=rx.cond(AppState.theme_mode == "light", "theme-light", "theme-dark"),
+    )
+
+
 def app_layout(page_title: str, content: rx.Component, max_width: str = "820px") -> rx.Component:
     """Standard app shell: Fixed left sidebar + calm centered content column (max ~820px)."""
     return rx.box(

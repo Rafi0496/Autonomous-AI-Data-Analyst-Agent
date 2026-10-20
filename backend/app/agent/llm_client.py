@@ -424,6 +424,40 @@ class HeuristicClient(LLMClient):
                 f"Available columns are: {', '.join(available_columns)}."
             )
 
+        # Check for data quality / cleaning inquiries
+        is_quality_q = any(k in q_lower for k in ["quality", "clean", "sentinel", "invalid", "sanitize", "sanitized", "imput", "missing", "return"])
+        if is_quality_q and not answer_parts:
+            sentinels = cleaning_report.get("sentinels_detected", [])
+            invalids = cleaning_report.get("invalid_values_detected", [])
+            returns = cleaning_report.get("suspected_returns", [])
+            imputations = cleaning_report.get("column_imputation_stats", {})
+            q_score = profile.get("quality_summary", {}).get("quality_score", 100.0)
+
+            parts = [f"Dataset data quality score is {q_score}/100."]
+            claims.append({"text": f"quality score is {q_score}/100", "source_id": "profile", "metric_key": "quality_score", "value": float(q_score), "unit": "/100"})
+            if sentinels:
+                s_details = ", ".join(f"{s.get('column')} (value {s.get('sentinel_value')}: {s.get('count')} rows)" for s in sentinels)
+                parts.append(f"Sentinels sanitized: {s_details}.")
+                for s in sentinels:
+                    if s.get("sentinel_value") is not None:
+                        try:
+                            claims.append({"text": str(s.get('sentinel_value')), "source_id": "cleaning_report", "metric_key": "sentinel_value", "value": float(s.get("sentinel_value")), "unit": ""})
+                        except Exception:
+                            pass
+            if invalids:
+                i_details = ", ".join(f"{iv.get('column')} ({iv.get('rule')}: {iv.get('count')} rows)" for iv in invalids)
+                parts.append(f"Domain invalid values removed: {i_details}.")
+            if returns:
+                r_details = ", ".join(f"{sr.get('column')} ({sr.get('count')} rows)" for sr in returns)
+                parts.append(f"Suspected returns preserved: {r_details}.")
+            if imputations:
+                high_imp = [f"{col} ({round(stat.get('imputation_rate', 0)*100, 1)}%)" for col, stat in imputations.items() if stat.get('imputation_rate', 0) > 0.05]
+                if high_imp:
+                    parts.append(f"Key imputation rates: {', '.join(high_imp)}.")
+            if not sentinels and not invalids and not returns and not imputations:
+                parts.append("All observed records passed validation rules with no invalid sentinels or domain anomalies detected.")
+            answer_parts.append(" ".join(parts))
+
         if not missing_entity and tool_results:
             for tr in tool_results:
                 if tr.get("tool") == "query_sql" and tr.get("rows"):
@@ -1000,10 +1034,10 @@ class GeminiClient(LLMClient):
                 pass
         return types.GenerateContentConfig(**cfg_args)
 
-    def _execute_with_retry(self, client, contents: Any, config: Any, max_retries: int = 3):
+    def _execute_with_retry(self, client, contents: Any, config: Any, max_retries: int = 2):
         """Execute generate_content across candidate models on transient 503/429 errors."""
         candidate_models = [self.model]
-        for fallback in ["gemini-3.1-flash-lite", "gemini-3.7-flash", "gemini-3.8-flash"]:
+        for fallback in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-3.1-flash-lite"]:
             if fallback not in candidate_models:
                 candidate_models.append(fallback)
 
@@ -1019,10 +1053,13 @@ class GeminiClient(LLMClient):
                 except Exception as e:
                     err_msg = str(e)
                     last_error = e
-                    if "503" in err_msg or "UNAVAILABLE" in err_msg:
+                    if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "quota" in err_msg.lower():
+                        logger.warning("Gemini model %s rate limited (429/quota), falling back: %s", m, err_msg[:120])
+                        break  # Immediately move to fallback model or heuristic
+                    elif "503" in err_msg or "UNAVAILABLE" in err_msg:
                         time.sleep(0.5 + attempt * 0.5)
                     else:
-                        break  # Non-transient error or 429 quota exhaustion: break immediately
+                        break
         raise last_error
 
     def _extract_usage(self, response: Any) -> TokenUsage:
