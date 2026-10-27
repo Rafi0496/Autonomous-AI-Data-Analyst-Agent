@@ -111,15 +111,15 @@ body:has(.theme-dark),
 [data-theme="dark"],
 .theme-dark,
 .dark {
-  /* Dark Theme: Deep Ink Blue-Slate */
-  --bg: #1B2230;
-  --surface: #202838;
+  /* Dark Theme: Pure Neutral Charcoal Monochrome */
+  --bg: #0E0E10;
+  --surface: #18181B;
   
   /* Semantic Text Tokens for Dark Theme */
-  --text-primary: #E5EBF2;
-  --text-secondary: #A6B4C4;
-  --text-tertiary: #92A2B4;
-  --text-on-primary: #0F161E;
+  --text-primary: #F2F2F4;
+  --text-secondary: #A1A1AA;
+  --text-tertiary: #71717A;
+  --text-on-primary: #09090B;
   --text-on-pastel-sage: #BCE2C7;
   --text-on-pastel-blue: #C2D7F3;
   --text-on-pastel-lavender: #D8CEF7;
@@ -140,9 +140,9 @@ body:has(.theme-dark),
   --accent-subtle: rgba(127, 179, 184, 0.16);
   --accent-text: var(--text-on-primary);
 
-  /* Neumorphic Tonal Shadows for Ink Slate */
-  --shadow-dark: #131824;
-  --shadow-light: #283246;
+  /* Neumorphic Tonal Shadows for Neutral Charcoal */
+  --shadow-dark: #070708;
+  --shadow-light: #222226;
   --shadow-raised: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);
   --shadow-raised-sm: 2px 2px 6px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
   --shadow-inset: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
@@ -208,14 +208,24 @@ body:has(.theme-dark),
   box-sizing: border-box;
 }
 
-body, html {
+html {
   margin: 0;
   padding: 0;
-  background-color: var(--bg) !important;
+  background-color: var(--bg);
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg);
   color: var(--text-primary) !important;
   font-family: var(--font-sans) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: relative;
+  isolation: isolate;
 }
 
 /* Single Fixed Background Layer (Zero Layout Repaints) */
@@ -223,17 +233,17 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: -10;
+  z-index: -1;
   background-image: var(--bg-pattern);
   background-repeat: no-repeat;
-  background-position: center top;
+  background-position: center center;
   background-size: cover;
   pointer-events: none;
   will-change: transform;
 }
 
 .theme-light, .theme-dark {
-  background-color: var(--bg) !important;
+  background-color: transparent !important;
   color: var(--text-primary) !important;
   min-height: 100vh;
   width: 100%;

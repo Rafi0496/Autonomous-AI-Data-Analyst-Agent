@@ -1,43 +1,144 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <!-- Layer 1: Faint fine dot grid (1px dots, 3.5% opacity, 24px pitch) -->
-    <pattern id="dot-grid-light" width="24" height="24" patternUnits="userSpaceOnUse">
-      <circle cx="12" cy="12" r="1" fill="#1D1C1A" fill-opacity="0.035"/>
-    </pattern>
+    <!-- Background Canvas Gradient: Light Porcelain / Soft Cloud Cement -->
+    <linearGradient id="cos-light-canvas" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F4F5F8"/>
+      <stop offset="50%" stop-color="#EAECEF"/>
+      <stop offset="100%" stop-color="#DEE1E6"/>
+    </linearGradient>
+
+    <!-- Circle 1: Center-Left Circle (cx: 740, cy: 330, r: 540) -->
+    <linearGradient id="cos-light-grad-c1" x1="20%" y1="10%" x2="90%" y2="95%">
+      <stop offset="0%" stop-color="#4F668A" stop-opacity="0.12"/>
+      <stop offset="45%" stop-color="#6F84A5" stop-opacity="0.07"/>
+      <stop offset="85%" stop-color="#9CB0CE" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#CBD8EA" stop-opacity="0.01"/>
+    </linearGradient>
+
+    <!-- Circle 2: Large Center-Right Circle (cx: 1140, cy: 280, r: 490) -->
+    <linearGradient id="cos-light-grad-c2" x1="80%" y1="15%" x2="15%" y2="85%">
+      <stop offset="0%" stop-color="#5B7296" stop-opacity="0.10"/>
+      <stop offset="50%" stop-color="#7B92B5" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#B2C5E0" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Circle 3: Far Upper-Right Circle (cx: 1680, cy: 160, r: 480) -->
+    <linearGradient id="cos-light-grad-c3" x1="75%" y1="10%" x2="20%" y2="90%">
+      <stop offset="0%" stop-color="#4A5F80" stop-opacity="0.08"/>
+      <stop offset="60%" stop-color="#7B8FA8" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#B5C3D6" stop-opacity="0.01"/>
+    </linearGradient>
+
+    <!-- Circle 4: Giant Lower-Right Circle (cx: 1540, cy: 960, r: 550) -->
+    <linearGradient id="cos-light-grad-c4" x1="20%" y1="10%" x2="85%" y2="90%">
+      <stop offset="0%" stop-color="#556E94" stop-opacity="0.11"/>
+      <stop offset="50%" stop-color="#7790B5" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#C2D3EB" stop-opacity="0.01"/>
+    </linearGradient>
+
+    <!-- Circle 5: Focal Medium Floating Circle (cx: 1360, cy: 580, r: 185) -->
+    <linearGradient id="cos-light-grad-c5" x1="15%" y1="15%" x2="85%" y2="85%">
+      <stop offset="0%" stop-color="#405980" stop-opacity="0.15"/>
+      <stop offset="50%" stop-color="#6983A8" stop-opacity="0.09"/>
+      <stop offset="100%" stop-color="#AEC3E0" stop-opacity="0.03"/>
+    </linearGradient>
+
+    <!-- Circle 6: Lower-Left Intersecting Circle (cx: 90, cy: 520, r: 185) -->
+    <linearGradient id="cos-light-grad-c6" x1="20%" y1="15%" x2="85%" y2="85%">
+      <stop offset="0%" stop-color="#445D85" stop-opacity="0.13"/>
+      <stop offset="55%" stop-color="#718BB2" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#BACCE6" stop-opacity="0.02"/>
+    </linearGradient>
+
+    <!-- Circle 7: Upper-Left Large Arc Circle (cx: -60, cy: 230, r: 380) -->
+    <linearGradient id="cos-light-grad-c7" x1="60%" y1="15%" x2="20%" y2="85%">
+      <stop offset="0%" stop-color="#536C91" stop-opacity="0.09"/>
+      <stop offset="60%" stop-color="#8097B9" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#C2D3EB" stop-opacity="0.01"/>
+    </linearGradient>
+
+    <!-- Circle 8: Bottom-Center Sweeping Arc (cx: 620, cy: 960, r: 430) -->
+    <linearGradient id="cos-light-grad-c8" x1="30%" y1="10%" x2="75%" y2="85%">
+      <stop offset="0%" stop-color="#526A8E" stop-opacity="0.08"/>
+      <stop offset="60%" stop-color="#7E94B7" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#CBD9EE" stop-opacity="0.01"/>
+    </linearGradient>
+
+    <!-- Crescent Gradient for Lower Intersection Lens (Circle 1 & Circle 2) -->
+    <linearGradient id="cos-light-grad-lens12" x1="25%" y1="30%" x2="80%" y2="80%">
+      <stop offset="0%" stop-color="#3D567B" stop-opacity="0.10"/>
+      <stop offset="55%" stop-color="#6F88AE" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#B2C6E2" stop-opacity="0.01"/>
+    </linearGradient>
+
+    <!-- Crescent Gradient for Left Intersection Lens (Circle 6 & Circle 7) -->
+    <linearGradient id="cos-light-grad-lens67" x1="20%" y1="20%" x2="80%" y2="80%">
+      <stop offset="0%" stop-color="#3C567D" stop-opacity="0.11"/>
+      <stop offset="60%" stop-color="#6C87AF" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#B8CCE8" stop-opacity="0.01"/>
+    </linearGradient>
+
+    <!-- Clip Paths for Precise Intersecting Lenses -->
+    <clipPath id="clip-light-circle-1">
+      <circle cx="740" cy="330" r="540"/>
+    </clipPath>
+    <clipPath id="clip-light-circle-6">
+      <circle cx="90" cy="520" r="185"/>
+    </clipPath>
+    <clipPath id="clip-light-circle-4">
+      <circle cx="1540" cy="960" r="550"/>
+    </clipPath>
   </defs>
 
-  <!-- Background Base Tint (Cement #EAE9E5) -->
-  <rect width="100%" height="100%" fill="#EAE9E5"/>
+  <!-- 1. Background Canvas -->
+  <rect width="100%" height="100%" fill="url(#cos-light-canvas)"/>
 
-  <!-- Layer 1 Grid Pattern -->
-  <rect width="100%" height="100%" fill="url(#dot-grid-light)"/>
+  <!-- 2. Far Background Layer: Top-Right and Upper-Left Circles -->
+  <!-- Circle 3: Far Upper-Right -->
+  <circle cx="1680" cy="160" r="480" fill="url(#cos-light-grad-c3)"/>
+  <circle cx="1680" cy="160" r="480" fill="none" stroke="#5F7596" stroke-width="1.2" stroke-opacity="0.08"/>
 
-  <!-- Layer 2: Large Organic Flat Pastel Shapes & Contour Arcs (6-8% opacity, zero blur) -->
-  <!-- Top-Right Pastel Sage Organic Blob -->
-  <path d="M 1320 0 C 1460 70, 1620 40, 1740 130 C 1840 205, 1900 330, 1920 420 L 1920 0 Z"
-        fill="#9DBFA8" fill-opacity="0.08"/>
-  <path d="M 1380 0 C 1510 60, 1660 30, 1780 120 C 1870 185, 1910 280, 1920 360"
-        fill="none" stroke="#9DBFA8" stroke-width="1.5" stroke-opacity="0.09"/>
+  <!-- Circle 7: Upper-Left Large Arc -->
+  <circle cx="-60" cy="230" r="380" fill="url(#cos-light-grad-c7)"/>
+  <circle cx="-60" cy="230" r="380" fill="none" stroke="#5F7596" stroke-width="1.2" stroke-opacity="0.08"/>
 
-  <!-- Bottom-Left Dusty Blue Organic Arc & Contour -->
-  <path d="M 0 680 C 120 670, 240 730, 310 820 C 390 920, 380 1020, 360 1080 L 0 1080 Z"
-        fill="#9DB4D3" fill-opacity="0.08"/>
-  <path d="M 0 740 C 100 730, 200 780, 260 860 C 330 950, 320 1030, 300 1080"
-        fill="none" stroke="#9DB4D3" stroke-width="1.5" stroke-opacity="0.10"/>
+  <!-- Circle 8: Bottom-Center Base Arc -->
+  <circle cx="620" cy="960" r="430" fill="url(#cos-light-grad-c8)"/>
+  <circle cx="620" cy="960" r="430" fill="none" stroke="#5F7596" stroke-width="1.2" stroke-opacity="0.07"/>
 
-  <!-- Top-Left Soft Sand Gentle Contour -->
-  <path d="M 0 120 C 90 110, 180 150, 250 210 C 330 280, 360 380, 340 460 C 310 570, 210 620, 110 610 C 50 605, 10 590, 0 570 Z"
-        fill="#DCC9A3" fill-opacity="0.075"/>
-  <path d="M 0 170 C 80 160, 160 195, 220 250 C 290 310, 320 400, 300 470"
-        fill="none" stroke="#DCC9A3" stroke-width="1.5" stroke-opacity="0.09"/>
+  <!-- 3. Mid-Deep Layer: Giant Circle 4 (Bottom-Right) -->
+  <circle cx="1540" cy="960" r="550" fill="url(#cos-light-grad-c4)"/>
+  <circle cx="1540" cy="960" r="550" fill="none" stroke="#5A7192" stroke-width="1.5" stroke-opacity="0.09"/>
 
-  <!-- Middle-Right Soft Lavender Contour Arc -->
-  <path d="M 1520 600 C 1620 580, 1720 620, 1810 680 C 1880 730, 1920 810, 1920 890 C 1920 980, 1860 1040, 1790 1080 L 1450 1080 C 1470 960, 1430 840, 1450 740 C 1465 670, 1480 610, 1520 600 Z"
-        fill="#B9AEDB" fill-opacity="0.07"/>
-  <path d="M 1560 640 C 1650 620, 1740 660, 1820 710 C 1880 750, 1920 820, 1920 890"
-        fill="none" stroke="#B9AEDB" stroke-width="1.5" stroke-opacity="0.08"/>
+  <!-- 4. Upper Center-Right Layer: Circle 2 -->
+  <circle cx="1140" cy="280" r="490" fill="url(#cos-light-grad-c2)"/>
+  <circle cx="1140" cy="280" r="490" fill="none" stroke="#546B8D" stroke-width="1.5" stroke-opacity="0.09"/>
 
-  <!-- Center-Right Subtle Rose-Mist Accent Path -->
-  <path d="M 1120 380 C 1220 360, 1310 410, 1370 480 C 1430 550, 1430 640, 1390 710 C 1350 780, 1260 820, 1180 810 C 1110 800, 1050 750, 1030 680 C 1010 610, 1030 540, 1060 480 C 1080 430, 1090 390, 1120 380 Z"
-        fill="#D9B1B8" fill-opacity="0.055"/>
+  <!-- 5. Dominant Center-Left Layer: Circle 1 -->
+  <circle cx="740" cy="330" r="540" fill="url(#cos-light-grad-c1)"/>
+  <circle cx="740" cy="330" r="540" fill="none" stroke="#4B6385" stroke-width="1.5" stroke-opacity="0.10"/>
+
+  <!-- 6. Intersecting Lens: Intersection of Circle 1 & Circle 2 -->
+  <g clip-path="url(#clip-light-circle-1)">
+    <circle cx="1140" cy="280" r="490" fill="url(#cos-light-grad-lens12)"/>
+    <circle cx="1140" cy="280" r="490" fill="none" stroke="#3D557A" stroke-width="1.2" stroke-opacity="0.10"/>
+  </g>
+
+  <!-- 7. Left Intersecting Circles: Circle 6 & its Lens with Circle 7 -->
+  <circle cx="90" cy="520" r="185" fill="url(#cos-light-grad-c6)"/>
+  <circle cx="90" cy="520" r="185" fill="none" stroke="#486184" stroke-width="1.4" stroke-opacity="0.11"/>
+  <g clip-path="url(#clip-light-circle-6)">
+    <circle cx="-60" cy="230" r="380" fill="url(#cos-light-grad-lens67)"/>
+    <circle cx="-60" cy="230" r="380" fill="none" stroke="#3A5377" stroke-width="1.2" stroke-opacity="0.10"/>
+  </g>
+
+  <!-- 8. Focal Floating Circle 5 (Center-Right Intersection) -->
+  <circle cx="1360" cy="580" r="185" fill="url(#cos-light-grad-c5)"/>
+  <circle cx="1360" cy="580" r="185" fill="none" stroke="#364F73" stroke-width="1.5" stroke-opacity="0.13"/>
+
+  <!-- Subtle overlapping depth segment under Circle 5 crossing Circle 4 -->
+  <g clip-path="url(#clip-light-circle-4)">
+    <circle cx="1360" cy="580" r="185" fill="#3D557A" fill-opacity="0.04"/>
+  </g>
+
 </svg>
