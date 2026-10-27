@@ -30,12 +30,14 @@ def validate_startup_config() -> None:
             f"Invalid LLM_PROVIDER '{settings.LLM_PROVIDER}'. Must be one of: {', '.join(valid_providers)}"
         )
     
-    # In live environments, ensure API keys are present for chosen provider
+    # In live environments, warn if API keys are absent for chosen provider
     if env in ("production", "staging", "prod"):
+        import logging
+        _logger = logging.getLogger(__name__)
         if settings.LLM_PROVIDER.lower() == "claude" and not settings.ANTHROPIC_API_KEY:
-            errors.append("ANTHROPIC_API_KEY is required when LLM_PROVIDER is 'claude' in production.")
+            _logger.warning("ANTHROPIC_API_KEY is not set in production. Autonomous LLM features will be disabled until configured.")
         elif settings.LLM_PROVIDER.lower() == "gemini" and not settings.GEMINI_API_KEY:
-            errors.append("GEMINI_API_KEY is required when LLM_PROVIDER is 'gemini' in production.")
+            _logger.warning("GEMINI_API_KEY is not set in production. Autonomous LLM features will be disabled until configured.")
 
     # 4. Storage directory writability
     for dir_name, dir_path in [

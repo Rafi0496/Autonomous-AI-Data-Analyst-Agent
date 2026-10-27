@@ -30,7 +30,8 @@ COPY shared /app/shared
 
 # Create storage directories
 RUN mkdir -p /app/data/uploads /app/data/processed /app/data/samples /app/data/reports
-
+ENV PORT=10000
 EXPOSE 8000
+EXPOSE 10000
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
