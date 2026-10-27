@@ -192,7 +192,7 @@ def upload_uploading_view() -> rx.Component:
         rx.vstack(
             rx.hstack(
                 rx.box(
-                    rx.icon(tag="upload-cloud", size=22, color=ACCENT_COLOR),
+                    rx.icon(tag="cloud-upload", size=22, color=ACCENT_COLOR),
                     padding="0.6rem",
                     border_radius=RADIUS_FULL,
                     background_color=SURFACE_COLOR,
