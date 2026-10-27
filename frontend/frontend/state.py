@@ -301,7 +301,7 @@ class AppState(rx.State):
     # Layout, Sidebar & Neumorphic Shell
     sidebar_collapsed: bool = False
     sidebar_search_query: str = ""
-    theme_mode: str = "light"
+    theme_mode: str = "dark"
     pinned_job_ids: List[str] = []
     recent_jobs: List[RecentJobModel] = []
     hero_prompt: str = ""

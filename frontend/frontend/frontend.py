@@ -15,12 +15,12 @@ rx.App._setup_sticky_badge = lambda self: None
 
 app = rx.App(
     theme=rx.theme(
-        appearance="light",
+        appearance="dark",
         has_background=False,
     ),
     stylesheets=[
         "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap",
-        "/styles.css",
+        "/styles.css?v=3",
     ],
     head_components=[
         rx.el.link(rel="icon", href="/favicon.svg", type="image/svg+xml"),
