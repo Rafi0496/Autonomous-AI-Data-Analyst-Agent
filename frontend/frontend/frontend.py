@@ -24,6 +24,7 @@ app = rx.App(
     ],
     head_components=[
         rx.el.link(rel="icon", href="/favicon.svg", type="image/svg+xml"),
+        rx.el.script(src="/glass_interactive.js"),
     ],
 )
 
