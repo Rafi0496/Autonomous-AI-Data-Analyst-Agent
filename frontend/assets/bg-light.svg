@@ -1,147 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
   <defs>
-    <!-- Background Canvas Gradient: ColorOS Sleek Porcelain Canvas -->
-    <linearGradient id="cos-light-canvas" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#EFF1F5"/>
-      <stop offset="50%" stop-color="#E5E8EF"/>
-      <stop offset="100%" stop-color="#D8DCE6"/>
+    <!-- Top-Left Circle Gradient: Soft Crisp Silver Mist fading into Pure White -->
+    <linearGradient id="grad-tl-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F0F1F3" stop-opacity="0.90"/>
+      <stop offset="45%" stop-color="#F5F6F8" stop-opacity="0.60"/>
+      <stop offset="85%" stop-color="#FAFAFB" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.05"/>
     </linearGradient>
 
-    <!-- Circle 1: Dominant Center-Left Circle (cx: 740, cy: 330, r: 540) -->
-    <linearGradient id="cos-light-grad-c1" x1="20%" y1="10%" x2="90%" y2="95%">
-      <stop offset="0%" stop-color="#94A3B8" stop-opacity="0.42"/>
-      <stop offset="40%" stop-color="#64748B" stop-opacity="0.28"/>
-      <stop offset="85%" stop-color="#334155" stop-opacity="0.14"/>
-      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.04"/>
+    <!-- Bottom-Right Circle Gradient: Soft Crisp Silver Mist fading into Pure White -->
+    <linearGradient id="grad-br-light" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#F0F1F3" stop-opacity="0.90"/>
+      <stop offset="45%" stop-color="#F5F6F8" stop-opacity="0.60"/>
+      <stop offset="85%" stop-color="#FAFAFB" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.05"/>
     </linearGradient>
-
-    <!-- Circle 2: Large Center-Right Circle (cx: 1140, cy: 280, r: 490) -->
-    <linearGradient id="cos-light-grad-c2" x1="80%" y1="15%" x2="15%" y2="85%">
-      <stop offset="0%" stop-color="#94A3B8" stop-opacity="0.36"/>
-      <stop offset="50%" stop-color="#64748B" stop-opacity="0.24"/>
-      <stop offset="90%" stop-color="#334155" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.03"/>
-    </linearGradient>
-
-    <!-- Circle 3: Far Upper-Right Circle (cx: 1680, cy: 160, r: 480) -->
-    <linearGradient id="cos-light-grad-c3" x1="75%" y1="10%" x2="20%" y2="90%">
-      <stop offset="0%" stop-color="#94A3B8" stop-opacity="0.32"/>
-      <stop offset="60%" stop-color="#475569" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.04"/>
-    </linearGradient>
-
-    <!-- Circle 4: Giant Lower-Right Circle (cx: 1540, cy: 960, r: 550) -->
-    <linearGradient id="cos-light-grad-c4" x1="20%" y1="10%" x2="85%" y2="90%">
-      <stop offset="0%" stop-color="#94A3B8" stop-opacity="0.40"/>
-      <stop offset="45%" stop-color="#64748B" stop-opacity="0.26"/>
-      <stop offset="85%" stop-color="#334155" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.04"/>
-    </linearGradient>
-
-    <!-- Circle 5: Focal Medium Floating Circle (cx: 1360, cy: 580, r: 185) -->
-    <linearGradient id="cos-light-grad-c5" x1="15%" y1="15%" x2="85%" y2="85%">
-      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.65"/>
-      <stop offset="40%" stop-color="#CBD5E1" stop-opacity="0.42"/>
-      <stop offset="85%" stop-color="#64748B" stop-opacity="0.25"/>
-      <stop offset="100%" stop-color="#334155" stop-opacity="0.10"/>
-    </linearGradient>
-
-    <!-- Circle 6: Lower-Left Intersecting Circle (cx: 90, cy: 520, r: 185) -->
-    <linearGradient id="cos-light-grad-c6" x1="20%" y1="15%" x2="85%" y2="85%">
-      <stop offset="0%" stop-color="#94A3B8" stop-opacity="0.40"/>
-      <stop offset="50%" stop-color="#64748B" stop-opacity="0.26"/>
-      <stop offset="100%" stop-color="#334155" stop-opacity="0.10"/>
-    </linearGradient>
-
-    <!-- Circle 7: Upper-Left Large Arc Circle (cx: -60, cy: 230, r: 380) -->
-    <linearGradient id="cos-light-grad-c7" x1="60%" y1="15%" x2="20%" y2="85%">
-      <stop offset="0%" stop-color="#94A3B8" stop-opacity="0.34"/>
-      <stop offset="60%" stop-color="#475569" stop-opacity="0.20"/>
-      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.05"/>
-    </linearGradient>
-
-    <!-- Circle 8: Bottom-Center Sweeping Arc (cx: 620, cy: 960, r: 430) -->
-    <linearGradient id="cos-light-grad-c8" x1="30%" y1="10%" x2="75%" y2="85%">
-      <stop offset="0%" stop-color="#94A3B8" stop-opacity="0.32"/>
-      <stop offset="60%" stop-color="#475569" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.04"/>
-    </linearGradient>
-
-    <!-- Crescent Gradient for Lower Intersection Lens (Circle 1 & Circle 2) -->
-    <linearGradient id="cos-light-grad-lens12" x1="25%" y1="30%" x2="80%" y2="80%">
-      <stop offset="0%" stop-color="#64748B" stop-opacity="0.34"/>
-      <stop offset="55%" stop-color="#475569" stop-opacity="0.22"/>
-      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.08"/>
-    </linearGradient>
-
-    <!-- Crescent Gradient for Left Intersection Lens (Circle 6 & Circle 7) -->
-    <linearGradient id="cos-light-grad-lens67" x1="20%" y1="20%" x2="80%" y2="80%">
-      <stop offset="0%" stop-color="#64748B" stop-opacity="0.36"/>
-      <stop offset="60%" stop-color="#475569" stop-opacity="0.22"/>
-      <stop offset="100%" stop-color="#1E293B" stop-opacity="0.08"/>
-    </linearGradient>
-
-    <!-- Clip Paths for Precise Intersecting Lenses -->
-    <clipPath id="clip-light-circle-1">
-      <circle cx="740" cy="330" r="540"/>
-    </clipPath>
-    <clipPath id="clip-light-circle-6">
-      <circle cx="90" cy="520" r="185"/>
-    </clipPath>
-    <clipPath id="clip-light-circle-4">
-      <circle cx="1540" cy="960" r="550"/>
-    </clipPath>
   </defs>
 
-  <!-- 1. Background Canvas -->
-  <rect width="100%" height="100%" fill="url(#cos-light-canvas)"/>
+  <!-- 1. Pure Crisp White Canvas (Zero Blue or Muddy Tint) -->
+  <rect width="100%" height="100%" fill="#FFFFFF"/>
 
-  <!-- 2. Far Background Layer: Top-Right and Upper-Left Circles -->
-  <!-- Circle 3: Far Upper-Right -->
-  <circle cx="1680" cy="160" r="480" fill="url(#cos-light-grad-c3)"/>
-  <circle cx="1680" cy="160" r="480" fill="none" stroke="#475569" stroke-width="2.0" stroke-opacity="0.35"/>
-
-  <!-- Circle 7: Upper-Left Large Arc -->
-  <circle cx="-60" cy="230" r="380" fill="url(#cos-light-grad-c7)"/>
-  <circle cx="-60" cy="230" r="380" fill="none" stroke="#475569" stroke-width="2.0" stroke-opacity="0.36"/>
-
-  <!-- Circle 8: Bottom-Center Base Arc -->
-  <circle cx="620" cy="960" r="430" fill="url(#cos-light-grad-c8)"/>
-  <circle cx="620" cy="960" r="430" fill="none" stroke="#475569" stroke-width="2.0" stroke-opacity="0.32"/>
-
-  <!-- 3. Mid-Deep Layer: Giant Circle 4 (Bottom-Right) -->
-  <circle cx="1540" cy="960" r="550" fill="url(#cos-light-grad-c4)"/>
-  <circle cx="1540" cy="960" r="550" fill="none" stroke="#334155" stroke-width="2.5" stroke-opacity="0.40"/>
-
-  <!-- 4. Upper Center-Right Layer: Circle 2 -->
-  <circle cx="1140" cy="280" r="490" fill="url(#cos-light-grad-c2)"/>
-  <circle cx="1140" cy="280" r="490" fill="none" stroke="#334155" stroke-width="2.5" stroke-opacity="0.38"/>
-
-  <!-- 5. Dominant Center-Left Layer: Circle 1 -->
-  <circle cx="740" cy="330" r="540" fill="url(#cos-light-grad-c1)"/>
-  <circle cx="740" cy="330" r="540" fill="none" stroke="#1E293B" stroke-width="2.8" stroke-opacity="0.45"/>
-
-  <!-- 6. Intersecting Lens: Intersection of Circle 1 & Circle 2 -->
-  <g clip-path="url(#clip-light-circle-1)">
-    <circle cx="1140" cy="280" r="490" fill="url(#cos-light-grad-lens12)"/>
-    <circle cx="1140" cy="280" r="490" fill="none" stroke="#1E293B" stroke-width="2.0" stroke-opacity="0.42"/>
+  <!-- 2. Circle 1: Top-Left Half Circle meeting at center (cx: 0, cy: 0, r: 1101.5) -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="0,0; 6,4; 0,0" dur="12s" repeatCount="indefinite"
+      calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"/>
+    <circle cx="0" cy="0" r="1101.5" fill="url(#grad-tl-light)" stroke="#D1D5DB" stroke-width="1.6" stroke-opacity="0.55"/>
   </g>
 
-  <!-- 7. Left Intersecting Circles: Circle 6 & its Lens with Circle 7 -->
-  <circle cx="90" cy="520" r="185" fill="url(#cos-light-grad-c6)"/>
-  <circle cx="90" cy="520" r="185" fill="none" stroke="#1E293B" stroke-width="2.5" stroke-opacity="0.42"/>
-  <g clip-path="url(#clip-light-circle-6)">
-    <circle cx="-60" cy="230" r="380" fill="url(#cos-light-grad-lens67)"/>
-    <circle cx="-60" cy="230" r="380" fill="none" stroke="#1E293B" stroke-width="2.0" stroke-opacity="0.40"/>
+  <!-- 3. Circle 2: Bottom-Right Half Circle meeting at center (cx: 1920, cy: 1080, r: 1101.5) -->
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="0,0; -6,-4; 0,0" dur="12s" repeatCount="indefinite"
+      calcMode="spline" keySplines="0.45 0 0.55 1; 0.45 0 0.55 1"/>
+    <circle cx="1920" cy="1080" r="1101.5" fill="url(#grad-br-light)" stroke="#D1D5DB" stroke-width="1.6" stroke-opacity="0.55"/>
   </g>
-
-  <!-- 8. Focal Floating Circle 5 (Center-Right Intersection) -->
-  <circle cx="1360" cy="580" r="185" fill="url(#cos-light-grad-c5)"/>
-  <circle cx="1360" cy="580" r="185" fill="none" stroke="#0F172A" stroke-width="2.8" stroke-opacity="0.50"/>
-
-  <!-- Subtle overlapping depth segment under Circle 5 crossing Circle 4 -->
-  <g clip-path="url(#clip-light-circle-4)">
-    <circle cx="1360" cy="580" r="185" fill="#1E293B" fill-opacity="0.12"/>
-  </g>
-
 </svg>
