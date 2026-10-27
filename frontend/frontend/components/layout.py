@@ -393,6 +393,7 @@ def landing_layout(content: rx.Component) -> rx.Component:
             margin="0 auto",
             padding_x="1.5rem",
             padding_bottom="4rem",
+            class_name="landing-page-container",
         ),
         auth_modal(),
         background_color="transparent",

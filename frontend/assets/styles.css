@@ -875,3 +875,167 @@ div:has(> a[href*="reflex.dev"]) {
   flex-shrink: 0;
 }
 
+/* ==========================================================================
+   FLOATING ANIMATION SUITE (40% Intensity • Subtle • Floating Theme • Aesthetic)
+   ========================================================================== */
+
+/* 1. Subtle Ambient Floating Loop for Geometric Background Atmosphere */
+@keyframes bgFloatAtmosphere {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.012) translateY(-4px);
+  }
+}
+
+body::before {
+  animation: bgFloatAtmosphere 20s ease-in-out infinite alternate !important;
+  will-change: transform;
+}
+
+/* 2. Global Page & Tab-Switching Floating Transition (Subtle 40% Level) */
+@keyframes tabFloatGlider {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.996);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.neu-page-container,
+.landing-page-container {
+  animation: tabFloatGlider 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Staggered Floating Entrance for Tab Content Sections */
+.neu-page-container > *:nth-child(1) {
+  animation: tabFloatGlider 360ms cubic-bezier(0.16, 1, 0.3, 1) 30ms both;
+}
+.neu-page-container > *:nth-child(2) {
+  animation: tabFloatGlider 380ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+.neu-page-container > *:nth-child(3) {
+  animation: tabFloatGlider 400ms cubic-bezier(0.16, 1, 0.3, 1) 130ms both;
+}
+.neu-page-container > *:nth-child(4) {
+  animation: tabFloatGlider 420ms cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
+}
+
+/* 3. Landing Page Floating Entrance Sequence */
+@keyframes floatUpSoft {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ambient Levitating Float (Continuous gentle buoyant floating drift) */
+@keyframes floatLevitate {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes floatLevitateSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Landing Page Hero Floating Elements */
+.landing-badge-pill {
+  animation: floatUpSoft 450ms cubic-bezier(0.16, 1, 0.3, 1) both,
+             floatLevitate 4.8s ease-in-out 450ms infinite !important;
+  will-change: transform;
+}
+
+.landing-hero-title {
+  animation: floatUpSoft 480ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
+}
+
+.landing-hero-subtitle {
+  animation: floatUpSoft 500ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+}
+
+.landing-hero-cta {
+  animation: floatUpSoft 520ms cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
+}
+
+.landing-trust-bar {
+  animation: floatUpSoft 540ms cubic-bezier(0.16, 1, 0.3, 1) 240ms both;
+}
+
+.landing-upload-card {
+  animation: floatUpSoft 580ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both,
+             floatLevitateSlow 7s ease-in-out 880ms infinite !important;
+  will-change: transform;
+}
+
+/* 4. Interactive Floating Hover Physics for Cards & Buttons */
+.landing-feature-card,
+.landing-benchmark-card,
+.neu-card,
+.neu-raised {
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: transform, box-shadow;
+}
+
+.landing-feature-card:hover,
+.landing-benchmark-card:hover,
+.neu-card:hover,
+.neu-raised:hover {
+  transform: translateY(-3px) translateZ(0) !important;
+}
+
+.landing-feature-card:active,
+.landing-benchmark-card:active,
+.neu-card:active,
+.neu-raised:active {
+  transform: translateY(-1px) translateZ(0) !important;
+}
+
+/* Floating Navigation Links */
+.landing-nav-link {
+  transition: transform 180ms ease, color 180ms ease, background-color 180ms ease !important;
+}
+.landing-nav-link:hover {
+  transform: translateY(-1.5px) !important;
+}
+
+/* Floating Sidebar Navigation Hover */
+.app-sidebar a > div {
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 180ms ease,
+              background-color 180ms ease !important;
+}
+.app-sidebar a:hover > div {
+  transform: translateX(3px) translateY(-1px) !important;
+}
+
+/* 5. Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}
+
+

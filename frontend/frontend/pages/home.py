@@ -197,6 +197,7 @@ def home_page() -> rx.Component:
                     text_align="center",
                     line_height="1.1",
                     max_width="850px",
+                    class_name="landing-hero-title",
                 ),
 
                 # Subheadline
@@ -208,6 +209,7 @@ def home_page() -> rx.Component:
                     max_width="660px",
                     line_height="1.6",
                     margin_top="1rem",
+                    class_name="landing-hero-subtitle",
                 ),
 
                 # Dual Call To Action Buttons
@@ -250,6 +252,7 @@ def home_page() -> rx.Component:
                     justify="center",
                     margin_top="1.85rem",
                     wrap="wrap",
+                    class_name="landing-hero-cta",
                 ),
 
                 # Trust badges row
@@ -283,6 +286,7 @@ def home_page() -> rx.Component:
                     justify="center",
                     wrap="wrap",
                     margin_top="2.25rem",
+                    class_name="landing-trust-bar",
                 ),
 
                 spacing="0",
@@ -457,6 +461,7 @@ def home_page() -> rx.Component:
                     ),
                     padding="2rem",
                     width="100%",
+                    class_name="landing-upload-card",
                 ),
                 id="upload-section",
                 spacing="0",
