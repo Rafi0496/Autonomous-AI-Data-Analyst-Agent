@@ -102,6 +102,7 @@ def render_insight_chart(ins: InsightModel) -> rx.Component:
                             stroke=ACCENT_COLOR,
                             stroke_width=2,
                             dot={"r": 3, "fill": ACCENT_COLOR},
+                            is_animation_active=False,
                         ),
                         rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
                         rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
@@ -114,7 +115,7 @@ def render_insight_chart(ins: InsightModel) -> rx.Component:
                     rx.cond(
                         ins.chart_spec.chart_type == "scatter",
                         rx.recharts.scatter_chart(
-                            rx.recharts.scatter(data_key=ins.chart_spec.y_key, fill=ACCENT_COLOR),
+                            rx.recharts.scatter(data_key=ins.chart_spec.y_key, fill=ACCENT_COLOR, is_animation_active=False),
                             rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
                             rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
                             rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="var(--border-subtle)"),
@@ -124,7 +125,7 @@ def render_insight_chart(ins: InsightModel) -> rx.Component:
                             width="100%",
                         ),
                         rx.recharts.bar_chart(
-                            rx.recharts.bar(data_key=ins.chart_spec.y_key, fill=ACCENT_COLOR, radius=[4, 4, 0, 0]),
+                            rx.recharts.bar(data_key=ins.chart_spec.y_key, fill=ACCENT_COLOR, radius=[4, 4, 0, 0], is_animation_active=False),
                             rx.recharts.x_axis(data_key=ins.chart_spec.x_key, stroke=TEXT_MUTED, font_size="0.7rem"),
                             rx.recharts.y_axis(stroke=TEXT_MUTED, font_size="0.7rem"),
                             rx.recharts.cartesian_grid(stroke_dasharray="3 3", stroke="var(--border-subtle)"),

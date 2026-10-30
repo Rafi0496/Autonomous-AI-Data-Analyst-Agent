@@ -527,7 +527,16 @@ def run_page() -> rx.Component:
                     rx.cond(
                         AppState.job_run_log.length() > 0,
                         rx.vstack(
-                            rx.foreach(AppState.job_run_log, run_log_step_row),
+                            rx.cond(
+                                AppState.job_run_log.length() > 30,
+                                rx.text(
+                                    "Showing most recent 30 execution steps for maximum responsiveness.",
+                                    font_size="0.72rem",
+                                    color=TEXT_MUTED,
+                                    font_style="italic",
+                                ),
+                            ),
+                            rx.foreach(AppState.displayed_run_log, run_log_step_row),
                             spacing="2",
                             width="100%",
                         ),

@@ -174,7 +174,7 @@ def top_status_bar() -> rx.Component:
         rx.box(
             neu_icon_button(
                 icon="menu",
-                on_click=AppState.toggle_sidebar,
+                on_click=[rx.call_script("window.__toggleSidebarInstant?.();"), AppState.toggle_sidebar],
                 size=16,
                 tooltip="Open navigation menu",
             ),
@@ -205,7 +205,7 @@ def top_status_bar() -> rx.Component:
                 background_color=SURFACE_COLOR,
                 box_shadow=SHADOW_RAISED_SM,
                 cursor="pointer",
-                on_click=AppState.toggle_theme,
+                on_click=[rx.call_script("window.__toggleThemeInstant?.();"), AppState.toggle_theme],
                 _hover={"box_shadow": SHADOW_INSET},
                 transition="box-shadow 150ms ease",
                 title="Toggle light/dark theme",
@@ -321,7 +321,7 @@ def landing_navbar() -> rx.Component:
                     background_color=SURFACE_COLOR,
                     box_shadow=SHADOW_RAISED_SM,
                     cursor="pointer",
-                    on_click=AppState.toggle_theme,
+                    on_click=[rx.call_script("window.__toggleThemeInstant?.();"), AppState.toggle_theme],
                     _hover={"box_shadow": SHADOW_INSET},
                     transition="box-shadow 150ms ease",
                     title="Toggle theme",
@@ -411,7 +411,7 @@ def app_layout(page_title: str, content: rx.Component, max_width: str = "820px")
         # Mobile Scrim (<900px drawer overlay)
         rx.box(
             class_name=rx.cond(~AppState.sidebar_collapsed, "sidebar-scrim visible", "sidebar-scrim"),
-            on_click=AppState.toggle_sidebar,
+            on_click=[rx.call_script("window.__toggleSidebarInstant?.();"), AppState.toggle_sidebar],
             display=["block", "block", "none"],
         ),
         rx.hstack(

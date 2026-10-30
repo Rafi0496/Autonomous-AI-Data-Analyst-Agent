@@ -107,6 +107,7 @@ def neu_input(
     on_change: Optional[Any] = None,
     type: str = "text",
     width: str = "100%",
+    debounce_timeout: int = 200,
     **props,
 ) -> rx.Component:
     """Sunken/inset text input with ONE container only and stripped inner input."""
@@ -115,6 +116,7 @@ def neu_input(
         "placeholder": placeholder,
         "class_name": "neu-input-field",
         "width": "100%",
+        "debounce_timeout": debounce_timeout,
     }
     if value is not None:
         input_props["value"] = value
@@ -432,6 +434,7 @@ def hero_input(
                     value=input_value,
                     on_change=on_change,
                     on_key_down=on_key_down,
+                    debounce_timeout=200,
                     class_name="neu-input-field",
                     width="100%",
                     rows="1",

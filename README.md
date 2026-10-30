@@ -156,12 +156,35 @@ before it is shown.
    ```
    *Note: If Celery or Redis is not running, the backend automatically executes analysis jobs via FastAPI BackgroundTasks.*
 
-6. **Run Reflex Frontend (Windows):**
+6. **Run Reflex Frontend (Development Mode):**
    ```powershell
    cd frontend
    ..\.venv\Scripts\reflex run
    ```
    The interactive UI will be available at [http://localhost:3000](http://localhost:3000).
+
+7. **Run Reflex Frontend (Production Mode - High Performance):**
+   For local testing with production build, minification, and zero dev-overhead:
+   ```powershell
+   $env:ENVIRONMENT="prod"
+   cd frontend
+   ..\.venv\Scripts\reflex run --env prod
+   ```
+
+8. **Deploy to Render (Production Web Service):**
+   - **Environment**: Python 3.11+ / Node.js 18+
+   - **Build Command**:
+     ```bash
+     pip install -r requirements.txt && cd frontend && reflex init && reflex export --frontend-only
+     ```
+   - **Start Command**:
+     ```bash
+     cd frontend && reflex run --env prod
+     ```
+   - **Environment Variables**:
+     - `ENVIRONMENT=prod`
+     - `PORT=3000` (or `$PORT` assigned by Render)
+     - `BACKEND_URL=https://<your-backend>.onrender.com`
 
 ---
 
@@ -170,6 +193,16 @@ before it is shown.
 Run the full pytest suite (offline + live):
 ```powershell
 .venv\Scripts\python -m pytest -m "not live"
+```
+
+Run Frontend Integration Tests:
+```powershell
+.venv\Scripts\pytest backend/tests/test_reflex_integration.py -v
+```
+
+Run Automated UI Performance & Responsiveness Smoke Test:
+```powershell
+.venv\Scripts\python scripts/measure_ui_perf.py --smoke-test
 ```
 
 Run Phase 4 Live Demo Walkthrough (Retail & HR scenarios end-to-end with Auth, Cleaning, Plan-Act-Reflect, Insights, Feedback, Q&A, and PDF/Word exports):

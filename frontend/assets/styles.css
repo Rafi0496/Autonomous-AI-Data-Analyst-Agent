@@ -311,20 +311,17 @@ body {
   isolation: isolate;
 }
 
-/* Single Fixed Background Layer (Zero Layout Repaints with Interactive Glass Parallax) */
+/* Single Fixed Background Layer (Zero Layout Repaints) */
 body::before {
   content: "";
   position: fixed;
-  inset: -20px;
+  inset: 0;
   z-index: -1;
   background-image: var(--bg-pattern);
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
   pointer-events: none;
-  will-change: transform;
-  transform: translate3d(var(--bg-parallax-x, 0px), var(--bg-parallax-y, 0px), 0);
-  transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.4, 1);
 }
 
 .theme-light, .theme-dark {
@@ -351,7 +348,7 @@ body::before {
   color: var(--text);
 }
 
-/* Ultra-Modern Fluid Glassmorphic Cards & Containers */
+/* Clean Neumorphic Cards & Containers (No backdrop-filter blur for 60fps performance) */
 .neu-raised,
 .neu-card,
 .landing-feature-card,
@@ -359,38 +356,30 @@ body::before {
 .landing-upload-card,
 .pipeline-step-card {
   background: var(--surface) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
   box-shadow: var(--shadow-raised) !important;
   border-radius: var(--radius-lg) !important;
   border: 1px solid var(--border-subtle) !important;
-  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 280ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-  will-change: transform, box-shadow;
+  transition: transform 160ms ease-out, box-shadow 160ms ease-out !important;
 }
 
 .neu-raised:hover,
 .neu-card:hover,
 .landing-feature-card:hover,
 .landing-benchmark-card:hover {
-  transform: translateY(-4px) scale(1.008) !important;
-  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.25), 0 0 1px 1px var(--border-subtle) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-raised) !important;
 }
 
 .neu-raised-sm {
   background: var(--surface) !important;
-  backdrop-filter: blur(14px) !important;
-  -webkit-backdrop-filter: blur(14px) !important;
   box-shadow: var(--shadow-raised-sm) !important;
   border-radius: var(--radius-md) !important;
   border: 1px solid var(--border-subtle) !important;
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out !important;
 }
 
 .neu-raised-sm:hover {
-  transform: translateY(-2px) !important;
+  transform: translateY(-1px) !important;
   box-shadow: var(--shadow-raised) !important;
 }
 
@@ -589,11 +578,11 @@ input::placeholder, textarea::placeholder {
   border: none !important;
 }
 
-/* Sidebar Smooth Collapse & Rail Behavior (220ms ease-out) */
+/* Sidebar Smooth Collapse & Rail Behavior (150ms ease-out with layout containment) */
 .app-sidebar {
   width: 280px;
-  transition: width 220ms cubic-bezier(0.16, 1, 0.3, 1), transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: width;
+  transition: width 150ms ease-out;
+  contain: layout style;
   overflow-x: hidden;
 }
 
@@ -605,7 +594,7 @@ input::placeholder, textarea::placeholder {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: opacity 100ms ease, max-width 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 120ms ease;
   opacity: 1;
   max-width: 190px;
 }
@@ -617,7 +606,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .sidebar-collapsible-section {
-  transition: opacity 100ms ease, max-height 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 120ms ease;
   opacity: 1;
   max-height: 600px;
   overflow: hidden;
@@ -762,24 +751,27 @@ div:has(> a[href*="reflex.dev"]) {
 /* =====================================================================
    PERFORMANCE & ZERO-LAG OPTIMIZATIONS (Requirement 4)
    ===================================================================== */
-/* GPU-accelerate transitions and prevent repaints */
-.neu-card, .neu-button, .app-sidebar, .landing-hero-card, .landing-feature-card {
-  will-change: transform, box-shadow;
-  backface-visibility: hidden;
-  transform: translateZ(0);
+
+/* Instant theme switch class - prevents transition lag on dark/light toggle */
+.no-transition,
+.no-transition *,
+.no-transition *::before,
+.no-transition *::after {
+  transition: none !important;
+  animation: none !important;
 }
 
 /* Fast responsive hover states with no layout reflow */
 .landing-feature-card {
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease !important;
+  transition: transform 140ms ease-out, box-shadow 140ms ease-out !important;
 }
 .landing-feature-card:hover {
-  transform: translateY(-3px) translateZ(0);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-raised) !important;
 }
 
 .landing-benchmark-card {
-  transition: transform 160ms ease, box-shadow 160ms ease !important;
+  transition: transform 140ms ease-out, box-shadow 140ms ease-out !important;
   cursor: pointer;
 }
 .landing-benchmark-card:hover {
@@ -788,19 +780,17 @@ div:has(> a[href*="reflex.dev"]) {
   border-color: var(--accent) !important;
 }
 
-/* Landing Page Header & Top Bar */
+/* Landing Page Header & Top Bar (Solid surface, no blur) */
 .landing-navbar {
   position: sticky;
   top: 0;
   z-index: 100;
-  background-color: rgba(234, 233, 229, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background-color: var(--surface);
   border-bottom: 1px solid var(--border-subtle);
-  transition: background-color 200ms ease;
+  transition: background-color 140ms ease-out;
 }
 .theme-dark .landing-navbar {
-  background-color: rgba(30, 34, 40, 0.88);
+  background-color: var(--surface);
 }
 
 .landing-nav-link {
@@ -810,7 +800,7 @@ div:has(> a[href*="reflex.dev"]) {
   text-decoration: none;
   padding: 0.45rem 0.85rem;
   border-radius: var(--radius-sm);
-  transition: color 150ms ease, background-color 150ms ease;
+  transition: color 140ms ease-out, background-color 140ms ease-out;
 }
 .landing-nav-link:hover {
   color: var(--text-primary);
@@ -849,199 +839,90 @@ div:has(> a[href*="reflex.dev"]) {
   flex-shrink: 0;
 }
 
-/* ==========================================================================
-   FLOATING ANIMATION SUITE (40% Intensity • Subtle • Floating Theme • Aesthetic)
-   ========================================================================== */
-
-/* 1. Subtle Ambient Floating Loop for Geometric Background Atmosphere */
-@keyframes bgFloatAtmosphere {
-  0%, 100% {
-    transform: scale(1) translateY(0);
+/* Fast Page & Section Entrance (Instant 120ms fade, no artificial staggered delay lag) */
+@keyframes fastPageFadeIn {
+  from {
+    opacity: 0.85;
   }
-  50% {
-    transform: scale(1.012) translateY(-4px);
-  }
-}
-
-body::before {
-  animation: bgFloatAtmosphere 20s ease-in-out infinite alternate !important;
-  will-change: transform;
-}
-
-/* 2. Global Page & Tab-Switching Floating Transition (Subtle 40% Level) */
-@keyframes tabFloatGlider {
-  0% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.996);
-  }
-  100% {
+  to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
 .neu-page-container,
 .landing-page-container {
-  animation: tabFloatGlider 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  will-change: transform, opacity;
+  animation: fastPageFadeIn 120ms ease-out both;
 }
 
-/* Staggered Floating Entrance for Tab Content Sections */
-.neu-page-container > *:nth-child(1) {
-  animation: tabFloatGlider 360ms cubic-bezier(0.16, 1, 0.3, 1) 30ms both;
-}
-.neu-page-container > *:nth-child(2) {
-  animation: tabFloatGlider 380ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
-}
-.neu-page-container > *:nth-child(3) {
-  animation: tabFloatGlider 400ms cubic-bezier(0.16, 1, 0.3, 1) 130ms both;
-}
-.neu-page-container > *:nth-child(4) {
-  animation: tabFloatGlider 420ms cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
+/* Content Visibility Optimization for Long Offscreen Sections */
+#features,
+#how-it-works,
+.landing-upload-card,
+.past-reports-table {
+  content-visibility: auto;
+  contain-intrinsic-size: 600px;
 }
 
-/* 3. Landing Page Floating Entrance Sequence */
-@keyframes floatUpSoft {
-  0% {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Ambient Levitating Float (Continuous gentle buoyant floating drift) */
-@keyframes floatLevitate {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
-@keyframes floatLevitateSlow {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-}
-
-/* Landing Page Hero Floating Elements */
-.landing-badge-pill {
-  animation: floatUpSoft 450ms cubic-bezier(0.16, 1, 0.3, 1) both,
-             floatLevitate 4.8s ease-in-out 450ms infinite !important;
-  will-change: transform;
-}
-
-.landing-hero-title {
-  animation: floatUpSoft 480ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
-}
-
-.landing-hero-subtitle {
-  animation: floatUpSoft 500ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
-}
-
-.landing-hero-cta {
-  animation: floatUpSoft 520ms cubic-bezier(0.16, 1, 0.3, 1) 180ms both;
-}
-
-.landing-trust-bar {
-  animation: floatUpSoft 540ms cubic-bezier(0.16, 1, 0.3, 1) 240ms both;
-}
-
-.landing-upload-card {
-  animation: floatUpSoft 580ms cubic-bezier(0.16, 1, 0.3, 1) 300ms both,
-             floatLevitateSlow 7s ease-in-out 880ms infinite !important;
-  will-change: transform;
-}
-
-/* 4. Interactive Fluid Hover Physics for Cards & Buttons */
+/* Clean Hover & Button Physics (Fast 140ms ease-out) */
 .landing-feature-card,
 .landing-benchmark-card,
 .neu-card,
 .neu-raised {
-  transition: transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1),
-              border-color 300ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-  will-change: transform, box-shadow;
+  transition: transform 140ms ease-out, box-shadow 140ms ease-out !important;
 }
 
 .landing-feature-card:hover,
 .landing-benchmark-card:hover,
 .neu-card:hover,
 .neu-raised:hover {
-  transform: translateY(-5px) scale(1.008) translateZ(0) !important;
+  transform: translateY(-2px) !important;
 }
 
 .landing-feature-card:active,
 .landing-benchmark-card:active,
 .neu-card:active,
 .neu-raised:active {
-  transform: translateY(-1px) scale(0.995) translateZ(0) !important;
+  transform: translateY(0px) !important;
 }
 
-/* Fluid Button Physics & Radiant Gradient Accents */
+/* Button transitions */
 button,
 .neu-button {
-  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1),
-              filter 240ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-  will-change: transform;
+  transition: transform 140ms ease-out, background-color 140ms ease-out !important;
 }
 
 button:hover,
 .neu-button:hover {
-  transform: translateY(-2px) scale(1.015) !important;
+  transform: translateY(-1px) !important;
 }
 
 button:active,
 .neu-button:active {
-  transform: translateY(1px) scale(0.985) !important;
+  transform: translateY(0px) !important;
 }
 
-/* Fluid Hero CTA Primary Button */
+/* Hero CTA Primary Button */
 .landing-hero-cta a:first-child button,
 .landing-hero-cta a:first-child .neu-button {
-  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%) !important;
+  background: var(--accent) !important;
   color: #FFFFFF !important;
   border: none !important;
-  box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.45) !important;
 }
 
 .landing-hero-cta a:first-child button:hover,
 .landing-hero-cta a:first-child .neu-button:hover {
-  box-shadow: 0 8px 30px -2px rgba(236, 72, 153, 0.6) !important;
-  filter: brightness(1.1) !important;
+  background: var(--accent-hover) !important;
 }
 
-/* Floating Navigation Links */
-.landing-nav-link {
-  transition: all 220ms cubic-bezier(0.22, 1, 0.36, 1) !important;
-  border-radius: var(--radius-full) !important;
-  padding: 0.35rem 0.85rem !important;
-}
-.landing-nav-link:hover {
-  color: var(--text-primary) !important;
-  background: rgba(99, 102, 241, 0.12) !important;
-  transform: translateY(-1.5px) !important;
-}
-
-/* Floating Sidebar Navigation Hover */
+/* Sidebar Navigation Hover */
 .app-sidebar a > div {
-  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-              box-shadow 220ms ease,
-              background-color 220ms ease !important;
+  transition: transform 120ms ease-out, background-color 120ms ease-out !important;
 }
 .app-sidebar a:hover > div {
-  transform: translateX(4px) translateY(-1px) !important;
+  transform: translateX(2px) !important;
 }
 
-/* 5. Reduced Motion Accessibility */
+/* Reduced Motion Accessibility */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -1050,5 +931,6 @@ button:active,
     transform: none !important;
   }
 }
+
 
 

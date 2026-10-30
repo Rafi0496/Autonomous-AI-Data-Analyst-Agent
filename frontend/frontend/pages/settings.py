@@ -175,7 +175,7 @@ def settings_page() -> rx.Component:
                                 align_items="center",
                             ),
                             variant="secondary",
-                            on_click=AppState.toggle_theme,
+                            on_click=[rx.call_script("window.__toggleThemeInstant?.();"), AppState.toggle_theme],
                         ),
                         spacing="3",
                         align_items="center",
